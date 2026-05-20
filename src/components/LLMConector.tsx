@@ -25,8 +25,8 @@ export default function LLMConector({
         <div className="card-title p-4">
           <LLMConnectorHeader className="card-title text-xl font-bold flex items-center gap-2" />
         </div>
-        <div className="card-body">
-          <LLMConnectorStatus hasKey={apiKey?.length > 0} />
+        <div className="card-body py-2 text-left">
+          <LLMConnectorStatus hasKey={savedKey?.length > 0} />
           <LLMConnectorForm apiKey={apiKey} setApiKey={setApiKey} />
         </div>
         <div className="card-actions p-2">

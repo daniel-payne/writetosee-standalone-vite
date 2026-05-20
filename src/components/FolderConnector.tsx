@@ -18,8 +18,7 @@ export default function FolderConnector({
   filesList,
   ...rest
 }: PropsWithChildren<FolderConnectorProps>) {
-  const handleDisconnectDirectory = () => { }
-  const handleSelectDirectory = () => { }
+
 
   return (
     <div {...rest} data-name={name} className={`space-y-8 ${rest.className || ''}`}>
@@ -28,18 +27,17 @@ export default function FolderConnector({
         <div className="card-title p-4">
           <FolderConnectorHeader className="card-title text-xl font-bold flex items-center gap-2" />
         </div>
-        <div className="card-body">
+        <div className="card-body py-2 text-left">
           <FolderConnectorStatus
             hasDirectory={hasDirectory}
             directoryName={directoryName}
+            filesList={filesList}
           />
         </div>
         <div className="card-actions p-2">
           <FolderConnectorActions
             className="w-full p-4"
             hasDirectory={hasDirectory}
-            handleDisconnectDirectory={handleDisconnectDirectory}
-            handleSelectDirectory={handleSelectDirectory}
           />
         </div>
       </div>

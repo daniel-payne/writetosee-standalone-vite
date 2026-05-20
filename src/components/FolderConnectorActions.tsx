@@ -1,18 +1,33 @@
 import type { HTMLAttributes, PropsWithChildren } from "react";
+import { useFetcher } from "react-router-dom";
 
 type FolderConnectorActionsProps = {
   hasDirectory: boolean;
-  handleDisconnectDirectory: () => void;
-  handleSelectDirectory: () => void;
+
 } & HTMLAttributes<HTMLDivElement>;
 
 export default function FolderConnectorActions({
   hasDirectory,
-  handleDisconnectDirectory,
-  handleSelectDirectory,
+
 
   ...rest
 }: PropsWithChildren<FolderConnectorActionsProps>) {
+  const fetcher = useFetcher();
+
+  const handleDisconnectDirectory = () => {
+    fetcher.submit(
+      { intent: 'DISCONNECT-DIRECTORY' },
+      { method: 'post', action: '/' }
+    );
+  }
+
+  const handleSelectDirectory = () => {
+    fetcher.submit(
+      { intent: 'SELECT-DIRECTORY' },
+      { method: 'post', action: '/' }
+    );
+  }
+
   return (
     <div {...rest}>
       {hasDirectory ? (

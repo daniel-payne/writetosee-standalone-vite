@@ -29,10 +29,9 @@ export default function LLMConnectorForm({
         className="input input-bordered focus:input-primary w-full"
         placeholder="Enter your LLM API Key..."
       />
-      <label className="label flex-wrap gap-2 ms-2">
-        <span className="label-text-alt text-xs">
-          Get a key: &nbsp;
-          <Link
+      <label className="gap-2 p-2 flex flex-col justify-start items-start">
+        <div className="label-text-alt text-xs">
+          Google Gemini : <Link
             to="https://aistudio.google.com/api-keys"
             target="_blank"
             rel="noopener noreferrer"
@@ -40,8 +39,19 @@ export default function LLMConnectorForm({
           >
             https://aistudio.google.com/api-keys
           </Link>
-        </span>
+          <div className="label-text-alt text-xs">
+            xAI Grok: <Link
+              to="https://console.x.ai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link link-primary-content"
+            >
+              https://console.x.ai
+            </Link>
+          </div>
+        </div>
       </label>
+
     </div>
   );
 }

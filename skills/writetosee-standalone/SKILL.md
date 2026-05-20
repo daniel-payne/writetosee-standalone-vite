@@ -38,3 +38,7 @@ When storing files received from LLMs (such as Markdown `.md` text and PNG `.png
 ## Version Control & Git Commit Ownership
 
 *   **Commit Responsibility:** The developer agent must **NEVER** run `git commit` commands. All commits and repository snapshot updates are handled exclusively by the user. Do not attempt to commit code changes.
+
+## Component Creation
+
+*   **Template:** ALWAYS use `src/components/DefaultComponent.tsx` as a template when creating a new React component in this project. It provides the standard `HTMLAttributes` and `PropsWithChildren` wrapper, along with proper `data-name` attributes for debugging.

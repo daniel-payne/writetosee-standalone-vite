@@ -5,7 +5,7 @@ import NotificationDisplay from '../components/NotificationDisplay';
 import LLMConector from '../components/LLMConector';
 import FolderConnector from '../components/FolderConnector';
 import type { HTMLAttributes, PropsWithChildren } from "react";
-import { useLoaderData, useSubmit, useActionData } from 'react-router-dom';
+import { useLoaderData, useSubmit, useActionData, Link } from 'react-router-dom';
 
 type WelcomeProps = {
 } & HTMLAttributes<HTMLDivElement>;
@@ -27,6 +27,7 @@ export default function Welcome({
   const [errorMsg, setErrorMsg] = useState<string | undefined>(actionData?.errorMsg);
   const [successMsg, setSuccessMsg] = useState<string | undefined>(actionData?.successMsg);
 
+  const isStartDisabled = hasDirectory === false || !(savedKey?.length > 0);
 
   useEffect(() => {
     if (loaderData) {
@@ -52,23 +53,48 @@ export default function Welcome({
 
 
   return (
-    <div {...rest} className={`h-full ${rest.className || ''}`}>
-      <div className="h-full w-full flex flex-row justify-center items-center gap-2 flex-wrap">
+    <div
+      {...rest}
+      className={`h-full bg-cover bg-center ${rest.className || ''}`}
+      style={{ backgroundImage: "url('/welcome-background.jpg')" }}
+    >
+      <div className="h-full w-full flex flex-col justify-center items-center gap-6 pt-0 pb-4 text-center">
+        <div className="animate-fade-in  ">
+          <h1 className="text-5xl md:text-6xl font-bold text-primary ">
+            WriteToSee
+          </h1>
+          <h4 className="text-secondary text-xs">
+            Video Intorduction: &nbsp;
+            <Link
+              to="https://www.youtube.com/watch?v=NbQ5YgtjyLs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link link-primary-content"
+            >
+              https://www.youtube.com/
+            </Link>
+          </h4>
+        </div>
+        <div className="flex flex-row justify-center items-center gap-6 flex-wrap">
+
+          <LLMConector
+            className="w-[360px] h-[280px]"
+            apiKey={apiKey}
+            savedKey={savedKey}
+            setApiKey={setApiKey}
+          />
+          <FolderConnector
+            className="w-[360px] h-[280px]"
+            hasDirectory={hasDirectory}
+            directoryName={directoryName}
+            filesList={filesList}
+          />
+        </div>
+        <Link to="/story" className={isStartDisabled ? "pointer-events-none" : ""} tabIndex={isStartDisabled ? -1 : undefined}>
+          <button className="btn btn-primary" disabled={isStartDisabled}>Start Creating Your Story</button>
+        </Link>
         <NotificationDisplay errorMsg={errorMsg} successMsg={successMsg} />
-        <LLMConector
-          className="w-[360px] h-[280px]"
-          apiKey={apiKey}
-          savedKey={savedKey}
-          setApiKey={setApiKey}
-        />
-        <FolderConnector
-          className="w-[360px] h-[280px]"
-          hasDirectory={hasDirectory}
-          directoryName={directoryName}
-          filesList={filesList}
-        />
-      </div>
-    </div>
+      </div></div>
 
   );
 };

@@ -1,4 +1,5 @@
 import type { HTMLAttributes, PropsWithChildren } from "react";
+import { useFetcher } from "react-router-dom";
 
 type LLMConectorActionsProps = {
   apiKey: string;
@@ -11,19 +12,33 @@ export default function LLMConectorActions({
   ...rest
 }: PropsWithChildren<LLMConectorActionsProps>) {
 
-  const handleDisconnectKey = () => {
+  const fetcher = useFetcher();
 
+  const handleDisconnectKey = () => {
+    fetcher.submit(
+      { intent: 'CLEAR-APIKEY' },
+      { method: 'post', action: '/' }
+    );
   };
 
   const handleSelectKey = () => {
-
+    fetcher.submit(
+      { intent: 'SAVE-APIKEY', apiKey },
+      { method: 'post', action: '/' }
+    );
   };
 
   const canShow = apiKey?.length > 0 || savedKey?.length > 0
   const canSave = apiKey !== savedKey && apiKey?.length > 0
 
   if (canShow === false) {
-    return null
+    return (<div {...rest} className={`space-y-2 ${rest.className || ''}`}><button
+      type="button"
+      className="btn btn-primary btn-sm w-full btn-disabled"
+      disabled
+    >
+      Save API Key
+    </button></div>)
   }
 
   return (

@@ -14,7 +14,7 @@ export default function LLMConnectorStatus({
         <span className="font-semibold me-2">Status:</span>
         {hasKey ? (
           <span className="badge badge-success gap-1">
-            Connected
+            LLM Connected
           </span>
         ) : (
           <span className="badge badge-warning gap-1">

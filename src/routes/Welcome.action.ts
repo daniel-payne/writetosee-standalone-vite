@@ -18,13 +18,18 @@ export async function clientAction({ request }: { request: Request }): Promise<W
       return { success: true, message: 'Successfully connected to local directory!' };
     }
 
+    if (intent === 'DISCONNECT-DIRECTORY') {
+      await fileStorage.disconnectDirectory();
+      return { success: true, message: 'Successfully disconnected from local directory!' };
+    }
+
     if (intent === 'SAVE-APIKEY') {
       window.sessionStorage.setItem("apiKey", apiKey);
       return { success: true, message: 'Successfully connected to local directory!' };
     }
 
     if (intent === 'CLEAR-APIKEY') {
-      window.sessionStorage.setItem("apiKey", '');
+      window.sessionStorage.removeItem("apiKey");
       return { success: true, message: 'Successfully connected to local directory!' };
     }
 

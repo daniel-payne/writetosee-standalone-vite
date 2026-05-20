@@ -1,23 +1,116 @@
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
-import MainLayout from './components/MainLayout';
+import MainLayout from './layouts/MainLayout';
+import EmptyLayout from './layouts/EmptyLayout';
 import Welcome from './routes/Welcome';
 import About from './routes/About';
 import { clientLoader as welcomeLoader } from './routes/Welcome.loader';
 import { clientAction as welcomeAction } from './routes/Welcome.action';
+import { clientLoader as mainLayoutLoader } from './layouts/MainLayout.loader';
+import { clientLoader as emptyLayoutLoader } from './layouts/EmptyLayout.loader';
+import Story from './routes/Story';
+import { clientLoader as storyLoader } from './routes/Story.loader';
+import { clientAction as storyAction } from './routes/Story.action';
+
+import Style from './routes/Style';
+import { clientLoader as styleLoader } from './routes/Style.loader';
+import { clientAction as styleAction } from './routes/Style.action';
+
+import Panels from './routes/Panels';
+import { clientLoader as panelsLoader } from './routes/Panels.loader';
+import { clientAction as panelsAction } from './routes/Panels.action';
+
+import Characters from './routes/Characters';
+import { clientLoader as charactersLoader } from './routes/Characters.loader';
+import { clientAction as charactersAction } from './routes/Characters.action';
+
+import Images from './routes/Images';
+import { clientLoader as imagesLoader } from './routes/Images.loader';
+import { clientAction as imagesAction } from './routes/Images.action';
+
+import Comic from './routes/Comic';
+import { clientLoader as comicLoader } from './routes/Comic.loader';
+import { clientAction as comicAction } from './routes/Comic.action';
+
+import Video from './routes/Video';
+import { clientLoader as videoLoader } from './routes/Video.loader';
+import { clientAction as videoAction } from './routes/Video.action';
+
+import Process from './routes/Process';
+import { clientLoader as processLoader } from './routes/Process.loader';
+import { clientAction as processAction } from './routes/Process.action';
 
 const router = createBrowserRouter([
   {
     element: (
-      <MainLayout>
+      <EmptyLayout>
         <Outlet />
-      </MainLayout>
+      </EmptyLayout>
     ),
+    loader: emptyLayoutLoader,
     children: [
       {
         path: '/',
         element: <Welcome />,
         loader: welcomeLoader,
         action: welcomeAction,
+      },
+    ],
+  },
+  {
+    element: (
+      <MainLayout>
+        <Outlet />
+      </MainLayout>
+    ),
+    loader: mainLayoutLoader,
+    children: [
+      {
+        path: '/style',
+        element: <Style />,
+        loader: styleLoader,
+        action: styleAction,
+      },
+      {
+        path: '/story',
+        element: <Story />,
+        loader: storyLoader,
+        action: storyAction,
+      },
+      {
+        path: '/panels',
+        element: <Panels />,
+        loader: panelsLoader,
+        action: panelsAction,
+      },
+      {
+        path: '/characters',
+        element: <Characters />,
+        loader: charactersLoader,
+        action: charactersAction,
+      },
+      {
+        path: '/images',
+        element: <Images />,
+        loader: imagesLoader,
+        action: imagesAction,
+      },
+      {
+        path: '/comic',
+        element: <Comic />,
+        loader: comicLoader,
+        action: comicAction,
+      },
+      {
+        path: '/video',
+        element: <Video />,
+        loader: videoLoader,
+        action: videoAction,
+      },
+      {
+        path: '/process',
+        element: <Process />,
+        loader: processLoader,
+        action: processAction,
       },
       {
         path: '/about',
@@ -32,4 +125,3 @@ function App() {
 }
 
 export default App;
-
