@@ -1,6 +1,6 @@
 import type { HTMLAttributes, PropsWithChildren } from "react";
 import { useLoaderData } from 'react-router-dom';
-import type { EmptyLayoutLoaderData } from './EmptyLayout.loader';
+// import type { EmptyLayoutLoaderData } from './EmptyLayout.loader';
 
 type EmptyLayoutProps = {} & HTMLAttributes<HTMLDivElement>;
 
@@ -8,7 +8,7 @@ export default function EmptyLayout({
   children,
   ...rest
 }: PropsWithChildren<EmptyLayoutProps>) {
-  const loaderData = useLoaderData() as EmptyLayoutLoaderData;
+  useLoaderData();
 
   return (
     <div

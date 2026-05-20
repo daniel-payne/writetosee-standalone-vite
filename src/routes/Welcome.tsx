@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useLocalState } from '@keldan-systems/state-mutex';
-import * as fileStorage from '../lib/fileStorage';
+import SimpleConnector from '../components/SimpleConnector';
 import NotificationDisplay from '../components/NotificationDisplay';
 import LLMConector from '../components/LLMConector';
 import FolderConnector from '../components/FolderConnector';
 import type { HTMLAttributes, PropsWithChildren } from "react";
-import { useLoaderData, useSubmit, useActionData, Link } from 'react-router-dom';
+import { useLoaderData, useActionData, Link } from 'react-router-dom';
 
 type WelcomeProps = {
 } & HTMLAttributes<HTMLDivElement>;
@@ -27,7 +26,7 @@ export default function Welcome({
   const [errorMsg, setErrorMsg] = useState<string | undefined>(actionData?.errorMsg);
   const [successMsg, setSuccessMsg] = useState<string | undefined>(actionData?.successMsg);
 
-  const isStartDisabled = hasDirectory === false || !(savedKey?.length > 0);
+  const isStartDisabled = hasDirectory === false || !((savedKey?.length ?? 0) > 0);
 
   useEffect(() => {
     if (loaderData) {
@@ -75,21 +74,29 @@ export default function Welcome({
             </Link>
           </h4>
         </div>
-        <div className="flex flex-row justify-center items-center gap-6 flex-wrap">
-
-          <LLMConector
-            className="w-[360px] h-[280px]"
-            apiKey={apiKey}
-            savedKey={savedKey}
+        {loaderData?.safeMode ? (
+          <SimpleConnector 
+            apiKey={apiKey ?? ''}
             setApiKey={setApiKey}
+            hasDirectory={hasDirectory ?? false}
           />
-          <FolderConnector
-            className="w-[360px] h-[280px]"
-            hasDirectory={hasDirectory}
-            directoryName={directoryName}
-            filesList={filesList}
-          />
-        </div>
+        ) : (
+          <div className="flex flex-row justify-center items-center gap-6 flex-wrap">
+            <LLMConector
+              className="w-[360px] h-[280px]"
+              apiKey={apiKey ?? ''}
+              savedKey={savedKey ?? null}
+              setApiKey={setApiKey}
+            />
+            <FolderConnector
+              className="w-[360px] h-[280px]"
+              hasDirectory={hasDirectory ?? false}
+              directoryName={directoryName}
+              filesList={filesList ?? []}
+            />
+          </div>
+        )}
+
         <Link to="/story" className={isStartDisabled ? "pointer-events-none" : ""} tabIndex={isStartDisabled ? -1 : undefined}>
           <button className="btn btn-primary" disabled={isStartDisabled}>Start Creating Your Story</button>
         </Link>

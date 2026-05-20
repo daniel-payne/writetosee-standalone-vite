@@ -8,7 +8,7 @@ interface FormDrawingInstructionsProps {
 }
 
 export default function FormDrawingInstructions({ name = 'FormDrawingInstructions', value, onChange, ...rest }: FormDrawingInstructionsProps) {
-  const handleUseInstructions = (style: string) => (e: any) => {
+  const handleUseInstructions = (_style: string) => (e: any) => {
     e.preventDefault();
     e.stopPropagation();
   }

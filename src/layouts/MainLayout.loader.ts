@@ -3,6 +3,7 @@ import * as fileStorage from '../lib/fileStorage';
 export interface MainLayoutLoaderData {
   hasDirectory: boolean;
   apiKey: string | null;
+  safeMode: boolean;
   manuscript?: string;
   images?: string;
   characters?: string;
@@ -13,6 +14,7 @@ export async function clientLoader(): Promise<MainLayoutLoaderData> {
   let hasDirectory = false;
   let filesList: string[] = [];
   const apiKey = window.sessionStorage.getItem("apiKey") ?? '';
+  const safeMode = (window.localStorage.getItem("safeMode") ?? '1') === '1' ? true : false;
 
   try {
     hasDirectory = await fileStorage.hasSavedDirectory();
@@ -26,5 +28,5 @@ export async function clientLoader(): Promise<MainLayoutLoaderData> {
   const characters = filesList.find((file) => file === 'characters.json');
   const panels = filesList.find((file) => file === 'panels.json');
 
-  return { hasDirectory, apiKey, manuscript, images, characters, panels };
+  return { hasDirectory, apiKey, safeMode, manuscript, images, characters, panels };
 }

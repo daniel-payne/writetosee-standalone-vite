@@ -33,7 +33,7 @@ export default function MainLayout({
   const isSubmitting = navigation.state === 'submitting';
   const isStoryDisabled = !loaderData?.hasDirectory || !loaderData?.apiKey;
 
-  let welcomeLinkStyle = unselectedStyle;
+
   let styleLinkStyle = unselectedStyle
   let storyLinkStyle = unselectedStyle;
   let panelsLinkStyle = unselectedStyle;
@@ -41,9 +41,7 @@ export default function MainLayout({
   let imagesLinkStyle = unselectedStyle;
   let aboutLinkStyle = unselectedStyle;
 
-  if (isActive('/')) {
-    welcomeLinkStyle = selectedStyle;
-  }
+
 
   if (isActive('/style')) {
     styleLinkStyle = selectedStyle;
@@ -105,11 +103,11 @@ export default function MainLayout({
 
           <nav className="flex items-center gap-2">
             {/* <Link to="/" className={welcomeLinkStyle} >Welcome</Link> */}
-            <Link to="/style" className={styleLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Style</Link>
+            {!loaderData?.safeMode && <Link to="/style" className={styleLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Style</Link>}
             <Link to="/story" className={storyLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Story</Link>
-            <Link to="/panels" className={panelsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Panels</Link>
-            <Link to="/characters" className={charactersLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Characters</Link>
-            <Link to="/images" className={imagesLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Images</Link>
+            {!loaderData?.safeMode && <Link to="/panels" className={panelsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Panels</Link>}
+            {!loaderData?.safeMode && <Link to="/characters" className={charactersLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Characters</Link>}
+            {!loaderData?.safeMode && <Link to="/images" className={imagesLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Images</Link>}
             <Link to="/about" className={aboutLinkStyle}>About</Link>
           </nav>
         </div>

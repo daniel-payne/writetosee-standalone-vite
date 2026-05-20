@@ -7,8 +7,8 @@ export default function Video({
   children,
   ...rest
 }: PropsWithChildren<VideoProps>) {
-  const loaderData = useLoaderData();
-  const actionData = useActionData();
+  useLoaderData();
+  useActionData();
 
   return (
     <div {...rest} className={`p-6 ${rest.className || ''}`}>

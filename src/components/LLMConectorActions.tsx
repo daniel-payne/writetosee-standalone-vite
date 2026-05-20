@@ -28,8 +28,8 @@ export default function LLMConectorActions({
     );
   };
 
-  const canShow = apiKey?.length > 0 || savedKey?.length > 0
-  const canSave = apiKey !== savedKey && apiKey?.length > 0
+  const canShow = (apiKey?.length ?? 0) > 0 || (savedKey?.length ?? 0) > 0
+  const canSave = apiKey !== savedKey && (apiKey?.length ?? 0) > 0
 
   if (canShow === false) {
     return (<div {...rest} className={`space-y-2 ${rest.className || ''}`}><button

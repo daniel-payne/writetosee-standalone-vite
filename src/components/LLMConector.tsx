@@ -1,4 +1,4 @@
-import { useState, type HTMLAttributes, type PropsWithChildren } from "react";
+import { type HTMLAttributes, type PropsWithChildren } from "react";
 
 import LLMConnectorHeader from "./LLMConnectorHeader";
 import LLMConnectorStatus from "./LLMConnectorStatus";
@@ -26,13 +26,13 @@ export default function LLMConector({
           <LLMConnectorHeader className="card-title text-xl font-bold flex items-center gap-2" />
         </div>
         <div className="card-body py-2 text-left">
-          <LLMConnectorStatus hasKey={savedKey?.length > 0} />
-          <LLMConnectorForm apiKey={apiKey} setApiKey={setApiKey} />
+          <LLMConnectorStatus hasKey={(savedKey?.length ?? 0) > 0} />
+          <LLMConnectorForm apiKey={apiKey ?? ''} setApiKey={setApiKey} />
         </div>
         <div className="card-actions p-2">
           <LLMConectorActions
             className="w-full p-4"
-            apiKey={apiKey}
+            apiKey={apiKey ?? ''}
             savedKey={savedKey}
           />
         </div>

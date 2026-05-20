@@ -8,7 +8,7 @@ export default function Story({
   ...rest
 }: PropsWithChildren<StoryProps>) {
   const loaderData = useLoaderData();
-  const actionData = useActionData();
+  useActionData();
 
   const [leftWidth, setLeftWidth] = useState(25);
   const [isDragging, setIsDragging] = useState(false);

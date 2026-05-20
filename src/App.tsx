@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, redirect } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import EmptyLayout from './layouts/EmptyLayout';
 import Welcome from './routes/Welcome';
@@ -40,6 +40,40 @@ import { clientLoader as processLoader } from './routes/Process.loader';
 import { clientAction as processAction } from './routes/Process.action';
 
 const router = createBrowserRouter([
+  {
+    path: '/safe',
+    loader: ({ request }) => {
+      const url = new URL(request.url);
+      const apiKey = url.searchParams.get('apiKey');
+
+      window.localStorage.setItem("safeMode", "1");
+
+      if (apiKey) {
+        window.sessionStorage.setItem("apiKey", apiKey);
+      } else {
+        window.sessionStorage.removeItem("apiKey");
+      }
+
+      return redirect('/');
+    }
+  },
+  {
+    path: '/full',
+    loader: ({ request }) => {
+      const url = new URL(request.url);
+      const apiKey = url.searchParams.get('apiKey');
+
+      window.localStorage.setItem("safeMode", "0");
+
+      if (apiKey) {
+        window.sessionStorage.setItem("apiKey", apiKey);
+      } else {
+        window.sessionStorage.removeItem("apiKey");
+      }
+
+      return redirect('/');
+    }
+  },
   {
     element: (
       <EmptyLayout>

@@ -1,4 +1,4 @@
-import { useEffect, useState, type HTMLAttributes, type PropsWithChildren } from "react";
+import { type HTMLAttributes, type PropsWithChildren } from "react";
 import { Link } from "react-router-dom";
 
 type LLMConnectorFormProps = {
@@ -13,7 +13,7 @@ export default function LLMConnectorForm({
   ...rest
 }: PropsWithChildren<LLMConnectorFormProps>) {
 
-  const handleApiKeyChange = (e) => {
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 
     const value = e.target.value
 

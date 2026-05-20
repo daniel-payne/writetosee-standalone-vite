@@ -74,7 +74,7 @@ export default function Style({
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const isSubmitting = navigation.state === 'submitting';
+
 
   return (
     <div {...rest} className={`p-6 w-full max-w-5xl mx-auto h-full overflow-auto ${rest.className || ''}`}>

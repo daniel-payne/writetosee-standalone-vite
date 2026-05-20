@@ -7,8 +7,8 @@ export default function Process({
   children,
   ...rest
 }: PropsWithChildren<ProcessProps>) {
-  const loaderData = useLoaderData();
-  const actionData = useActionData();
+  useLoaderData();
+  useActionData();
 
   return (
     <div {...rest} className={`p-6 ${rest.className || ''}`}>

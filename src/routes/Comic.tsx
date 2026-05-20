@@ -7,8 +7,8 @@ export default function Comic({
   children,
   ...rest
 }: PropsWithChildren<ComicProps>) {
-  const loaderData = useLoaderData();
-  const actionData = useActionData();
+  useLoaderData();
+  useActionData();
 
   return (
     <div {...rest} className={`p-6 ${rest.className || ''}`}>

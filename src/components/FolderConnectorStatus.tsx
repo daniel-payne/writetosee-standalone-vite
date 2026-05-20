@@ -13,7 +13,7 @@ export default function FolderConnectorStatus({
   ...rest
 }: PropsWithChildren<FolderConnectorStatusProps>) {
 
-  const fileCount = filesList?.length || 0;
+  // const fileCount = filesList?.length || 0;
 
   const manuscriptCount = filesList?.filter((file) => file.includes("manuscript.md"))?.length ?? 0;
   const styleCount = filesList?.filter((file) => file.includes("style.json"))?.length ?? 0;

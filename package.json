@@ -5,10 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build:dev": "tsc -b && vite build && npm run deploy:dev",
+    "build:prod": "tsc -b && vite build && npm run deploy:prod",
     "lint": "eslint .",
     "preview": "vite preview",
-    "serve": "serve dist -s -l 5000"
+    "serve": "serve dist -s -l 5000",
+    "deploy:dev": "./deploy-dev.sh",
+    "deploy:prod": "./deploy-prod.sh"
   },
   "dependencies": {
     "@keldan-systems/state-mutex": "^0.0.35",

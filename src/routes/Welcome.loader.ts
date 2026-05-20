@@ -5,12 +5,15 @@ export interface WelcomeLoaderData {
   filesList: string[] | null;
   directoryName: string | null;
   apiKey: string | null;
+  safeMode: boolean;
 }
 
 export async function clientLoader(): Promise<WelcomeLoaderData> {
   let hasDirectory = false;
   let filesList: string[] = [];
   let directoryName: string | null = null;
+
+  const safeMode = (window.localStorage.getItem("safeMode") ?? '1') === '1' ? true : false;
 
   // Retrieve API Key directly from window.sessionStorage in clientLoader
   const apiKey = window.sessionStorage.getItem("apiKey") ?? '';
@@ -27,6 +30,7 @@ export async function clientLoader(): Promise<WelcomeLoaderData> {
   }
 
   return {
+    safeMode,
     hasDirectory,
     filesList,
     directoryName,
