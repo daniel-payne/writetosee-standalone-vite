@@ -2,8 +2,8 @@ import { getState, setState, StoragePersistence } from "@keldan-systems/state-mu
 
 
 
-export default async function processStory({ story }: { story: string }) {
-    let publication = getState("publication") as any;
+export default async function processPublication({ story }: { story: string }) {
+    let publication = getState("publication-data") as any;
 
     if (publication == null) {
         publication = {}
@@ -15,5 +15,5 @@ export default async function processStory({ story }: { story: string }) {
 
     publication.count = (publication.count ?? 0) + 1
 
-    setState("publication", publication, StoragePersistence.local);
+    setState("publication-data", publication, StoragePersistence.local);
 }

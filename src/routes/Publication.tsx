@@ -11,7 +11,7 @@ export default function Publication({
   useLoaderData();
   useActionData();
 
-  const [publication] = useLocalState('publication', {})
+  const [publication] = useLocalState('publication-data', {})
 
   return (
     <div {...rest} className={`p-6 ${rest.className || ''}`}>

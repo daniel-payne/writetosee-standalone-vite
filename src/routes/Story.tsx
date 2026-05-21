@@ -13,7 +13,7 @@ export default function Story({
   const loaderData = useLoaderData() as StoryLoaderData;
   useActionData();
 
-  const [publication] = useLocalState('publication', {})
+  const [publication] = useLocalState('publication-data', {})
 
   const [leftWidth, setLeftWidth] = useState(25);
   const [isDragging, setIsDragging] = useState(false);

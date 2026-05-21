@@ -134,30 +134,37 @@ export default function MainLayout({
         </div>
 
         <div className="flex-1 flex justify-center items-center min-h-[40px]">
-          {['/style', '/story', '/panels', '/characters'].includes(location.pathname) && (
-            <div className="flex items-center space-x-4">
-              <button
-                type="submit"
-                form="main-form"
-                name="intent"
-                value="CANCEL-UPDATES"
-                disabled={isSubmitting}
-                className="btn btn-sm btn-ghost"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                form="main-form"
-                name="intent"
-                value="SAVE-UPDATES"
-                disabled={isSubmitting}
-                className="btn btn-sm btn-success"
-              >
-                {isSubmitting ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
+
+          {isStoryDisabled ? (
+            <div className="text-xs text-base-content/50">Save not available in secondary windows. Renter apiKey to activate save.</div>
+          ) : (
+            ['/style', '/story', '/panels', '/characters'].includes(location.pathname) && (
+              <div className="flex items-center space-x-4">
+                <button
+                  type="submit"
+                  form="main-form"
+                  name="intent"
+                  value="CANCEL-UPDATES"
+                  disabled={isSubmitting}
+                  className="btn btn-sm btn-ghost"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  form="main-form"
+                  name="intent"
+                  value="SAVE-UPDATES"
+                  disabled={isSubmitting}
+                  className="btn btn-sm btn-success"
+                >
+                  {isSubmitting ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            )
           )}
+
+
         </div>
 
         <div className="flex-1 flex justify-end items-center">

@@ -1,6 +1,6 @@
 import * as fileStorage from '../data/fileStorage';
 import { type ActionFunctionArgs } from 'react-router-dom';
-import processStory from '../data/processStory';
+import processPublication from '../data/processPublication';
 
 export async function clientAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -9,7 +9,7 @@ export async function clientAction({ request }: ActionFunctionArgs) {
   if (intent === 'SAVE-UPDATES') {
     const story = formData.get('story') as string;
 
-    await processStory({ story });
+    await processPublication({ story });
 
     try {
       if (story !== null) {
@@ -23,7 +23,7 @@ export async function clientAction({ request }: ActionFunctionArgs) {
   } else if (intent === 'UPDATE-STORY') {
     const story = formData.get('story') as string;
 
-    await processStory({ story });
+    await processPublication({ story });
 
     try {
       if (story !== null) {
