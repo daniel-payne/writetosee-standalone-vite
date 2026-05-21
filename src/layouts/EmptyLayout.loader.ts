@@ -3,7 +3,7 @@ import * as fileStorage from '../lib/fileStorage';
 export interface EmptyLayoutLoaderData {
   hasDirectory: boolean;
   apiKey: string | null;
-  manuscript?: string;
+  story?: string;
   images?: string;
   characters?: string;
   panels?: string;
@@ -21,10 +21,10 @@ export async function clientLoader(): Promise<EmptyLayoutLoaderData> {
     console.warn('Could not check directory status in EmptyLayout.', err);
   }
 
-  const manuscript = filesList.find((file) => file === 'manuscript.md');
+  const story = filesList.find((file) => file === 'story.md');
   const images = filesList.find((file) => file.endsWith('.png') || file.endsWith('.jpg') || file.endsWith('.jpeg'));
   const characters = filesList.find((file) => file === 'characters.json');
   const panels = filesList.find((file) => file === 'panels.json');
 
-  return { hasDirectory, apiKey, manuscript, images, characters, panels };
+  return { hasDirectory, apiKey, story, images, characters, panels };
 }

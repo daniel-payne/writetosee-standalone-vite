@@ -1,29 +1,29 @@
 import * as fileStorage from '../lib/fileStorage';
 
 export interface StoryLoaderData {
-  manuscript: string;
-  story: Record<string, any>;
+  story: string;
+  publication: Record<string, any>;
 }
 
 export async function clientLoader(): Promise<StoryLoaderData> {
-  let manuscript = '';
-  let story = {};
+  let story = '';
+  let publication = {};
 
   try {
-    const manuscriptFile = await fileStorage.readFile('manuscript.md');
-    manuscript = await manuscriptFile.text();
+    const storyFile = await fileStorage.readFile('story.md');
+    story = await storyFile.text();
   } catch (err) {
-    console.warn('Could not read manuscript.md', err);
+    console.warn('Could not read story.md', err);
   }
 
   try {
-    const storyFile = await fileStorage.readFile('story.json');
-    const text = await storyFile.text();
+    const publicationFile = await fileStorage.readFile('publication.json');
+    const text = await publicationFile.text();
 
-    story = JSON.parse(text);
+    publication = JSON.parse(text);
   } catch (err) {
-    console.warn('Could not read story.json', err);
+    console.warn('Could not read publication.json', err);
   }
 
-  return { manuscript, story };
+  return { story, publication };
 }

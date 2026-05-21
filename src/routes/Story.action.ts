@@ -6,33 +6,33 @@ export async function clientAction({ request }: ActionFunctionArgs) {
   const intent = formData.get('intent');
 
   if (intent === 'SAVE-UPDATES') {
-    const manuscript = formData.get('manuscript');
     const story = formData.get('story');
+    const publication = formData.get('publication');
 
     try {
-      if (manuscript !== null) {
-        await fileStorage.writeFile('manuscript.md', manuscript as string);
-      }
       if (story !== null) {
-        await fileStorage.writeFile('story.json', story as string);
+        await fileStorage.writeFile('story.md', story as string);
+      }
+      if (publication !== null) {
+        await fileStorage.writeFile('publication.json', publication as string);
       }
       return { success: true, message: 'Story updated successfully' };
     } catch (err: any) {
       return { error: err.message || 'Failed to save story' };
     }
-  } else if (intent === 'UPDATE-MANUSCRIPT') {
-    const manuscript = formData.get('manuscript');
+  } else if (intent === 'UPDATE-STORY') {
+    const story = formData.get('story');
 
-    // await processManuscript(manuscript as string); 
+    // await processStory(story as string); 
 
-    // try {
-    //   if (manuscript !== null) {
-    //     await fileStorage.writeFile('manuscript.md', manuscript as string);
-    //   }
-    //   return { success: true, message: 'Manuscript updated successfully' };
-    // } catch (err: any) {
-    //   return { error: err.message || 'Failed to save manuscript' };
-    // }
+    try {
+      if (story !== null) {
+        await fileStorage.writeFile('story.md', story as string);
+      }
+      return { success: true, message: 'Story updated successfully' };
+    } catch (err: any) {
+      return { error: err.message || 'Failed to save story' };
+    }
   }
 
   return null;

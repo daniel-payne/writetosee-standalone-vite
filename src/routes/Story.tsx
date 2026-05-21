@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type HTMLAttributes, type PropsWithChildren } from "react";
-import ManuscriptEditor from "../components/ManuscriptEditor";
+import StoryEditor from "../components/StoryEditor";
 import { useLoaderData, useActionData, Form } from "react-router-dom";
 import type { StoryLoaderData } from "./Story.loader";
 
@@ -55,7 +55,7 @@ export default function Story({
     <div {...rest} className={`h-full w-full min-h-0 ${rest.className || ''}`}>
       <Form id="main-form" method="post" className="flex flex-row gap-0 justify-between items-stretch h-full w-full min-h-0" ref={containerRef}>
         <div className="h-full overflow-hidden" style={{ width: `${leftWidth}%` }}>
-          <ManuscriptEditor defaultValue={loaderData.manuscript} />
+          <StoryEditor defaultValue={loaderData.story} />
         </div>
         <div
           className={`divider divider-horizontal m-0 p-1 cursor-col-resize hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors relative z-10 ${isDragging ? 'bg-slate-200/50 dark:bg-slate-700/50' : ''}`}
@@ -63,7 +63,7 @@ export default function Story({
         />
         <div className="flex-1 h-full overflow-hidden">
           <div className="h-full w-full overflow-auto p-4">
-            <pre className="text-sm font-mono whitespace-pre-wrap text-left">{JSON.stringify(loaderData.story, null, 2)}</pre>
+            <pre className="text-sm font-mono whitespace-pre-wrap text-left">{JSON.stringify(loaderData.publication, null, 2)}</pre>
           </div>
         </div>
       </Form>

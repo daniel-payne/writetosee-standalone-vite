@@ -3,31 +3,31 @@ import { useFetcher } from "react-router-dom";
 import type { HTMLAttributes, PropsWithChildren } from "react";
 
 /**
- * ManuscriptEditor
- * -----------------
- * A reusable editor component for writing a manuscript. It displays a textarea
+ * StoryEditor
+ * -----------
+ * A reusable editor component for writing a story. It displays a textarea
  * pre‑filled with `defaultValue` (typically loaded from loader data). When the
  * user presses Enter twice consecutively, the component automatically submits the
  * text (including the newlines) using a `react-router-dom` fetcher with the
- * intent `UPDATE-MANUSCRIPT`.
+ * intent `UPDATE-STORY`.
  *
  * Props
  * -----
- * - `defaultValue?: string` – Initial manuscript text.
+ * - `defaultValue?: string` – Initial story text.
  * - `name?: string` – Optional identifier used for the `data-name` attribute.
  * - All other HTML `div` attributes are passed through via `...rest`.
  */
 
-type ManuscriptEditorProps = {
+type StoryEditorProps = {
   defaultValue?: string;
   name?: string;
 } & HTMLAttributes<HTMLDivElement>;
 
-export default function ManuscriptEditor({
+export default function StoryEditor({
   defaultValue = "",
-  name = "ManuscriptEditor",
+  name = "StoryEditor",
   ...rest
-}: PropsWithChildren<ManuscriptEditorProps>) {
+}: PropsWithChildren<StoryEditorProps>) {
   const fetcher = useFetcher();
   const [text, setText] = useState<string>(defaultValue);
   const lastKeyRef = useRef<string>("");
@@ -49,7 +49,7 @@ export default function ManuscriptEditor({
         const newValue = currentValue.substring(0, start) + "\n" + currentValue.substring(end);
 
         fetcher.submit(
-          { intent: "UPDATE-MANUSCRIPT", manuscript: newValue },
+          { intent: "UPDATE-STORY", story: newValue },
           { method: "post", action: "/story" }
         );
       }
@@ -70,7 +70,7 @@ export default function ManuscriptEditor({
   return (
     <div {...rest} data-name={name} className="h-full w-full bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
       <textarea
-        name="manuscript"
+        name="story"
         value={text}
         onKeyDown={handleKeyDown}
         onMouseDown={handleMouseDown}
