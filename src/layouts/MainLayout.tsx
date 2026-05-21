@@ -80,6 +80,7 @@ export default function MainLayout({
     imagesLinkStyle = disabledStyle;
     storyLinkStyle = disabledStyle;
     styleLinkStyle = disabledStyle;
+    aboutLinkStyle = disabledStyle;
   }
 
   return (
@@ -91,8 +92,13 @@ export default function MainLayout({
       <header className="sticky top-0 z-50 backdrop-blur-md bg-base-100/70 border-b border-base-content/10 px-4 sm:px-8 py-3">
         <div className="mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link to="/" >
-              <div className="p-2 bg-primary rounded-xl text-primary-content shadow-lg shadow-primary/30 animate-pulse">
+            <Link
+              to="/"
+              tabIndex={isStoryDisabled ? -1 : undefined}
+              aria-disabled={isStoryDisabled}
+              className={isStoryDisabled ? 'pointer-events-none' : ''}
+            >
+              <div className={`p-2 bg-primary rounded-xl text-primary-content shadow-lg shadow-primary/30 ${isStoryDisabled ? 'opacity-50' : 'animate-pulse'}`}>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.83 17.29a2.182 2.182 0 01-.504.34l-3.327 1.11a.488.488 0 01-.613-.613l1.11-3.328a2.182 2.182 0 01.34-.504l12.016-12.017zm0 0L19.5 7.125" />
                 </svg>
@@ -115,7 +121,7 @@ export default function MainLayout({
             {!loaderData?.safeMode && <Link to="/characters" className={charactersLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Characters</Link>}
             {!loaderData?.safeMode && <Link to="/images" className={imagesLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Images</Link>}
             {!loaderData?.safeMode && <Link to="/style" className={styleLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Style</Link>}
-            <Link to="/about" className={aboutLinkStyle}>About</Link>
+            <Link to="/about" className={aboutLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>About</Link>
           </nav>
         </div>
       </header>
@@ -136,7 +142,7 @@ export default function MainLayout({
         <div className="flex-1 flex justify-center items-center min-h-[40px]">
 
           {isStoryDisabled ? (
-            <div className="text-xs text-base-content/50">Save not available in secondary windows. Renter apiKey to activate save.</div>
+            <div className="text-xs text-base-content/50">Save not available in secondary windows</div>
           ) : (
             ['/style', '/story', '/panels', '/characters'].includes(location.pathname) && (
               <div className="flex items-center space-x-4">

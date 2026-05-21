@@ -8,6 +8,43 @@ window.atob = function(str: string): string {
   }
 };
 
+import { setState, StoragePersistence } from '@keldan-systems/state-mutex';
+
+declare global {
+  interface Window {
+    localstate?: {
+      clear: (key: string) => void;
+    };
+  }
+}
+
+window.localstate = {
+  clear: (key: string) => {
+    setState(key, null, StoragePersistence.local);
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      // Ignore security errors in some iframe contexts
+    }
+  }
+};
+
+const handleCleanup = () => {
+  if (window.localstate) {
+    try {
+      const apiKey = sessionStorage.getItem('apiKey');
+      if (apiKey) {
+        window.localstate.clear('publication-data');
+      }
+    } catch (e) {
+      // Ignore security errors in some iframe contexts
+    }
+  }
+};
+
+window.addEventListener('pagehide', handleCleanup);
+window.addEventListener('beforeunload', handleCleanup);
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
