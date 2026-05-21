@@ -37,7 +37,7 @@ const styleInstructions = [
 ]
 
 
-const manuscript = `# Chapter 1
+const story = `# Chapter 1
 The cat sat on the mat, beside the fireplace. The storm raged outside, wind and heavy rain.
 
 Mr Brown was a lumberjack, he had spent the day working in the woods, the wind an rain howling around him.
@@ -91,7 +91,7 @@ const style = {
     ],
 }
 
-const story = {
+const publication = {
     lines: [
         { chapter: 1, page: 1, parararagh: 1, panel: 1, characters: ['Polly'], text: 'The cat sat on the mat, beside the fireplace. The storm raged outside, wind and heavy rain.' },
         { chapter: 1, page: 1, parararagh: 2, panel: 2, characters: ['Mr Brown'], text: 'Mr Brown was a lumberjack, he had spent the day working in the woods, the wind an rain howling around him.', priorText: 'The cat sat on the mat, beside the fireplace. The storm raged outside, wind and heavy rain.' },

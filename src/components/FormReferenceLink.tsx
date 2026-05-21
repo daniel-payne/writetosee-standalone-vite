@@ -94,8 +94,8 @@ export default function FormReferenceLink({
     };
 
     return (
-        <div {...rest} data-name={name}>
-            <div className="flex flex-col gap-6">
+        <div {...rest} data-name={name} className={`flex-1 flex flex-col min-h-0 ${rest.className || ''}`}>
+            <div className="flex-1 flex flex-col gap-4 min-h-0">
                 <div>
                     <label htmlFor="drawingInstructions" className="ps-4 block text-md font-medium text-primary-content mb-1">
                         Reference Style
@@ -142,7 +142,7 @@ export default function FormReferenceLink({
                 )}
 
                 {displaySrc && !imgError && (
-                    <div className="flex flex-col">
+                    <div className="flex-1 flex flex-col min-h-0">
 
                         <label htmlFor="drawingInstructions" className="ps-4 block text-sm font-medium text-slate-400 dark:text-slate-600">
                             Text description of the picture, to be used as the prompt for generating images.
@@ -167,10 +167,9 @@ export default function FormReferenceLink({
                         <textarea
                             name="linkInstructions"
                             id="linkInstructions"
-                            rows={16}
                             value={instructionsValue}
                             onChange={onChange}
-                            className="w-full flex-grow px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-y dark:bg-slate-700 dark:text-white"
+                            className="w-full flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none dark:bg-slate-700 dark:text-white min-h-0"
                         />
                     </div>
                 )}

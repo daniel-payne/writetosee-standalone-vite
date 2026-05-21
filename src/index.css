@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @plugin "daisyui" {
-  themes: pastel --default, night;
+  themes: pastel --default, dim;
 }
 
 input,
@@ -9,4 +9,12 @@ textarea,
 .input,
 .textarea {
   border-radius: 8px !important;
+}
+
+input:focus,
+textarea:focus,
+.input:focus,
+.textarea:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, type HTMLAttributes, type PropsWithChildren } from "react";
-import { useLoaderData, useActionData } from "react-router-dom";
+import ManuscriptEditor from "../components/ManuscriptEditor";
+import { useLoaderData, useActionData, Form } from "react-router-dom";
+import type { StoryLoaderData } from "./Story.loader";
 
 type StoryProps = {} & HTMLAttributes<HTMLDivElement>;
 
@@ -7,12 +9,12 @@ export default function Story({
   children,
   ...rest
 }: PropsWithChildren<StoryProps>) {
-  const loaderData = useLoaderData();
+  const loaderData = useLoaderData() as StoryLoaderData;
   useActionData();
 
   const [leftWidth, setLeftWidth] = useState(25);
   const [isDragging, setIsDragging] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -50,23 +52,21 @@ export default function Story({
   }, [isDragging]);
 
   return (
-    <div {...rest} className={`h-full w-full ${rest.className || ''}`}>
-      <div ref={containerRef} className="flex flex-row gap-0 justify-between items-stretch h-full w-full">
-        <div className="" style={{ width: `${leftWidth}%` }}>
-          <div className="h-full w-full bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-            <textarea className="h-full w-full resize-none outline-none overflow-y-auto bg-transparent" placeholder="Manuscript" />
-          </div>
+    <div {...rest} className={`h-full w-full min-h-0 ${rest.className || ''}`}>
+      <Form id="main-form" method="post" className="flex flex-row gap-0 justify-between items-stretch h-full w-full min-h-0" ref={containerRef}>
+        <div className="h-full overflow-hidden" style={{ width: `${leftWidth}%` }}>
+          <ManuscriptEditor defaultValue={loaderData.manuscript} />
         </div>
         <div
           className={`divider divider-horizontal m-0 p-1 cursor-col-resize hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors relative z-10 ${isDragging ? 'bg-slate-200/50 dark:bg-slate-700/50' : ''}`}
           onMouseDown={() => setIsDragging(true)}
         />
-        <div className=" flex-1">
-          <div>
-            <pre>{JSON.stringify(loaderData, null, 2)}</pre>
+        <div className="flex-1 h-full overflow-hidden">
+          <div className="h-full w-full overflow-auto p-4">
+            <pre className="text-sm font-mono whitespace-pre-wrap text-left">{JSON.stringify(loaderData.story, null, 2)}</pre>
           </div>
         </div>
-      </div>
+      </Form>
     </div>
   );
 }

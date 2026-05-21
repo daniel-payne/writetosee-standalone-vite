@@ -7,6 +7,9 @@ import { useLocalState } from '@keldan-systems/state-mutex';
 type MainLayoutProps = {
 } & HTMLAttributes<HTMLDivElement>;
 
+const DEFAULT_THEME = 'pastel';
+const DARK_THEME = 'dim';
+
 const unselectedStyle = 'btn btn-sm btn-ghost rounded-xl';
 const selectedStyle = 'btn btn-sm btn-primary bg-button hover:bg-button/80 bg-primary text-primary-content shadow-md shadow-primary/20 rounded-xl';
 const disabledStyle = 'btn btn-sm btn-ghost btn-disabled pointer-events-none';
@@ -16,14 +19,18 @@ export default function MainLayout({
   ...rest
 }: PropsWithChildren<MainLayoutProps>) {
   const location = useLocation();
-  const [theme, setTheme] = useLocalState<string>('writetosee-theme', 'pastel');
+  const [theme, setTheme] = useLocalState<string>('writetosee-theme', DEFAULT_THEME);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+    if (theme !== DEFAULT_THEME && theme !== DARK_THEME) {
+      setTheme(DEFAULT_THEME);
+    } else {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+  }, [theme, setTheme]);
 
   const toggleTheme = () => {
-    setTheme(theme === 'pastel' ? 'night' : 'pastel');
+    setTheme(theme === DEFAULT_THEME ? DARK_THEME : DEFAULT_THEME);
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -87,7 +94,7 @@ export default function MainLayout({
             <Link to="/" >
               <div className="p-2 bg-primary rounded-xl text-primary-content shadow-lg shadow-primary/30 animate-pulse">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 21l8.982-11.795H14.19l.818-5.096L6 15.904h3.813z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.83 17.29a2.182 2.182 0 01-.504.34l-3.327 1.11a.488.488 0 01-.613-.613l1.11-3.328a2.182 2.182 0 01.34-.504l12.016-12.017zm0 0L19.5 7.125" />
                 </svg>
               </div>
             </Link>
@@ -103,19 +110,19 @@ export default function MainLayout({
 
           <nav className="flex items-center gap-2">
             {/* <Link to="/" className={welcomeLinkStyle} >Welcome</Link> */}
-            {!loaderData?.safeMode && <Link to="/style" className={styleLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Style</Link>}
             <Link to="/story" className={storyLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Story</Link>
             {!loaderData?.safeMode && <Link to="/panels" className={panelsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Panels</Link>}
             {!loaderData?.safeMode && <Link to="/characters" className={charactersLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Characters</Link>}
             {!loaderData?.safeMode && <Link to="/images" className={imagesLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Images</Link>}
+            {!loaderData?.safeMode && <Link to="/style" className={styleLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Style</Link>}
             <Link to="/about" className={aboutLinkStyle}>About</Link>
           </nav>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto w-full flex flex-col">
-        <div className="w-full flex-1 mx-auto px-2 py-2 animate-fade-in flex flex-col">
+      <main className="flex-1 min-h-0 w-full flex flex-col">
+        <div className="w-full flex-1 mx-auto px-2 py-2 animate-fade-in flex flex-col min-h-0 overflow-y-auto">
           {children}
         </div>
       </main>
@@ -158,7 +165,7 @@ export default function MainLayout({
             onClick={toggleTheme}
             className="btn btn-sm btn-ghost gap-2 rounded-xl text-xs font-bold transition-all duration-300 hover:bg-base-content/10"
           >
-            {theme === 'pastel' ? (
+            {theme === DEFAULT_THEME ? (
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 text-warning">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
               </svg>

@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import SimpleConnector from '../components/SimpleConnector';
+import DisclaimerModal from '../components/DisclaimerModal';
 import NotificationDisplay from '../components/NotificationDisplay';
 import LLMConector from '../components/LLMConector';
 import FolderConnector from '../components/FolderConnector';
 import type { HTMLAttributes, PropsWithChildren } from "react";
 import { useLoaderData, useActionData, Link } from 'react-router-dom';
+
+
 
 type WelcomeProps = {
 } & HTMLAttributes<HTMLDivElement>;
@@ -25,8 +28,21 @@ export default function Welcome({
 
   const [errorMsg, setErrorMsg] = useState<string | undefined>(actionData?.errorMsg);
   const [successMsg, setSuccessMsg] = useState<string | undefined>(actionData?.successMsg);
+  const [showDisclaimer, setShowDisclaimer] = useState<boolean>(false);
 
   const isStartDisabled = hasDirectory === false || !((savedKey?.length ?? 0) > 0);
+
+  useEffect(() => {
+    const accepted = localStorage.getItem('disclamer-accecpted');
+    if (accepted !== 'true') {
+      setShowDisclaimer(true);
+    }
+  }, []);
+
+  const handleAcceptDisclaimer = () => {
+    localStorage.setItem('disclamer-accecpted', 'true');
+    setShowDisclaimer(false);
+  };
 
   useEffect(() => {
     if (loaderData) {
@@ -75,7 +91,7 @@ export default function Welcome({
           </h4>
         </div>
         {loaderData?.safeMode ? (
-          <SimpleConnector 
+          <SimpleConnector
             apiKey={apiKey ?? ''}
             setApiKey={setApiKey}
             hasDirectory={hasDirectory ?? false}
@@ -101,7 +117,11 @@ export default function Welcome({
           <button className="btn btn-primary" disabled={isStartDisabled}>Start Creating Your Story</button>
         </Link>
         <NotificationDisplay errorMsg={errorMsg} successMsg={successMsg} />
-      </div></div>
+      </div>
 
+      {showDisclaimer && (
+        <DisclaimerModal onAccept={handleAcceptDisclaimer} />
+      )}
+    </div>
   );
-};
+}

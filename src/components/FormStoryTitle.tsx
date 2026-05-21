@@ -17,7 +17,15 @@ export default function FormStoryTitle({
         <div {...rest} data-name={name}>
             <div className="flex flex-col gap-6">
                 <div>
-                    <label htmlFor="storyTitle" className="ps-4 block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Story Title</label>
+                    <div>
+                        <label htmlFor="storyTitle" className="ps-4 block text-md font-medium text-primary-content mb-1">
+                            Story Title
+                        </label>
+                        <label htmlFor="storyTitle" className="ps-4 block text-sm font-medium text-slate-400 dark:text-slate-600 mb-1">
+                            The title of your story.
+                        </label>
+
+                    </div>
                     <input
                         type="text"
                         name="storyTitle"

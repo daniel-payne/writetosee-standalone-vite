@@ -22,7 +22,7 @@ export default function Style({
     linkInstructions: (initialStyle.linkInstructions || []).join('\n'),
   });
 
-  const isDirty = 
+  const isDirty =
     formData.storyTitle !== (initialStyle.storyTitle || '') ||
     formData.drawingInstructions !== (initialStyle.drawingInstructions || []).join('\n') ||
     formData.linkUrl !== (initialStyle.linkUrl || '') ||
@@ -77,25 +77,25 @@ export default function Style({
 
 
   return (
-    <div {...rest} className={`p-6 w-full max-w-5xl mx-auto h-full overflow-auto ${rest.className || ''}`}>
-      <h1 className="text-3xl font-bold mb-6 text-primary-content">Style</h1>
-      <h2 className="text-lg font-bold mb-6 text-black/20">
-        <p>Here you describe the style you want your story to be illustrated in, </p>
-        <p>You can either provide a link to an image, or describe it in words, or both. </p>
-        <p>The more detail you provide, the better the illustrations will match your vision.</p>
-      </h2>
-
-      <Form id="main-form" method="post" className="space-y-6 bg-white dark:bg-slate-800 p-8 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-
-        <FormStoryTitle value={formData.storyTitle} onChange={handleChange} />
-
-        <FormDrawingInstructions value={formData.drawingInstructions} onChange={handleChange} />
-
-        <FormReferenceLink linkValue={formData.linkUrl} instructionsValue={formData.linkInstructions} onChange={handleChange} />
+    <div {...rest} className={`p-4 w-full mx-auto h-full overflow-auto ${rest.className || ''}`}>
 
 
+      <Form id="main-form" method="post" className="flex flex-row w-full h-full items-strech justify-between gap-2">
+
+        <div className="flex-1 card bg-base-100 shadow-xl border border-base-content/5 h-full flex flex-col overflow-hidden">
+          <div className="card-body flex-1 flex flex-col min-h-0">
+            <FormStoryTitle value={formData.storyTitle} onChange={handleChange} />
+
+            <FormDrawingInstructions value={formData.drawingInstructions} onChange={handleChange} />
+          </div>
+        </div>
 
 
+        <div className="flex-1 card bg-base-100 shadow-xl border border-base-content/5 h-full flex flex-col overflow-hidden">
+          <div className="card-body overflow-auto flex-1 flex flex-col min-h-0">
+            <FormReferenceLink linkValue={formData.linkUrl} instructionsValue={formData.linkInstructions} onChange={handleChange} />
+          </div>
+        </div>
       </Form>
     </div>
   );
