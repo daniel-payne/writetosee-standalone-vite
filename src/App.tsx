@@ -35,9 +35,9 @@ import Video from './routes/Video';
 import { clientLoader as videoLoader } from './routes/Video.loader';
 import { clientAction as videoAction } from './routes/Video.action';
 
-import Process from './routes/Process';
-import { clientLoader as processLoader } from './routes/Process.loader';
-import { clientAction as processAction } from './routes/Process.action';
+import Publication from './routes/Publication';
+import { clientLoader as publicationLoader } from './routes/Publication.loader';
+import { clientAction as publicationAction } from './routes/Publication.action';
 
 const router = createBrowserRouter([
   {
@@ -140,11 +140,12 @@ const router = createBrowserRouter([
         loader: videoLoader,
         action: videoAction,
       },
+
       {
-        path: '/process',
-        element: <Process />,
-        loader: processLoader,
-        action: processAction,
+        path: '/publication',
+        element: <Publication />,
+        loader: publicationLoader,
+        action: publicationAction,
       },
       {
         path: '/about',

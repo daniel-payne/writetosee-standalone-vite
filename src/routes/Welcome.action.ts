@@ -1,4 +1,4 @@
-import * as fileStorage from '../lib/fileStorage';
+import * as fileStorage from '../data/fileStorage';
 
 export interface WelcomeActionResult {
   success: boolean;

@@ -1,4 +1,5 @@
-import * as fileStorage from '../lib/fileStorage';
+import * as fileStorage from '../data/fileStorage';
+import processStory from '../data/processStory';
 
 export interface WelcomeLoaderData {
   hasDirectory: boolean;
@@ -24,6 +25,17 @@ export async function clientLoader(): Promise<WelcomeLoaderData> {
     if (hasDirectory) {
       filesList = await fileStorage.listFiles();
       directoryName = await fileStorage.getDirectoryName();
+
+      let story = '';
+      if (filesList && filesList.includes('story.md')) {
+        try {
+          const storyFile = await fileStorage.readFile('story.md');
+          story = await storyFile.text();
+        } catch (err) {
+          console.warn('Could not read story.md inside Welcome loader', err);
+        }
+      }
+      await processStory({ story });
     }
   } catch (err) {
     console.warn('Could not auto-verify directory handle inside clientLoader.', err);

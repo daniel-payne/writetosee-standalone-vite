@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, type HTMLAttributes, type PropsWithChildre
 import StoryEditor from "../components/StoryEditor";
 import { useLoaderData, useActionData, Form } from "react-router-dom";
 import type { StoryLoaderData } from "./Story.loader";
+import { useLocalState } from "@keldan-systems/state-mutex";
 
 type StoryProps = {} & HTMLAttributes<HTMLDivElement>;
 
@@ -11,6 +12,8 @@ export default function Story({
 }: PropsWithChildren<StoryProps>) {
   const loaderData = useLoaderData() as StoryLoaderData;
   useActionData();
+
+  const [publication] = useLocalState('publication', {})
 
   const [leftWidth, setLeftWidth] = useState(25);
   const [isDragging, setIsDragging] = useState(false);
@@ -63,7 +66,7 @@ export default function Story({
         />
         <div className="flex-1 h-full overflow-hidden">
           <div className="h-full w-full overflow-auto p-4">
-            <pre className="text-sm font-mono whitespace-pre-wrap text-left">{JSON.stringify(loaderData.publication, null, 2)}</pre>
+            <pre className="text-sm font-mono whitespace-pre-wrap text-left">{JSON.stringify(publication, null, 2)}</pre>
           </div>
         </div>
       </Form>

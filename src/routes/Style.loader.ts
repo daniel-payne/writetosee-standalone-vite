@@ -1,4 +1,4 @@
-import { readFile } from "../lib/fileStorage";
+import { readFile } from "../data/fileStorage";
 
 const DEFAULT_STYLE = {}
 

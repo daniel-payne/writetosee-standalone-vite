@@ -1,4 +1,4 @@
-import { writeFile } from "../lib/fileStorage";
+import { writeFile } from "../data/fileStorage";
 
 export async function clientAction({ request }: any) {
   const formData = await request.formData();
