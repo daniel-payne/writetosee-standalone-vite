@@ -1,0 +1,17 @@
+export default function mergeValues(values: Record<string, unknown>, defaults: Record<string, unknown>) {
+    const isPresent = ([_, value]: [string, unknown]) => {
+        if (value === null || value === undefined) return false;
+        if (typeof value === 'string' && value.trim() === '') return false;
+        if (Array.isArray(value) && value.length === 0) return false;
+        return true;
+    };
+
+    return {
+        ...Object.fromEntries(
+            Object.entries(defaults).filter(isPresent)
+        ),
+        ...Object.fromEntries(
+            Object.entries(values).filter(isPresent)
+        )
+    };
+}

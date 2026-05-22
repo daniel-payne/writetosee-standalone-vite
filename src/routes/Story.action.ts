@@ -1,6 +1,6 @@
-import * as fileStorage from '../data/fileStorage';
+import * as fileStorage from '@/data/fileStorage';
 import { type ActionFunctionArgs } from 'react-router-dom';
-import processPublication from '../data/processPublication';
+import processPublication from '@/data/processPublication';
 
 export async function clientAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData();

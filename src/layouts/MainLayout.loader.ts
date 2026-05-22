@@ -1,4 +1,4 @@
-import * as fileStorage from '../data/fileStorage';
+import * as fileStorage from '@/data/fileStorage';
 
 export interface MainLayoutLoaderData {
   hasDirectory: boolean;

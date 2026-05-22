@@ -1,8 +1,8 @@
 import { Form, useLoaderData, useNavigation, useBlocker } from "react-router-dom";
 import { useState, useEffect, type HTMLAttributes, type PropsWithChildren } from "react";
-import FormDrawingInstructions from "../components/FormDrawingInstructions";
-import FormReferenceLink from "../components/FormReferenceLink";
-import FormStoryTitle from "../components/FormStoryTitle";
+import FormDrawingInstructions from "@/components/FormDrawingInstructions";
+import FormReferenceLink from "@/components/FormReferenceLink";
+import FormStoryTitle from "@/components/FormStoryTitle";
 
 type StyleProps = {} & HTMLAttributes<HTMLDivElement>;
 

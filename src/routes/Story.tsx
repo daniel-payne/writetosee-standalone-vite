@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type HTMLAttributes, type PropsWithChildren } from "react";
-import StoryEditor from "../components/StoryEditor";
+import StoryEditor from "@/components/StoryEditor";
 import { useLoaderData, useActionData, Form } from "react-router-dom";
 import type { StoryLoaderData } from "./Story.loader";
 import { useLocalState } from "@keldan-systems/state-mutex";

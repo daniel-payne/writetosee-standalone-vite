@@ -1,4 +1,5 @@
 import { getState, setState, StoragePersistence } from "@keldan-systems/state-mutex"
+import generateParagraphs from "@/data/utilities/generateParagraphs";
 
 
 
@@ -13,7 +14,12 @@ export default async function processPublication({ story }: { story: string }) {
         publication.story = story
     }
 
-    publication.count = (publication.count ?? 0) + 1
+    publication.paragraphs = generateParagraphs(publication.story)
+
+
 
     setState("publication-data", publication, StoragePersistence.local);
+
+
+    return publication;
 }

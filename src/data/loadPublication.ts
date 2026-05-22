@@ -1,4 +1,4 @@
-import * as fileStorage from '../fileStorage';
+import * as fileStorage from './fileStorage';
 
 import { setState, getState, StoragePersistence } from "@keldan-systems/state-mutex";
 

@@ -1,4 +1,4 @@
-import { listFiles, readFile } from "../data/fileStorage";
+import { listFiles, readFile } from "@/data/fileStorage";
 
 export async function clientLoader() {
   try {

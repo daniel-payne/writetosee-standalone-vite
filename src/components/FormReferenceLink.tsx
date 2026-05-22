@@ -1,6 +1,6 @@
 import React, { useState, useEffect, type HTMLAttributes, type PropsWithChildren } from "react";
 import { useFetcher } from "react-router-dom";
-import { readFile, listFiles } from "../data/fileStorage";
+import { readFile, listFiles } from "@/data/fileStorage";
 
 type ComponentProps = {
     linkValue: string;

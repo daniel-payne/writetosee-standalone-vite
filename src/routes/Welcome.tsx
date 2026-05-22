@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import SimpleConnector from '../components/SimpleConnector';
-import DisclaimerModal from '../components/DisclaimerModal';
-import NotificationDisplay from '../components/NotificationDisplay';
-import LLMConector from '../components/LLMConector';
-import FolderConnector from '../components/FolderConnector';
+import SimpleConnector from '@/components/SimpleConnector';
+import DisclaimerModal from '@/components/DisclaimerModal';
+import NotificationDisplay from '@/components/NotificationDisplay';
+import LLMConector from '@/components/LLMConector';
+import FolderConnector from '@/components/FolderConnector';
 import type { HTMLAttributes, PropsWithChildren } from "react";
 import { useLoaderData, useActionData, Link } from 'react-router-dom';
 

@@ -1,5 +1,5 @@
-import * as fileStorage from '../data/fileStorage';
-import processPublication from '../data/processPublication';
+import * as fileStorage from '@/data/fileStorage';
+import processPublication from '@/data/processPublication';
 
 export interface WelcomeLoaderData {
   hasDirectory: boolean;
