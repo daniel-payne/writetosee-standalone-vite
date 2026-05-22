@@ -1,26 +1,62 @@
 
 
+import generateTextDigest from "@/data/utilities/generateTextDigest";
+
 export default function generateParagraphs(text: string | null, characterThreshold = 20, paragraphSeparator = '\n\n') {
-  let paragraphs: string[]
-
   if (text == null) {
-    return []
+    return [];
   }
 
+  let rawParagraphs: string[];
   if (text.replace(/\s/g, '').length < characterThreshold) {
-    paragraphs = [text]
+    rawParagraphs = [text];
   } else {
-    paragraphs = text.split(paragraphSeparator).map(p => p.trim()).filter(p => p);
+    rawParagraphs = text.split(paragraphSeparator).map(p => p.trim()).filter(p => p);
   }
 
-  paragraphs = paragraphs.map(p => p.trim())
+  const result: Array<{
+    paragraphNo: number;
+    text: string;
+    precedingText: string | null;
+    chapterNo: number;
+    pageNo: number;
+    textDigest: string;
+  }> = [];
 
-  paragraphs = paragraphs.filter(p => p.indexOf("#") == -1)
+  let chapterNo = 0;
+  let pageNo = 0;
+  let paragraphNo = 0;
 
-  return paragraphs.map((p, i) => ({
-    text: p,
-    precedingText: i === 0 ? null : paragraphs.slice(0, i).join(paragraphSeparator),
-    paragraphOrder: i
-  }));
+  const currentPageParagraphs: string[] = [];
+
+  for (const block of rawParagraphs) {
+    const trimmed = block.trim();
+    if (trimmed.startsWith('##')) {
+      pageNo++;
+      currentPageParagraphs.length = 0; // Clear paragraphs for the new page
+    } else if (trimmed.startsWith('#')) {
+      chapterNo++;
+      pageNo = 0;
+      currentPageParagraphs.length = 0; // Clear paragraphs for the new chapter/page
+    } else {
+      const precedingText = currentPageParagraphs.length === 0
+        ? null
+        : currentPageParagraphs.join(paragraphSeparator);
+
+      result.push({
+        paragraphNo,
+        text: trimmed,
+        precedingText,
+        chapterNo,
+        pageNo,
+        textDigest: generateTextDigest(trimmed)
+      });
+
+      currentPageParagraphs.push(trimmed);
+      paragraphNo++;
+    }
+  }
+
+  return result;
 }
 

@@ -1,18 +1,11 @@
-import { readFile } from "@/data/fileStorage";
-
-const DEFAULT_STYLE = {}
+import { loadStyle } from "@/data/manageStyle";
 
 export async function clientLoader() {
   try {
-    const file = await readFile('style.json');
-    const text = await file.text();
-    const style = JSON.parse(text);
-
-    console.log('style', style)
-
+    const style = await loadStyle();
+    console.log('style', style);
     return { style };
   } catch (e) {
-
-    return { style: DEFAULT_STYLE }
+    return { style: {} };
   }
 }

@@ -1,25 +1,27 @@
-import { getState, setState, StoragePersistence } from "@keldan-systems/state-mutex"
 import generateParagraphs from "@/data/utilities/generateParagraphs";
+import generatePages from "./utilities/generatePages";
+import generateChapters from "./utilities/generateChapters";
+import { loadPublication, savePublication } from "./managePublication";
 
+export default async function processPublication({ style, story }: { style?: Record<string, any>, story?: string } = {}) {
+    // Load current publication state from disk or in-memory cache
+    const publication = await loadPublication();
 
-
-export default async function processPublication({ story }: { story: string }) {
-    let publication = getState("publication-data") as any;
-
-    if (publication == null) {
-        publication = {}
+    if (style != null) {
+        publication.style = style;
     }
 
     if (story != null) {
-        publication.story = story
+        publication.story = story;
     }
 
-    publication.paragraphs = generateParagraphs(publication.story)
 
+    publication.paragraphs = generateParagraphs(publication.story);
+    publication.pages = generatePages(publication.paragraphs);
+    publication.chapters = generateChapters(publication.pages);
 
-
-    setState("publication-data", publication, StoragePersistence.local);
-
+    // Save updated publication back to disk and update the hash state
+    await savePublication(publication);
 
     return publication;
 }

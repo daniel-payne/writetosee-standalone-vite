@@ -1,0 +1,121 @@
+
+type props = {
+    systemPrompt: string;
+    userPrompt: string;
+    apiKey: string;
+    model?: string;
+    inputCostPerMillion?: number;
+    outputCostPerMillion?: number;
+    forceJson?: boolean;
+    schema?: any;
+    temperature?: number;
+}
+
+type response = {
+    content: string;
+    totalCost: number;
+}
+
+export default async function processGoogleChat({
+    systemPrompt,
+    userPrompt,
+    apiKey,
+    model = "gemini-2.5-flash",
+    inputCostPerMillion = 0.075,
+    outputCostPerMillion = 0.30,
+    forceJson = false,
+    schema = null,
+    temperature = 0.7
+}: props): Promise<response> {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+    const payload = {
+        contents: [
+            {
+                role: "user",
+                parts: [{ text: userPrompt }]
+            }
+        ],
+        generationConfig: {
+            temperature: temperature
+        }
+    } as any;
+
+    // Gemini handles system prompts separately from the main messages array
+    if (systemPrompt) {
+        payload.systemInstruction = {
+            parts: [{ text: systemPrompt }]
+        };
+    }
+
+    // Enforce JSON output formatting
+    if (forceJson === true) {
+        payload.generationConfig.responseMimeType = "application/json";
+        if (schema) {
+            // Gemini schema requires uppercase Types and does not support additionalProperties
+            const cleanSchema = (s: any): any => {
+                if (typeof s !== 'object' || s === null) return s;
+                if (Array.isArray(s)) return s.map(cleanSchema);
+                const cleaned: Record<string, any> = {};
+                for (const key in s) {
+                    if (key === 'additionalProperties') continue;
+                    if (key === 'type' && typeof s[key] === 'string') {
+                        cleaned[key] = s[key].toUpperCase();
+                    } else {
+                        cleaned[key] = cleanSchema(s[key]);
+                    }
+                }
+                return cleaned;
+            };
+            payload.generationConfig.responseSchema = cleanSchema(schema);
+        }
+    }
+
+    try {
+
+
+        // Gemini typically accepts the API key as a query parameter
+        const response = await fetch(`${endpoint}?key=${apiKey}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorMessage = await response.text();
+
+            throw new Error(`API Error: ${response.status} - ${errorMessage}`);
+        }
+
+        const data = await response.json();
+
+        // Extracting content from Gemini's nested response structure
+        const content = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+        if (!content || content.length === 0) {
+
+            throw new Error("No response returned from the API");
+        }
+
+        let totalCost;
+
+        // Cost calculation based on Gemini's usageMetadata
+        if (data.usageMetadata) {
+            const usage = data.usageMetadata;
+
+            const inputCost = ((usage.promptTokenCount || 0) / 1_000_000) * inputCostPerMillion;
+            const outputCost = ((usage.candidatesTokenCount || 0) / 1_000_000) * outputCostPerMillion;
+
+            totalCost = inputCost + outputCost;
+        } else {
+            totalCost = 0;
+        }
+
+        return { content, totalCost };
+    } catch (error: any) {
+
+        throw new Error(`Error: ${error.message}`);
+    }
+}

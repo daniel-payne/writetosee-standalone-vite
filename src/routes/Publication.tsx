@@ -1,4 +1,4 @@
-import { useLocalState } from "@keldan-systems/state-mutex";
+import { usePublication } from "@/data/managePublication";
 import type { HTMLAttributes, PropsWithChildren } from "react";
 import { useLoaderData, useActionData } from "react-router-dom";
 
@@ -11,7 +11,7 @@ export default function Publication({
   useLoaderData();
   useActionData();
 
-  const [publication] = useLocalState('publication-data', {})
+  const [publication] = usePublication();
 
   return (
     <div {...rest} className={`p-6 ${rest.className || ''}`}>

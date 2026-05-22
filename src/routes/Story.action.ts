@@ -1,6 +1,5 @@
-import * as fileStorage from '@/data/fileStorage';
 import { type ActionFunctionArgs } from 'react-router-dom';
-import processPublication from '@/data/processPublication';
+import { saveStory } from '@/data/manageStory';
 
 export async function clientAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -9,11 +8,9 @@ export async function clientAction({ request }: ActionFunctionArgs) {
   if (intent === 'SAVE-UPDATES') {
     const story = formData.get('story') as string;
 
-    await processPublication({ story });
-
     try {
       if (story !== null) {
-        await fileStorage.writeFile('story.md', story);
+        await saveStory(story);
       }
 
       return { success: true, message: 'Story updated successfully' };
@@ -23,11 +20,9 @@ export async function clientAction({ request }: ActionFunctionArgs) {
   } else if (intent === 'UPDATE-STORY') {
     const story = formData.get('story') as string;
 
-    await processPublication({ story });
-
     try {
       if (story !== null) {
-        await fileStorage.writeFile('story.md', story as string);
+        await saveStory(story);
       }
       return { success: true, message: 'Story updated successfully' };
     } catch (err: any) {

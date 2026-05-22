@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, type HTMLAttributes, type PropsWithChildren } from "react";
 import StoryEditor from "@/components/StoryEditor";
 import { useLoaderData, useActionData, Form } from "react-router-dom";
-import type { StoryLoaderData } from "./Story.loader";
-import { useLocalState } from "@keldan-systems/state-mutex";
+import { usePublication } from "@/data/managePublication";
+import { useStory } from "@/data/manageStory";
 
 type StoryProps = {} & HTMLAttributes<HTMLDivElement>;
 
@@ -10,10 +10,11 @@ export default function Story({
   children,
   ...rest
 }: PropsWithChildren<StoryProps>) {
-  const loaderData = useLoaderData() as StoryLoaderData;
+  useLoaderData();
   useActionData();
 
-  const [publication] = useLocalState('publication-data', {})
+  const [publication] = usePublication();
+  const [story] = useStory();
 
   const [leftWidth, setLeftWidth] = useState(25);
   const [isDragging, setIsDragging] = useState(false);
@@ -58,7 +59,7 @@ export default function Story({
     <div {...rest} className={`h-full w-full min-h-0 ${rest.className || ''}`}>
       <Form id="main-form" method="post" className="flex flex-row gap-0 justify-between items-stretch h-full w-full min-h-0" ref={containerRef}>
         <div className="h-full overflow-hidden" style={{ width: `${leftWidth}%` }}>
-          <StoryEditor defaultValue={loaderData.story} />
+          <StoryEditor defaultValue={story} />
         </div>
         <div
           className={`divider divider-horizontal m-0 p-1 cursor-col-resize hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors relative z-10 ${isDragging ? 'bg-slate-200/50 dark:bg-slate-700/50' : ''}`}

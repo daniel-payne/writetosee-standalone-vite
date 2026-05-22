@@ -3,6 +3,7 @@ import { useState, useEffect, type HTMLAttributes, type PropsWithChildren } from
 import FormDrawingInstructions from "@/components/FormDrawingInstructions";
 import FormReferenceLink from "@/components/FormReferenceLink";
 import FormStoryTitle from "@/components/FormStoryTitle";
+import { useStyle } from "@/data/manageStyle";
 
 type StyleProps = {} & HTMLAttributes<HTMLDivElement>;
 
@@ -10,10 +11,11 @@ export default function Style({
   children,
   ...rest
 }: PropsWithChildren<StyleProps>) {
-  const loaderData = useLoaderData() as any;
+  useLoaderData();
   const navigation = useNavigation();
 
-  const initialStyle = loaderData?.style ?? {};
+  const [style] = useStyle();
+  const initialStyle = style ?? {};
 
   const [formData, setFormData] = useState({
     storyTitle: initialStyle.storyTitle || '',

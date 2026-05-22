@@ -32,10 +32,21 @@ export default function StoryEditor({
   const [text, setText] = useState<string>(defaultValue);
   const lastKeyRef = useRef<string>("");
 
+  const debounceTimeoutRef = useRef<any>(null);
+
   // Sync state if defaultValue changes from the outside (e.g. loader loads another story)
   useEffect(() => {
     setText(defaultValue);
   }, [defaultValue]);
+
+  // Clean up debounce timer on component unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const isEnter = e.key === "Enter" && !e.ctrlKey && !e.metaKey && !e.altKey;
@@ -47,6 +58,10 @@ export default function StoryEditor({
         const end = textarea.selectionEnd;
         const currentValue = textarea.value;
         const newValue = currentValue.substring(0, start) + "\n" + currentValue.substring(end);
+
+        if (debounceTimeoutRef.current) {
+          clearTimeout(debounceTimeoutRef.current);
+        }
 
         fetcher.submit(
           { intent: "UPDATE-STORY", story: newValue },
@@ -64,7 +79,38 @@ export default function StoryEditor({
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setText(e.target.value);
+    const newValue = e.target.value;
+    setText(newValue);
+
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
+      fetcher.submit(
+        { intent: "UPDATE-STORY", story: newValue },
+        { method: "post", action: "/story" }
+      );
+    }, 1000);
+  };
+
+  const handleCutPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const textarea = e.currentTarget;
+    setTimeout(() => {
+      const newValue = textarea.value;
+      setText(newValue);
+
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+
+      debounceTimeoutRef.current = setTimeout(() => {
+        fetcher.submit(
+          { intent: "UPDATE-STORY", story: newValue },
+          { method: "post", action: "/story" }
+        );
+      }, 1000);
+    }, 0);
   };
 
   return (
@@ -75,6 +121,8 @@ export default function StoryEditor({
         onKeyDown={handleKeyDown}
         onMouseDown={handleMouseDown}
         onChange={handleChange}
+        onCut={handleCutPaste}
+        onPaste={handleCutPaste}
         className="flex-1 w-full resize-none outline-none overflow-y-auto bg-transparent"
         placeholder="Type your story here..."
       />

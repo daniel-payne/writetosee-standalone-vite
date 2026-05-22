@@ -1,22 +1,17 @@
-import * as fileStorage from '@/data/fileStorage';
+import { loadStory } from '@/data/manageStory';
 
 export interface StoryLoaderData {
   story: string;
-
 }
 
 export async function clientLoader(): Promise<StoryLoaderData> {
   let story = '';
 
-
   try {
-    const storyFile = await fileStorage.readFile('story.md');
-    story = await storyFile.text();
+    story = await loadStory();
   } catch (err) {
-    console.warn('Could not read story.md', err);
+    console.warn('Could not load story in clientLoader:', err);
   }
-
-
 
   return { story };
 }

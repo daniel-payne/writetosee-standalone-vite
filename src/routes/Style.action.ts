@@ -1,4 +1,4 @@
-import { writeFile } from "@/data/fileStorage";
+import { saveStyle } from "@/data/manageStyle";
 
 export async function clientAction({ request }: any) {
   const formData = await request.formData();
@@ -21,10 +21,8 @@ export async function clientAction({ request }: any) {
       linkInstructions: linkInstructionsText.split('\n').map(line => line.trim()).filter(Boolean),
     };
 
-    const newContent = JSON.stringify(style, null, 2);
-
     try {
-      await writeFile('style.json', newContent);
+      await saveStyle(style);
       return { success: true };
     } catch (error) {
       console.error('Failed to save style.json:', error);
