@@ -3,6 +3,7 @@ import StoryEditor from "@/components/StoryEditor";
 import { useLoaderData, useActionData, Form } from "react-router-dom";
 import { usePublication } from "@/data/managePublication";
 import { useStory } from "@/data/manageStory";
+import ParagraphImageDisplay from "@/components/ParagraphImageDisplay";
 
 type StoryProps = {} & HTMLAttributes<HTMLDivElement>;
 
@@ -66,8 +67,14 @@ export default function Story({
           onMouseDown={() => setIsDragging(true)}
         />
         <div className="flex-1 h-full overflow-hidden">
-          <div className="h-full w-full overflow-auto p-4">
-            <pre className="text-sm font-mono whitespace-pre-wrap text-left">{JSON.stringify(publication, null, 2)}</pre>
+          <div className="h-full w-full overflow-auto p-0 flex flex-row flex-wrap gap-0 items-start justify-start content-start">
+            {publication?.paragraphs?.map((paragraph: any, idx: number) => (
+              <ParagraphImageDisplay
+                key={paragraph.textDigest || idx}
+                paragraph={paragraph}
+                className="w-1/4 aspect-square p-2"
+              />
+            ))}
           </div>
         </div>
       </Form>

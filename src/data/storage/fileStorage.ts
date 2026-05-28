@@ -122,7 +122,24 @@ export async function getDirectoryHandle(): Promise<any | null> {
 }
 
 /**
- * Write a file (text or binary/blob) to the saved directory.
+ * Helper to resolve nested directory handles.
+ */
+async function getDirectoryHandleForPath(
+  rootHandle: any,
+  pathSegments: string[],
+  create: boolean = false
+): Promise<any> {
+  let currentHandle = rootHandle;
+  for (const segment of pathSegments) {
+    if (segment && segment !== '.' && segment !== '..') {
+      currentHandle = await currentHandle.getDirectoryHandle(segment, { create });
+    }
+  }
+  return currentHandle;
+}
+
+/**
+ * Write a file (text or binary/blob) to the saved directory, supporting subdirectories (e.g. "sub/dir/file.txt")
  */
 export async function writeFile(fileName: string, content: string | Blob): Promise<void> {
   const dirHandle = await getDirectoryHandle();
@@ -130,14 +147,18 @@ export async function writeFile(fileName: string, content: string | Blob): Promi
     throw new Error('No directory selected or access not granted.');
   }
 
-  const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+  const parts = fileName.split('/');
+  const fileLeaf = parts.pop()!;
+  
+  const targetDirHandle = await getDirectoryHandleForPath(dirHandle, parts, true);
+  const fileHandle = await targetDirHandle.getFileHandle(fileLeaf, { create: true });
   const writable = await fileHandle.createWritable();
   await writable.write(content);
   await writable.close();
 }
 
 /**
- * Read a file's content from the saved directory.
+ * Read a file's content from the saved directory, supporting subdirectories (e.g. "sub/dir/file.txt")
  */
 export async function readFile(fileName: string): Promise<File> {
   const dirHandle = await getDirectoryHandle();
@@ -145,12 +166,16 @@ export async function readFile(fileName: string): Promise<File> {
     throw new Error('No directory selected or access not granted.');
   }
 
-  const fileHandle = await dirHandle.getFileHandle(fileName);
+  const parts = fileName.split('/');
+  const fileLeaf = parts.pop()!;
+
+  const targetDirHandle = await getDirectoryHandleForPath(dirHandle, parts, false);
+  const fileHandle = await targetDirHandle.getFileHandle(fileLeaf);
   return await fileHandle.getFile();
 }
 
 /**
- * List all files in the saved directory.
+ * List all files in the saved directory recursively, returning relative paths.
  */
 export async function listFiles(): Promise<string[]> {
   const dirHandle = await getDirectoryHandle();
@@ -158,13 +183,21 @@ export async function listFiles(): Promise<string[]> {
     return [];
   }
 
-  const fileNames: string[] = [];
-  for await (const entry of dirHandle.values()) {
-    if (entry.kind === 'file') {
-      fileNames.push(entry.name);
+  const filePaths: string[] = [];
+
+  async function collect(handle: any, currentPath: string) {
+    for await (const entry of handle.values()) {
+      const entryPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+      if (entry.kind === 'file') {
+        filePaths.push(entryPath);
+      } else if (entry.kind === 'directory') {
+        await collect(entry, entryPath);
+      }
     }
   }
-  return fileNames;
+
+  await collect(dirHandle, '');
+  return filePaths;
 }
 
 /**

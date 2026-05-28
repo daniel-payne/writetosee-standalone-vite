@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocalState, useSharedState, setState, StoragePersistence } from '@keldan-systems/state-mutex';
-import * as fileStorage from '@/data/fileStorage';
+import * as fileStorage from '@/data/storage/fileStorage';
 import generateTextDigest from '@/data/utilities/generateTextDigest';
 
 // Module-level caches to keep a single, synchronous source of truth in memory

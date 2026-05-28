@@ -1,4 +1,4 @@
-export default async function llmGenerateText(prompt: string, provider: 'gemini' = 'gemini'): Promise<string> {
+export default async function llmGenerateText(systemPrompt: string, userPrompt: string, provider: 'gemini' = 'gemini'): Promise<string> {
 
-    return Promise.resolve([prompt, provider].join('\n\n'))
+    return Promise.resolve([systemPrompt, userPrompt, provider].join('\n\n'))
 }

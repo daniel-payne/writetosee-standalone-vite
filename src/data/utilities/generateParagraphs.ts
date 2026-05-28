@@ -2,7 +2,9 @@
 
 import generateTextDigest from "@/data/utilities/generateTextDigest";
 
-export default function generateParagraphs(text: string | null, characterThreshold = 20, paragraphSeparator = '\n\n') {
+export default function generateParagraphs(publication: Record<string, any>, characterThreshold = 20, paragraphSeparator = '\n\n') {
+  const text = publication.story
+
   if (text == null) {
     return [];
   }
@@ -56,6 +58,8 @@ export default function generateParagraphs(text: string | null, characterThresho
       paragraphNo++;
     }
   }
+
+  publication.paragraphs = result;
 
   return result;
 }

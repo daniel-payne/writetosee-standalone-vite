@@ -38,6 +38,7 @@ export default function MainLayout({
   const loaderData = useLoaderData() as MainLayoutLoaderData;
   const navigation = useNavigation();
   const isSubmitting = navigation.state === 'submitting';
+
   const isStoryDisabled = !loaderData?.hasDirectory || !loaderData?.apiKey;
 
 
@@ -142,7 +143,7 @@ export default function MainLayout({
         <div className="flex-1 flex justify-center items-center min-h-[40px]">
 
           {isStoryDisabled ? (
-            <div className="text-xs text-base-content/50">Save not available in secondary windows</div>
+            <div className="text-xs text-base-content/50">Save not available without </div>
           ) : (
             ['/style', '/story', '/panels', '/characters'].includes(location.pathname) && (
               <div className="flex items-center space-x-4">

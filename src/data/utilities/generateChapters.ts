@@ -1,12 +1,8 @@
 import generateTextDigest from "@/data/utilities/generateTextDigest";
 
-export default function generateChapters(
-  pages: Array<{
-    chapterNo: number;
-    pageNo: number;
-    text: string;
-  }>
-) {
+export default function generateChapters(publication: Record<string, any>) {
+  const pages = publication.pages;
+
   const chaptersMap = new Map<number, { chapterNo: number; texts: string[] }>();
 
   for (const p of pages) {
@@ -19,7 +15,7 @@ export default function generateChapters(
     chaptersMap.get(p.chapterNo)!.texts.push(p.text);
   }
 
-  return Array.from(chaptersMap.values()).map(chapter => {
+  const result: any[] = Array.from(chaptersMap.values()).map(chapter => {
     const text = chapter.texts.join('\n\n');
     return {
       chapterNo: chapter.chapterNo,
@@ -27,4 +23,8 @@ export default function generateChapters(
       textDigest: generateTextDigest(text)
     };
   });
+
+  publication.chapters = result;
+
+  return result;
 }
