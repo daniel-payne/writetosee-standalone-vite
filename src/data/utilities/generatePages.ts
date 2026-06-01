@@ -23,7 +23,7 @@ export default function generatePages(publication: Record<string, any>) {
       chapterNo: page.chapterNo,
       pageNo: page.pageNo,
       text,
-      textDigest: generateTextDigest(text)
+      digest: generateTextDigest(text)
     };
   });
 

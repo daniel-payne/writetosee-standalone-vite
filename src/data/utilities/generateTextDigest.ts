@@ -1,6 +1,6 @@
 export default function generateTextDigest(input: string | null | undefined): string {
-    if (!input) {
-        return "0000000000000000";
+    if (input == null) {
+        return;
     }
 
     // Strip all whitespace and convert to lowercase

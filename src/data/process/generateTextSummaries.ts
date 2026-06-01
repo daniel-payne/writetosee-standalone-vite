@@ -1,6 +1,7 @@
 import llmGenerateText from "../llm/llmGenerateText";
-import { readFile } from "../storage/fileStorage";
+import { readFile, writeFile } from "../storage/fileStorage";
 import generateTextDigest from "../utilities/generateTextDigest";
+import storeCost from "../llm/storeCost";
 
 const MIN_SUMMARIZATION_LENGTH = 300;
 
@@ -21,34 +22,104 @@ const USER_PROMPT = `
 </text>
 `;
 
-async function getSummary(text: string): Promise<string> {
-    return await llmGenerateText(SYSTEM_PROMPT, USER_PROMPT.replace('{{TEXT}}', text));
+interface SummaryItem {
+    digest?: string;
+    text?: string;
+    summary?: string;
 }
 
-async function generateTextSummary(item: Record<string, any>): Promise<void> {
+interface PublicationData {
+    predicates: any[];
+    pages?: SummaryItem[];
+    chapters?: SummaryItem[];
+    paragraphs?: SummaryItem[];
+}
+
+async function generateTextSummary(item: SummaryItem): Promise<number | null> {
     const text = item.text;
 
     if (!text || text.length < MIN_SUMMARIZATION_LENGTH) {
-        return;
+        return null;
     }
 
-    item.digest = generateTextDigest(text);
+    const digest = item.digest || generateTextDigest(text);
+    item.digest = digest;
 
     try {
-        const file = await readFile(`summaries/${item.digest}.md`);
+        const file = await readFile(`summaries/${digest}.txt`);
 
         item.summary = await file.text();
-    } catch (error: any) {
-        if (error.name === 'NotFoundError') {
-            item.summary = await getSummary(text);
+        return null;
+    } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'NotFoundError') {
+            const userPrompt = USER_PROMPT
+                .replace('{{TEXT}}', text)
+                .trim();
+
+            const { content, totalCost } = await llmGenerateText(SYSTEM_PROMPT, userPrompt);
+            const contentString = content || '';
+            item.summary = contentString;
+
+            try {
+                await writeFile(`summaries/${digest}.txt`, contentString);
+            } catch (writeError) {
+                console.error("Failed to write summary cache file:", writeError);
+            }
+
+            return totalCost ?? null;
         } else {
             console.error("An unexpected error occurred:", error);
+            return null;
         }
     }
 }
 
-export default async function generateTextSummaries(publication: Record<string, any>): Promise<void> {
-    const items = [...(publication.pages || []), ...(publication.chapters || [])];
+export default async function generateTextSummaries(publication: PublicationData): Promise<void> {
+    const items = [
+        ...(publication.pages || []),
+        ...(publication.chapters || []),
+        ...(publication.predicates || []),
+    ];
 
-    await Promise.all(items.map(item => generateTextSummary(item)));
+    // Filter items that have text and meet the minimum length
+    const itemsToProcess = items.filter(item => item.text && item.text.length >= MIN_SUMMARIZATION_LENGTH);
+
+    // Group items by their digest
+    const digestToItems = new Map<string, SummaryItem[]>();
+    for (const item of itemsToProcess) {
+        const digest = item.digest || generateTextDigest(item.text!);
+        item.digest = digest;
+
+        let list = digestToItems.get(digest);
+        if (!list) {
+            list = [];
+            digestToItems.set(digest, list);
+        }
+        list.push(item);
+    }
+
+    const uniqueDigests = Array.from(digestToItems.keys());
+
+    // Process unique digests in parallel
+    const costs = await Promise.all(uniqueDigests.map(async (digest) => {
+        const list = digestToItems.get(digest)!;
+        const representativeItem = list[0];
+
+        // Generate summary for the representative item
+        const cost = await generateTextSummary(representativeItem);
+
+        // Copy the generated summary to all other duplicate items
+        const summary = representativeItem.summary;
+        for (const item of list) {
+            item.summary = summary;
+        }
+
+        return cost;
+    }));
+
+    const validCosts = costs.filter((cost): cost is number => cost !== null && cost !== undefined);
+
+    if (validCosts.length > 0) {
+        await storeCost(validCosts);
+    }
 }

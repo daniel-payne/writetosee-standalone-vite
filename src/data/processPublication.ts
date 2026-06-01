@@ -3,6 +3,7 @@ import generatePages from "@/data/utilities/generatePages";
 import generateChapters from "@/data/utilities/generateChapters";
 import { loadPublication, savePublication } from "@/data/managePublication";
 import generateTextSummaries from "@/data/process/generateTextSummaries";
+import generatePredicates from "./utilities/generatePredicates";
 
 export default async function processPublication({ style, story }: { style?: Record<string, any>, story?: string } = {}) {
     // Load current publication state from disk or in-memory cache
@@ -22,6 +23,7 @@ export default async function processPublication({ style, story }: { style?: Rec
     generateParagraphs(publication);
     generatePages(publication);
     generateChapters(publication);
+    generatePredicates(publication)
 
     await generateTextSummaries(publication);
 

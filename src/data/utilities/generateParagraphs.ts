@@ -19,10 +19,9 @@ export default function generateParagraphs(publication: Record<string, any>, cha
   const result: Array<{
     paragraphNo: number;
     text: string;
-    precedingText: string | null;
     chapterNo: number;
     pageNo: number;
-    textDigest: string;
+    digest: string;
   }> = [];
 
   let chapterNo = 0;
@@ -41,17 +40,12 @@ export default function generateParagraphs(publication: Record<string, any>, cha
       pageNo = 0;
       currentPageParagraphs.length = 0; // Clear paragraphs for the new chapter/page
     } else {
-      const precedingText = currentPageParagraphs.length === 0
-        ? null
-        : currentPageParagraphs.join(paragraphSeparator);
-
       result.push({
         paragraphNo,
         text: trimmed,
-        precedingText,
         chapterNo,
         pageNo,
-        textDigest: generateTextDigest(trimmed)
+        digest: generateTextDigest(trimmed)
       });
 
       currentPageParagraphs.push(trimmed);

@@ -23,7 +23,7 @@ export async function loadPublication(): Promise<any> {
 
     activeLoadPromise = (async () => {
         try {
-            const file = await fileStorage.readFile('publication.json');
+            const file = await fileStorage.readFile('data/publication.json');
             const text = await file.text();
             const loadedPub = JSON.parse(text);
             const calculatedHash = generateTextDigest(text);
@@ -50,9 +50,9 @@ export async function loadPublication(): Promise<any> {
                 setState('publication-hash', defaultHash, StoragePersistence.local);
 
                 try {
-                    await fileStorage.writeFile('publication.json', json);
+                    await fileStorage.writeFile('data/publication.json', json);
                 } catch (writeErr) {
-                    console.warn("Could not write default publication.json:", writeErr);
+                    console.warn("Could not write default data/publication.json:", writeErr);
                 }
 
                 return defaultPub;
@@ -89,7 +89,7 @@ export async function savePublication(
         const hash = generateTextDigest(json);
 
         // Save to disk
-        await fileStorage.writeFile('publication.json', json);
+        await fileStorage.writeFile('data/publication.json', json);
 
         // Update in-memory references
         inMemoryPublication = pub;

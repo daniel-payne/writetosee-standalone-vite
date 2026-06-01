@@ -20,7 +20,7 @@ export default function generateChapters(publication: Record<string, any>) {
     return {
       chapterNo: chapter.chapterNo,
       text,
-      textDigest: generateTextDigest(text)
+      digest: generateTextDigest(text)
     };
   });
 
