@@ -71,3 +71,14 @@ export default defineConfig([
   },
 ])
 ```
+
+
+## Skills
+
+npx skills add https://github.com/sickn33/antigravity-awesome-skills --skill senior-frontend
+npx skills add https://github.com/sickn33/antigravity-awesome-skills --skill react-patterns
+npx skills add https://github.com/sickn33/antigravity-awesome-skills --skill typescript-expert
+npx skills add https://github.com/sickn33/antigravity-awesome-skills --skill frontend-dev-guidelines 
+ 
+
+

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "frontend-dev-guidelines": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-dev-guidelines/SKILL.md",
+      "computedHash": "b1f1183bb089490302eca16b1495988b19bb2d6418b6dabc585f64976c61704f"
+    },
+    "react-patterns": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/react-patterns/SKILL.md",
+      "computedHash": "af8463c224dc911e56233db2c67bceb944099f764d77e34600cd951e85558081"
+    },
+    "senior-frontend": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/senior-frontend/SKILL.md",
+      "computedHash": "431bc32af5d82ceb3d0ad781c7c0ca2f0a585df5e7a768af85e23f0f67641e65"
+    },
+    "typescript-expert": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/typescript-expert/SKILL.md",
+      "computedHash": "525e74a7220ed67832001ca89b46deae8f2bab1abc9d25c56c8716d6550c795f"
+    }
+  }
+}

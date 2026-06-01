@@ -34,7 +34,7 @@ export default function FolderConnector({
             filesList={filesList}
           />
         </div>
-        <div className="card-actions p-4">
+        <div className="card-actions p-2">
           <FolderConnectorActions
             className="w-full p-8"
             hasDirectory={hasDirectory}

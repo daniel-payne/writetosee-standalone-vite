@@ -31,3 +31,6 @@ dist-ssr
 
 deploy-dev.sh
 deploy-prod.sh
+
+
+.agents/skills/*
