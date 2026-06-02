@@ -1,4 +1,5 @@
 import * as fileStorage from '@/data/storage/fileStorage';
+import { clearLogs } from '@/data/storage/logStorage';
 
 export interface WelcomeLoaderData {
   hasDirectory: boolean;
@@ -24,6 +25,11 @@ export async function clientLoader(): Promise<WelcomeLoaderData> {
     if (hasDirectory) {
       filesList = await fileStorage.listFiles();
       directoryName = await fileStorage.getDirectoryName();
+      try {
+        await clearLogs();
+      } catch (logErr) {
+        console.warn('Could not clear logs inside clientLoader.', logErr);
+      }
     }
   } catch (err) {
     console.warn('Could not auto-verify directory handle inside clientLoader.', err);

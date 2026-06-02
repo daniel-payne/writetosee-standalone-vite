@@ -1,7 +1,7 @@
-import llmGenerateText from "../llm/llmGenerateText";
-import { readFile, writeFile } from "../storage/fileStorage";
-import generateTextDigest from "../utilities/generateTextDigest";
-import storeCost from "../llm/storeCost";
+import llmGenerateText from "@/data/llm/llmGenerateText";
+import { storeCost } from "@/data/storage/costStorage";
+import { readFile, writeFile } from "@/data/storage/fileStorage";
+import generateTextDigest from "@/data/utilities/generateTextDigest";
 
 const MIN_SUMMARIZATION_LENGTH = 300;
 
