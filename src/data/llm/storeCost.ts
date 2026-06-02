@@ -1,4 +1,6 @@
 import { readFile, writeFile } from "../storage/fileStorage";
+import writeLog from "../utilities/storeLog";
+// ... (lines omitted for brevity, target content handles replacements)
 
 export default async function storeCost(cost: number | (number | null | undefined)[] | null | undefined) {
     if (cost === null || cost === undefined) {
@@ -57,4 +59,7 @@ export default async function storeCost(cost: number | (number | null | undefine
 
     const content = costs.map(item => JSON.stringify(item)).join('\n');
     await writeFile('data/costs.json', content);
+    
+    // Log the event
+    await writeLog('info', 'llm', `LLM API query cost stored: $${validCosts.reduce((s, c) => s + c, 0).toFixed(5)}`);
 }

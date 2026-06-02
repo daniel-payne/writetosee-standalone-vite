@@ -3,6 +3,22 @@ import { useLocalState, useSharedState, setState, StoragePersistence } from '@ke
 import * as fileStorage from '@/data/storage/fileStorage';
 import generateTextDigest from '@/data/utilities/generateTextDigest';
 import processPublication from './processPublication';
+import markdownToJSON from './utilities/markdownToJSON';
+import jsonToMarkdown from './utilities/jsonToMarkdown';
+
+const defaultStyle = {
+    storyTitle: "A story about [name]",
+    drawingInstructions: [
+        "Vibrant, colorful children's book illustration style, bright colors, clear shapes, happy atmosphere, fameless, full-bleed, no white margins, edge-to-edge environment. Keep the background in focus and of the same style as the foreground.",
+        "Ensure that the illustrations complement the text, are lively and expressive, and simple enough for young children aged 4 to 8 years old to understand.",
+        "The target persona is a boy or girl aged between 4 and 8 years old.",
+        "The lighting is from all directions, creating a happy and childlike landscape.",
+        "Use bright colors and clear shapes to capture the attention of young readers.",
+        "Each illustration should be lively and expressive, conveying the emotions and actions of the characters clearly.",
+        "The illustrations should be colorful, engaging, and simple enough for young children to understand.",
+        "Ensure that the illustrations complement the text and help to tell the story visually."
+    ],
+}
 
 // Module-level caches to keep a single, synchronous source of truth in memory
 // across all components using the useStyle hooks.
@@ -15,6 +31,10 @@ let activeLoadPromise: Promise<any> | null = null;
  * and the loading/error states.
  */
 export async function loadStyle(): Promise<any> {
+    if (inMemoryStyle !== null) {
+        return inMemoryStyle;
+    }
+
     if (activeLoadPromise) {
         return activeLoadPromise;
     }
@@ -24,9 +44,9 @@ export async function loadStyle(): Promise<any> {
 
     activeLoadPromise = (async () => {
         try {
-            const file = await fileStorage.readFile('style.json');
+            const file = await fileStorage.readFile('style.md');
             const text = await file.text();
-            const loadedStyle = JSON.parse(text);
+            const loadedStyle = markdownToJSON(text);
             const calculatedHash = generateTextDigest(text);
 
             inMemoryStyle = loadedStyle;
@@ -40,9 +60,9 @@ export async function loadStyle(): Promise<any> {
         } catch (e: any) {
             // Initialize empty style if file doesn't exist
             if (e.name === 'NotFoundError' || e.message?.includes('NotFoundError') || e.message?.includes('does not exist')) {
-                const defaultStyle = {};
-                const json = JSON.stringify(defaultStyle, null, 2);
-                const defaultHash = generateTextDigest(json);
+
+                const markdown = jsonToMarkdown(defaultStyle);
+                const defaultHash = generateTextDigest(markdown);
 
                 inMemoryStyle = defaultStyle;
                 inMemoryHash = defaultHash;
@@ -51,9 +71,9 @@ export async function loadStyle(): Promise<any> {
                 setState('style-hash', defaultHash, StoragePersistence.local);
 
                 try {
-                    await fileStorage.writeFile('style.json', json);
+                    await fileStorage.writeFile('style.md', markdown);
                 } catch (writeErr) {
-                    console.warn("Could not write default style.json:", writeErr);
+                    console.warn("Could not write default style.md:", writeErr);
                 }
 
                 return defaultStyle;
@@ -86,11 +106,12 @@ export async function saveStyle(
     setState('style-error', null, StoragePersistence.none);
 
     try {
-        const json = JSON.stringify(style, null, 2);
-        const hash = generateTextDigest(json);
+        const markdown = jsonToMarkdown(style);
+        const hash = generateTextDigest(markdown);
+
 
         // Save to disk
-        await fileStorage.writeFile('style.json', json);
+        await fileStorage.writeFile('style.md', markdown);
 
         // Update in-memory references
         inMemoryStyle = style;
@@ -178,4 +199,13 @@ export function useStyleLoading(): [boolean] {
 export function useStyleLoadingError(): [string | null] {
     const [error] = useSharedState<string | null>('style-error', null);
     return [error];
+}
+
+/**
+ * Checks if the style is already loaded in memory.
+ * 
+ * @returns boolean
+ */
+export function isStyleLoaded(): boolean {
+    return inMemoryStyle !== null;
 }

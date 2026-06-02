@@ -1,10 +1,11 @@
 import generateTextDigest from "@/data/utilities/generateTextDigest";
 
 interface ParagraphItem {
-  text: string;
+  paragraphIndex: number;
   chapterNo: number;
   pageNo: number;
   paragraphNo: number;
+  text: string;
 }
 
 interface PublicationData {
@@ -26,6 +27,7 @@ export default function generatePredicates(publication: PublicationData) {
     }
 
     const item = {
+      paragraphIndex: p.paragraphIndex,
       chapterNo: p.chapterNo,
       pageNo: p.pageNo,
       paragraphNo: p.paragraphNo,

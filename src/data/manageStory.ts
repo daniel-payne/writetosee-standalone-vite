@@ -15,6 +15,10 @@ let activeLoadPromise: Promise<string> | null = null;
  * and the loading/error states.
  */
 export async function loadStory(): Promise<string> {
+    if (inMemoryHash !== null) {
+        return inMemoryStory;
+    }
+
     if (activeLoadPromise) {
         return activeLoadPromise;
     }
@@ -175,4 +179,13 @@ export function useStoryLoading(): [boolean] {
 export function useStoryLoadingError(): [string | null] {
     const [error] = useSharedState<string | null>('story-error', null);
     return [error];
+}
+
+/**
+ * Checks if the story is already loaded in memory.
+ * 
+ * @returns boolean
+ */
+export function isStoryLoaded(): boolean {
+    return inMemoryHash !== null;
 }

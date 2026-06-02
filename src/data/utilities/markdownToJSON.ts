@@ -26,140 +26,157 @@ function toCamelCase(text: string): string {
     .join('');
 }
 
-export default function markdownToJSON(markdown: string): Record<string, unknown> {
-  const root: Record<string, unknown> = {};
+interface HeadingNode {
+  key: string;
+  level: number;
+  textLines: string[];
+  listItems: string[];
+  properties: { key: string; val: string }[];
+  children: HeadingNode[];
+}
+
+export default function markdownToJSON(markdown: string): Record<string, any> {
   const lines = markdown.split(/\r?\n/);
 
-  // Keep track of active heading keys at each level (1-indexed level)
-  let activeHeadings: string[] = [];
+  const rootHeadings: HeadingNode[] = [];
+  const rootProperties: { key: string; val: string }[] = [];
+  const rootTextLines: string[] = [];
+  const rootListItems: string[] = [];
 
-  // Map to accumulate text lines for each object
-  const textLinesMap = new Map<Record<string, unknown>, string[]>();
-
-  // Helper to get the target object for the current heading path
-  function getTargetObject(path: string[]): Record<string, unknown> {
-    let current = root;
-    for (const key of path) {
-      if (current[key] === undefined || typeof current[key] !== 'object' || current[key] === null) {
-        current[key] = {} as Record<string, unknown>;
-      }
-      current = current[key] as Record<string, unknown>;
-    }
-    return current;
-  }
+  const stack: HeadingNode[] = [];
 
   for (const line of lines) {
-    // 1. Check for heading (up to 6 levels)
+    // 1. Heading
     const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
     if (headingMatch) {
-      const level = headingMatch[1].length; // number of '#'
+      const level = headingMatch[1].length;
       const headingText = headingMatch[2].trim();
       const headingKey = toCamelCase(headingText);
 
-      // Clear any deeper level active headings
-      activeHeadings = activeHeadings.slice(0, level - 1);
-      activeHeadings[level - 1] = headingKey;
+      const node: HeadingNode = {
+        key: headingKey,
+        level,
+        textLines: [],
+        listItems: [],
+        properties: [],
+        children: []
+      };
+
+      while (stack.length >= level) {
+        stack.pop();
+      }
+
+      if (stack.length > 0) {
+        stack[stack.length - 1].children.push(node);
+      } else {
+        rootHeadings.push(node);
+      }
+      stack.push(node);
       continue;
     }
 
-    // 2. Check for property item (starting with - or * or + and containing :)
+    // 2. Property
     const propertyMatch = line.match(/^\s*[-*+]\s+(.+?)\s*:\s*(.+)$/);
     if (propertyMatch) {
       const key = propertyMatch[1].trim();
       const val = propertyMatch[2].trim();
-      const target = getTargetObject(activeHeadings);
-      target[key] = val;
+      if (stack.length > 0) {
+        stack[stack.length - 1].properties.push({ key, val });
+      } else {
+        rootProperties.push({ key, val });
+      }
       continue;
     }
 
-    // 3. Otherwise, treat as normal text line (even if empty)
-    const target = getTargetObject(activeHeadings);
-    let textLines = textLinesMap.get(target);
-    if (!textLines) {
-      textLines = [];
-      textLinesMap.set(target, textLines);
+    // 3. Ordered List Item
+    const orderedListMatch = line.match(/^\s*\d+\.\s+(.+)$/);
+    if (orderedListMatch) {
+      const itemText = orderedListMatch[1].trim();
+      if (stack.length > 0) {
+        stack[stack.length - 1].listItems.push(itemText);
+      } else {
+        rootListItems.push(itemText);
+      }
+      continue;
     }
-    textLines.push(line);
+
+    // 4. Regular Text (keep empty lines for paragraph breaks)
+    if (stack.length > 0) {
+      stack[stack.length - 1].textLines.push(line);
+    } else {
+      rootTextLines.push(line);
+    }
   }
 
-  // Process accumulated text lines for each object
-  for (const [target, accumulatedLines] of textLinesMap.entries()) {
-    // Trim leading and trailing empty/blank lines
+  function cleanTextLines(textLines: string[]): string {
     let start = 0;
-    while (start < accumulatedLines.length && accumulatedLines[start].trim() === '') {
+    while (start < textLines.length && textLines[start].trim() === '') {
       start++;
     }
-    let end = accumulatedLines.length - 1;
-    while (end >= start && accumulatedLines[end].trim() === '') {
+    let end = textLines.length - 1;
+    while (end >= start && textLines[end].trim() === '') {
       end--;
     }
-
     if (start <= end) {
-      const sliced = accumulatedLines.slice(start, end + 1);
-      const joinedText = sliced.join('\n');
-      if (joinedText !== '') {
-        target['text'] = joinedText;
+      return textLines.slice(start, end + 1).join('\n').trim();
+    }
+    return '';
+  }
+
+  function buildNodeJSON(node: HeadingNode): unknown {
+    const textVal = cleanTextLines(node.textLines);
+
+    if (node.children.length > 0) {
+      const obj: Record<string, unknown> = {};
+      if (textVal !== '') {
+        obj.text = textVal;
+      }
+      for (const prop of node.properties) {
+        obj[prop.key] = prop.val;
+      }
+      for (const child of node.children) {
+        obj[child.key] = buildNodeJSON(child);
+      }
+      return obj;
+    } else {
+      if (node.level === 1) {
+        if (node.listItems.length > 0) {
+          return node.listItems;
+        }
+        return textVal;
+      } else {
+        const obj: Record<string, unknown> = {};
+        if (node.listItems.length > 0) {
+          obj.text = node.listItems;
+        } else if (textVal !== '') {
+          obj.text = textVal;
+        }
+        for (const prop of node.properties) {
+          obj[prop.key] = prop.val;
+        }
+        return obj;
       }
     }
+  }
+
+  const root: Record<string, unknown> = {};
+
+  for (const prop of rootProperties) {
+    root[prop.key] = prop.val;
+  }
+
+  const rootText = cleanTextLines(rootTextLines);
+  if (rootText !== '') {
+    root['text'] = rootText;
+  }
+
+  if (rootListItems.length > 0) {
+    root['listItems'] = rootListItems;
+  }
+
+  for (const heading of rootHeadings) {
+    root[heading.key] = buildNodeJSON(heading);
   }
 
   return root;
 }
-
-
-/*
-
-EXAMPLES
-
-
-```md
-All the text from the MD
-```
-
-```JSON
-{
-  "text": "All the text from the MD"
-}
-```
-
-```md
-# Heading 1
-## Heading 2
-### Heading 3
-#### Heading 4
-##### Heading 5
-###### Heading 6
-All the Text till the next heading
-```
-```json
-{
-  "headingOne": {
-    "headingTwo": {
-      "headingThree": {
-        "headingFour": {
-          "headingFive": {
-            "headingSix": { "text": "All the Text till the next heading"}
-          }
-        }
-      }
-    }
-  }
-
-}
-```
-
-```md
-- property One : value
-- property Two : value two
-```
-
-```json
-{
-  "property One": "value",
-  "property Two": "value two"
-}
-```
-
-
-
-*/

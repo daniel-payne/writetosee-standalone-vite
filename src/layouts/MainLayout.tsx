@@ -47,9 +47,9 @@ export default function MainLayout({
   let panelsLinkStyle = unselectedStyle;
   let charactersLinkStyle = unselectedStyle;
   let imagesLinkStyle = unselectedStyle;
+  let costsLinkStyle = unselectedStyle;
+  let logsLinkStyle = unselectedStyle;
   let aboutLinkStyle = unselectedStyle;
-
-
 
   if (isActive('/style')) {
     styleLinkStyle = selectedStyle;
@@ -71,6 +71,14 @@ export default function MainLayout({
     imagesLinkStyle = selectedStyle;
   }
 
+  if (isActive('/costs')) {
+    costsLinkStyle = selectedStyle;
+  }
+
+  if (isActive('/logs')) {
+    logsLinkStyle = selectedStyle;
+  }
+
   if (isActive('/about')) {
     aboutLinkStyle = selectedStyle;
   }
@@ -81,6 +89,8 @@ export default function MainLayout({
     imagesLinkStyle = disabledStyle;
     storyLinkStyle = disabledStyle;
     styleLinkStyle = disabledStyle;
+    costsLinkStyle = disabledStyle;
+    logsLinkStyle = disabledStyle;
     aboutLinkStyle = disabledStyle;
   }
 
@@ -122,6 +132,8 @@ export default function MainLayout({
             {!loaderData?.safeMode && <Link to="/characters" className={charactersLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Characters</Link>}
             {!loaderData?.safeMode && <Link to="/images" className={imagesLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Images</Link>}
             {!loaderData?.safeMode && <Link to="/style" className={styleLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Style</Link>}
+            {!loaderData?.safeMode && <Link to="/costs" className={costsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Costs</Link>}
+            {!loaderData?.safeMode && <Link to="/logs" className={logsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Logs</Link>}
             <Link to="/about" className={aboutLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>About</Link>
           </nav>
         </div>
@@ -143,7 +155,7 @@ export default function MainLayout({
         <div className="flex-1 flex justify-center items-center min-h-[40px]">
 
           {isStoryDisabled ? (
-            <div className="text-xs text-base-content/50">Save not available without </div>
+            <div className="text-xs text-base-content/50">Save not available without a API Key and Local Directory Set</div>
           ) : (
             ['/style', '/story', '/panels', '/characters'].includes(location.pathname) && (
               <div className="flex items-center space-x-4">

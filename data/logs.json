@@ -1,0 +1,22 @@
+[
+  {"datetime":"2026-06-02T11:00:01.123Z","type":"info","source":"system","message":"Application initialized successfully"},
+  {"datetime":"2026-06-02T11:05:12.456Z","type":"info","source":"directory","message":"Local directory check completed"},
+  {"datetime":"2026-06-02T11:10:22.789Z","type":"info","source":"apikey","message":"API Key availability verified"},
+  {"datetime":"2026-06-02T11:12:05.111Z","type":"info","source":"story","message":"story.md read from storage"},
+  {"datetime":"2026-06-02T11:12:10.222Z","type":"info","source":"style","message":"style.md parsed successfully"},
+  {"datetime":"2026-06-02T11:15:33.333Z","type":"info","source":"llm","message":"Text summarization request sent to Gemini"},
+  {"datetime":"2026-06-02T11:15:35.555Z","type":"info","source":"llm","message":"LLM API response received: 120 prompt tokens, 50 response tokens"},
+  {"datetime":"2026-06-02T11:15:36.666Z","type":"info","source":"llm","message":"LLM API query cost stored: $0.00003"},
+  {"datetime":"2026-06-02T11:18:40.777Z","type":"info","source":"images","message":"Scanning directory for generated assets"},
+  {"datetime":"2026-06-02T11:20:00.888Z","type":"warn","source":"images","message":"Asset missing: character_hero.png. Fallback display will be used."},
+  {"datetime":"2026-06-02T11:22:15.999Z","type":"info","source":"panels","message":"panels.json generated successfully"},
+  {"datetime":"2026-06-02T11:25:30.000Z","type":"info","source":"llm","message":"Requesting panel 1 illustration script details"},
+  {"datetime":"2026-06-02T11:25:34.123Z","type":"info","source":"llm","message":"LLM API response received: 250 prompt tokens, 100 response tokens"},
+  {"datetime":"2026-06-02T11:25:35.234Z","type":"info","source":"llm","message":"LLM API query cost stored: $0.00006"},
+  {"datetime":"2026-06-02T11:30:45.345Z","type":"info","source":"directory","message":"Saving latest story.md updates to local disk"},
+  {"datetime":"2026-06-02T11:32:00.456Z","type":"error","source":"llm","message":"API Rate limit reached on Gemini endpoint. Retrying in 5 seconds."},
+  {"datetime":"2026-06-02T11:32:05.567Z","type":"info","source":"llm","message":"Retry successful: LLM API response received"},
+  {"datetime":"2026-06-02T11:32:06.678Z","type":"info","source":"llm","message":"LLM API query cost stored: $0.00004"},
+  {"datetime":"2026-06-02T11:40:50.789Z","type":"info","source":"publication","message":"Compilation of publication PDF package started"},
+  {"datetime":"2026-06-02T11:41:00.890Z","type":"info","source":"publication","message":"Publication package generated successfully: 4 pages"}
+]

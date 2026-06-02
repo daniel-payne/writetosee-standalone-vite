@@ -39,3 +39,10 @@ When storing files received from LLMs (such as Markdown `.md` text and PNG `.png
 ## 4. Component Creation
 
 *   **Template:** ALWAYS use `src/components/DefaultComponent.tsx` as a template when creating a new React component in this project. It provides the standard `HTMLAttributes` and `PropsWithChildren` wrapper, along with proper `data-name` attributes for debugging.
+
+---
+
+## 5. Planning and Execution Guidelines
+
+*   **No Mandatory Planning:** Unless explicitly requested by the user, the developer agent does not need to create implementation plans, task checklists, or walkthrough artifacts. The agent should directly execute requested changes and verify them.
+

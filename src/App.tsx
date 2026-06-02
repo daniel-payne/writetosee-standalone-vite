@@ -39,6 +39,13 @@ import Publication from './routes/Publication';
 import { clientLoader as publicationLoader } from './routes/Publication.loader';
 import { clientAction as publicationAction } from './routes/Publication.action';
 
+import Costs from './routes/Costs';
+import { clientLoader as costsLoader } from './routes/Costs.loader';
+
+import Logs from './routes/Logs';
+import { clientLoader as logsLoader } from './routes/Logs.loader';
+
+
 const router = createBrowserRouter([
   {
     path: '/safe',
@@ -146,6 +153,16 @@ const router = createBrowserRouter([
         element: <Publication />,
         loader: publicationLoader,
         action: publicationAction,
+      },
+      {
+        path: '/costs',
+        element: <Costs />,
+        loader: costsLoader,
+      },
+      {
+        path: '/logs',
+        element: <Logs />,
+        loader: logsLoader,
       },
       {
         path: '/about',

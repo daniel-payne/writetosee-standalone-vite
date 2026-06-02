@@ -176,3 +176,24 @@ export function usePublicationLoadingError(): [string | null] {
     const [error] = useSharedState<string | null>('publication-error', null);
     return [error];
 }
+
+
+export function getChapter(chapterNo) {
+    return inMemoryPublication?.chapters?.find((c: any) => c.chapterNo === chapterNo);
+}
+
+export function getPage(chapterNo, pageNo) {
+    return inMemoryPublication?.pages?.find((p: any) => p.chapterNo === chapterNo && p.pageNo === pageNo);
+}
+
+export function getParagraph(chapterNo, pageNo, paragraphNo) {
+    return inMemoryPublication?.paragraphs?.find((p: any) => p.chapterNo === chapterNo && p.pageNo === pageNo && p.paragraphNo === paragraphNo);
+}
+
+export function getPredicates(chapterNo, pageNo, paragraphNo) {
+    return inMemoryPublication?.predicates?.find((p: any) => p.chapterNo === chapterNo && p.pageNo === pageNo && p.paragraphNo === paragraphNo);
+}
+
+export function getPrompts(chapterNo, pageNo, paragraphNo) {
+    return inMemoryPublication?.prompts?.find((p: any) => p.chapterNo === chapterNo && p.pageNo === pageNo && p.paragraphNo === paragraphNo);
+}   

@@ -17,18 +17,25 @@ export default function Style({
   const [style] = useStyle();
   const initialStyle = style ?? {};
 
+  const safeJoin = (val: unknown): string => {
+    if (Array.isArray(val)) {
+      return val.join('\n');
+    }
+    return typeof val === 'string' ? val : '';
+  };
+
   const [formData, setFormData] = useState({
     storyTitle: initialStyle.storyTitle || '',
-    drawingInstructions: (initialStyle.drawingInstructions || []).join('\n'),
+    drawingInstructions: safeJoin(initialStyle.drawingInstructions),
     linkUrl: initialStyle.linkUrl || '',
-    linkInstructions: (initialStyle.linkInstructions || []).join('\n'),
+    linkInstructions: safeJoin(initialStyle.linkInstructions),
   });
 
   const isDirty =
     formData.storyTitle !== (initialStyle.storyTitle || '') ||
-    formData.drawingInstructions !== (initialStyle.drawingInstructions || []).join('\n') ||
+    formData.drawingInstructions !== safeJoin(initialStyle.drawingInstructions) ||
     formData.linkUrl !== (initialStyle.linkUrl || '') ||
-    formData.linkInstructions !== (initialStyle.linkInstructions || []).join('\n');
+    formData.linkInstructions !== safeJoin(initialStyle.linkInstructions);
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) => {
@@ -66,9 +73,9 @@ export default function Style({
   useEffect(() => {
     setFormData({
       storyTitle: initialStyle.storyTitle || '',
-      drawingInstructions: (initialStyle.drawingInstructions || []).join('\n'),
+      drawingInstructions: safeJoin(initialStyle.drawingInstructions),
       linkUrl: initialStyle.linkUrl || '',
-      linkInstructions: (initialStyle.linkInstructions || []).join('\n'),
+      linkInstructions: safeJoin(initialStyle.linkInstructions),
     });
   }, [initialStyle]);
 
@@ -80,7 +87,6 @@ export default function Style({
 
   return (
     <div {...rest} className={`p-4 w-full mx-auto h-full overflow-auto ${rest.className || ''}`}>
-
 
       <Form id="main-form" method="post" className="flex flex-row w-full h-full items-strech justify-between gap-2">
 

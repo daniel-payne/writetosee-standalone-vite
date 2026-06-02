@@ -18,6 +18,7 @@ export default function generateParagraphs(publication: Record<string, any>, cha
 
   const result: Array<{
     paragraphNo: number;
+    paragraphIndex: number;
     text: string;
     chapterNo: number;
     pageNo: number;
@@ -30,7 +31,8 @@ export default function generateParagraphs(publication: Record<string, any>, cha
 
   const currentPageParagraphs: string[] = [];
 
-  for (const block of rawParagraphs) {
+  for (let i = 0; i < rawParagraphs.length; i++) {
+    const block = rawParagraphs[i];
     const trimmed = block.trim();
     if (trimmed.startsWith('##')) {
       pageNo++;
@@ -42,6 +44,7 @@ export default function generateParagraphs(publication: Record<string, any>, cha
     } else {
       result.push({
         paragraphNo,
+        paragraphIndex: i,
         text: trimmed,
         chapterNo,
         pageNo,

@@ -23,9 +23,14 @@ export default async function processPublication({ style, story }: { style?: Rec
     generateParagraphs(publication);
     generatePages(publication);
     generateChapters(publication);
+
     generatePredicates(publication)
 
     await generateTextSummaries(publication);
+
+    // generatePrompts(publication);
+
+    // await generateImages(publication);
 
     // Save updated publication back to disk and update the hash state
     await savePublication(publication);
