@@ -1,7 +1,10 @@
 import { readFile, writeFile } from "./fileStorage";
 import { writeLog } from "@/data/storage/logStorage";
 
-export async function storeCost(cost: number | (number | null | undefined)[] | null | undefined) {
+export async function storeCost(
+    cost: number | (number | null | undefined)[] | null | undefined,
+    type: 'summary' | 'image' = 'summary'
+) {
     if (cost === null || cost === undefined) {
         return;
     }
@@ -53,12 +56,12 @@ export async function storeCost(cost: number | (number | null | undefined)[] | n
 
     const date = new Date().toISOString();
     for (const vc of validCosts) {
-        costs.push({ date, cost: vc });
+        costs.push({ date, cost: vc, type });
     }
 
     const content = costs.map(item => JSON.stringify(item)).join('\n');
     await writeFile('data/costs.json', content);
 
     // Log the event
-    await writeLog('info', 'llm', `LLM API query cost stored: $${validCosts.reduce((s, c) => s + c, 0).toFixed(5)}`);
+    await writeLog('info', 'llm', `LLM API query cost stored: $${validCosts.reduce((s, c) => s + c, 0).toFixed(5)} (${type})`);
 }

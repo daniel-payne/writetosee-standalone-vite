@@ -19,16 +19,22 @@ export async function clientLoader(): Promise<WelcomeLoaderData> {
   // Retrieve API Key directly from window.sessionStorage in clientLoader
   const apiKey = window.sessionStorage.getItem("apiKey") ?? '';
 
+  let permissionGranted = false;
+
   try {
     hasDirectory = await fileStorage.hasSavedDirectory();
 
     if (hasDirectory) {
-      filesList = await fileStorage.listFiles();
-      directoryName = await fileStorage.getDirectoryName();
-      try {
-        await clearLogs();
-      } catch (logErr) {
-        console.warn('Could not clear logs inside clientLoader.', logErr);
+      permissionGranted = await fileStorage.isPermissionGranted();
+      directoryName = await fileStorage.getSavedDirectoryName();
+
+      if (permissionGranted) {
+        filesList = await fileStorage.listFiles();
+        try {
+          await clearLogs();
+        } catch (logErr) {
+          console.warn('Could not clear logs inside clientLoader.', logErr);
+        }
       }
     }
   } catch (err) {
@@ -38,6 +44,7 @@ export async function clientLoader(): Promise<WelcomeLoaderData> {
   return {
     safeMode,
     hasDirectory,
+    permissionGranted,
     filesList,
     directoryName,
     apiKey

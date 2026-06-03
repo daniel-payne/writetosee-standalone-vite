@@ -120,6 +120,6 @@ export default async function generateTextSummaries(publication: PublicationData
     const validCosts = costs.filter((cost): cost is number => cost !== null && cost !== undefined);
 
     if (validCosts.length > 0) {
-        await storeCost(validCosts);
+        await storeCost(validCosts, 'summary');
     }
 }

@@ -18,7 +18,7 @@ type props = {
     references?: string[];
     node?: { status: (status: any) => void } | null;
     model?: string;
-    inputCost?: number;
+    inputCostPerMillion?: number;
     outputCostPerMillion?: number;
 }
 
@@ -33,7 +33,7 @@ export default async function processGoogleImage({
     references: _references = [],
     node = null,
     model = "gemini-2.5-flash-image",
-    inputCost = 0.30,
+    inputCostPerMillion = 0.30,
     outputCostPerMillion = 30.00
 }: props): Promise<response> {
     try {
@@ -62,7 +62,11 @@ export default async function processGoogleImage({
         }
 
 
-        imageParts.push({ text: imagePrompt });
+        // Force 1:1 aspect ratio in prompt text
+        const promptWithAspectRatio = imagePrompt.trim().endsWith(".")
+            ? `${imagePrompt} Ensure the output image has a 1:1 square aspect ratio.`
+            : `${imagePrompt}. Ensure the output image has a 1:1 square aspect ratio.`;
+        imageParts.push({ text: promptWithAspectRatio });
 
         const body = {
             contents: [
@@ -72,7 +76,10 @@ export default async function processGoogleImage({
             ],
             // 1. MUST BE 'generationConfig', not 'config'
             generationConfig: {
-                responseModalities: ["IMAGE"] // Forces the model to output an image
+                responseModalities: ["IMAGE"], // Forces the model to output an image
+                imageConfig: {
+                    aspectRatio: "1:1"
+                }
             }
         };
 
@@ -115,6 +122,7 @@ export default async function processGoogleImage({
         if (data.usageMetadata) {
             const usage = data.usageMetadata;
 
+            const inputCost = ((usage.promptTokenCount || 0) / 1_000_000) * inputCostPerMillion;
             const outputCost = ((usage.candidatesTokenCount || 0) / 1_000_000) * outputCostPerMillion;
 
             totalCost = inputCost + outputCost;

@@ -2,12 +2,14 @@ import type { HTMLAttributes, PropsWithChildren } from "react";
 
 type FolderConnectorStatusProps = {
   hasDirectory: boolean;
+  permissionGranted: boolean;
   directoryName?: string | null;
   filesList?: string[] | null;
 } & HTMLAttributes<HTMLDivElement>;
 
 export default function FolderConnectorStatus({
   hasDirectory,
+  permissionGranted,
   directoryName,
   filesList,
   ...rest
@@ -25,17 +27,21 @@ export default function FolderConnectorStatus({
     <div {...rest}>
       <div>
         <span className="font-semibold me-2">Status:</span>
-        {hasDirectory ? (
-          <span className="badge badge-success gap-1">
-            {directoryName} Connected
-          </span>
-        ) : (
+        {!hasDirectory ? (
           <span className="badge badge-warning gap-1">
             Not Connected
           </span>
+        ) : !permissionGranted ? (
+          <span className="badge badge-warning bg-orange-500 text-white border-none gap-1">
+            Access Required
+          </span>
+        ) : (
+          <span className="badge badge-success gap-1">
+            {directoryName} Connected
+          </span>
         )}
       </div>
-      {hasDirectory ? (
+      {hasDirectory && permissionGranted ? (
         <>
           <div className="flex items-center gap-1">
             {storyCount === 1 ? <span className="text-success-content/70">🗹</span> : <span className="text-warning-content/70">🗷</span>}<span className="text-base-content/70">Story</span>
@@ -53,7 +59,11 @@ export default function FolderConnectorStatus({
             {imagesCount > 0 ? <span className="text-success-content/70">🗹</span> : <span className="text-warning-content/70">🗷</span>}<span className="text-base-content/70">{imagesCount === 0 ? 'No images' : imagesCount === 1 ? '1 image' : imagesCount + ' images'}</span>
           </div>
         </>
-      ) : (null)}
+      ) : hasDirectory && !permissionGranted ? (
+        <div className="text-xs text-base-content/60 mt-3 leading-relaxed">
+          Access to <span className="font-bold">{directoryName}</span> is required to load your story and images.
+        </div>
+      ) : null}
     </div>
   );
 }

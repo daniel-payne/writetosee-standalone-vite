@@ -42,3 +42,7 @@ When storing files received from LLMs (such as Markdown `.md` text and PNG `.png
 ## Component Creation
 
 *   **Template:** ALWAYS use `src/components/DefaultComponent.tsx` as a template when creating a new React component in this project. It provides the standard `HTMLAttributes` and `PropsWithChildren` wrapper, along with proper `data-name` attributes for debugging.
+
+## Planning and Execution Guidelines
+
+*   **No Planning Mode Unless Explicitly Requested:** Do NOT create implementation plans, task checklists (e.g. `task.md`), or walkthrough artifacts (e.g. `walkthrough.md`) automatically at the start of a conversation. The agent must proceed directly to code changes and execution, skipping the implementation plan phase entirely, unless the user explicitly requests one.

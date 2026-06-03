@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 import type { HTMLAttributes, PropsWithChildren } from "react";
-import { Link, useLocation, useLoaderData, useNavigation } from 'react-router-dom';
+import { Link, useLocation, useLoaderData, useNavigation, useRevalidator, useNavigate } from 'react-router-dom';
 import type { MainLayoutLoaderData } from './MainLayout.loader';
 import { useLocalState } from '@keldan-systems/state-mutex';
+import { getDirectoryHandle, disconnectDirectory } from '@/data/storage/fileStorage';
 
 type MainLayoutProps = {
 } & HTMLAttributes<HTMLDivElement>;
@@ -19,6 +20,8 @@ export default function MainLayout({
   ...rest
 }: PropsWithChildren<MainLayoutProps>) {
   const location = useLocation();
+  const revalidator = useRevalidator();
+  const navigate = useNavigate();
   const [theme, setTheme] = useLocalState<string>('writetosee-theme', DEFAULT_THEME);
 
   useEffect(() => {
@@ -39,7 +42,27 @@ export default function MainLayout({
   const navigation = useNavigation();
   const isSubmitting = navigation.state === 'submitting';
 
-  const isStoryDisabled = !loaderData?.hasDirectory || !loaderData?.apiKey;
+  const isStoryDisabled = !loaderData?.hasDirectory || !loaderData?.permissionGranted || !loaderData?.apiKey;
+
+  const handleGrantPermission = async () => {
+    try {
+      const handle = await getDirectoryHandle();
+      if (handle) {
+        revalidator.revalidate();
+      }
+    } catch (err) {
+      console.error("Failed to grant directory permission:", err);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      await disconnectDirectory();
+      navigate('/');
+    } catch (err) {
+      console.error("Failed to disconnect directory:", err);
+    }
+  };
 
 
   let styleLinkStyle = unselectedStyle
@@ -47,6 +70,7 @@ export default function MainLayout({
   let panelsLinkStyle = unselectedStyle;
   let charactersLinkStyle = unselectedStyle;
   let imagesLinkStyle = unselectedStyle;
+  let publicationLinkStyle = unselectedStyle;
   let costsLinkStyle = unselectedStyle;
   let logsLinkStyle = unselectedStyle;
   let aboutLinkStyle = unselectedStyle;
@@ -71,6 +95,10 @@ export default function MainLayout({
     imagesLinkStyle = selectedStyle;
   }
 
+  if (isActive('/publication')) {
+    publicationLinkStyle = selectedStyle;
+  }
+
   if (isActive('/costs')) {
     costsLinkStyle = selectedStyle;
   }
@@ -89,6 +117,7 @@ export default function MainLayout({
     imagesLinkStyle = disabledStyle;
     storyLinkStyle = disabledStyle;
     styleLinkStyle = disabledStyle;
+    publicationLinkStyle = disabledStyle;
     costsLinkStyle = disabledStyle;
     logsLinkStyle = disabledStyle;
     aboutLinkStyle = disabledStyle;
@@ -131,6 +160,7 @@ export default function MainLayout({
             {!loaderData?.safeMode && <Link to="/panels" className={panelsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Panels</Link>}
             {!loaderData?.safeMode && <Link to="/characters" className={charactersLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Characters</Link>}
             {!loaderData?.safeMode && <Link to="/images" className={imagesLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Images</Link>}
+            {!loaderData?.safeMode && <Link to="/publication" className={publicationLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Publication</Link>}
             {!loaderData?.safeMode && <Link to="/style" className={styleLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Style</Link>}
             {!loaderData?.safeMode && <Link to="/costs" className={costsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Costs</Link>}
             {!loaderData?.safeMode && <Link to="/logs" className={logsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Logs</Link>}
@@ -140,10 +170,47 @@ export default function MainLayout({
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-h-0 w-full flex flex-col">
-        <div className="w-full flex-1 mx-auto px-2 py-2 animate-fade-in flex flex-col min-h-0 overflow-y-auto">
-          {children}
-        </div>
+      <main className="flex-1 min-h-0 w-full flex flex-col justify-center items-center">
+        {loaderData?.hasDirectory && !loaderData?.permissionGranted ? (
+          <div className="max-w-md w-full mx-auto p-8 rounded-2xl bg-base-100/60 backdrop-blur-lg border border-base-content/10 shadow-2xl text-center space-y-6 animate-fade-in">
+            <div className="w-16 h-16 bg-warning/10 rounded-2xl text-warning flex items-center justify-center mx-auto shadow-inner">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-extrabold text-base-content">
+                Permission Required
+              </h2>
+              <p className="text-sm text-base-content/70 leading-relaxed">
+                WriteToSee needs permission to access files in your connected directory:
+              </p>
+              <div className="p-3 bg-base-200/50 rounded-xl border border-base-content/5 font-mono text-xs text-primary font-bold break-all">
+                {loaderData?.directoryName || "Local Directory"}
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleGrantPermission}
+                className="btn btn-primary bg-primary text-primary-content shadow-lg shadow-primary/20 rounded-xl w-full"
+              >
+                Grant Access
+              </button>
+              <button
+                type="button"
+                onClick={handleDisconnect}
+                className="btn btn-ghost text-error/80 hover:text-error hover:bg-error/10 rounded-xl w-full"
+              >
+                Disconnect Directory
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="w-full flex-1 mx-auto px-2 py-2 animate-fade-in flex flex-col min-h-0 overflow-y-auto">
+            {children}
+          </div>
+        )}
       </main>
 
       {/* Footer */}

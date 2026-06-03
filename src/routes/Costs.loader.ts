@@ -3,6 +3,7 @@ import { readFile } from "@/data/storage/fileStorage";
 export interface CostRecord {
   date: string;
   cost: number;
+  type?: 'summary' | 'image';
 }
 
 export async function clientLoader() {

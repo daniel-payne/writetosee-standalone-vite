@@ -21,6 +21,7 @@ export default function Welcome({
   const actionData = useActionData() as any;
 
   const [hasDirectory, setHasDirectory] = useState<boolean | undefined>(loaderData?.hasDirectory);
+  const [permissionGranted, setPermissionGranted] = useState<boolean | undefined>(loaderData?.permissionGranted);
   const [filesList, setFilesList] = useState<string[] | undefined>(loaderData?.filesList);
   const [directoryName, setDirectoryName] = useState<string | undefined>(loaderData?.directoryName);
   const [apiKey, setApiKey] = useState<string | undefined>(loaderData?.apiKey);
@@ -30,7 +31,7 @@ export default function Welcome({
   const [successMsg, setSuccessMsg] = useState<string | undefined>(actionData?.successMsg);
   const [showDisclaimer, setShowDisclaimer] = useState<boolean>(false);
 
-  const isStartDisabled = hasDirectory === false || !((savedKey?.length ?? 0) > 0);
+  const isStartDisabled = hasDirectory === false || permissionGranted === false || !((savedKey?.length ?? 0) > 0);
 
   useEffect(() => {
     const accepted = localStorage.getItem('disclamer-accecpted');
@@ -47,6 +48,7 @@ export default function Welcome({
   useEffect(() => {
     if (loaderData) {
       setHasDirectory(loaderData.hasDirectory)
+      setPermissionGranted(loaderData.permissionGranted)
       setFilesList(loaderData.filesList)
       setDirectoryName(loaderData.directoryName)
       setApiKey(loaderData.apiKey)
@@ -107,6 +109,7 @@ export default function Welcome({
             <FolderConnector
               className="w-[360px] h-[280px]"
               hasDirectory={hasDirectory ?? false}
+              permissionGranted={permissionGranted ?? false}
               directoryName={directoryName}
               filesList={filesList ?? []}
             />

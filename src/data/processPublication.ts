@@ -4,6 +4,8 @@ import generateChapters from "@/data/utilities/generateChapters";
 import { loadPublication, savePublication } from "@/data/managePublication";
 import generateTextSummaries from "@/data/process/generateTextSummaries";
 import generatePredicates from "./utilities/generatePredicates";
+import generatePrompts from "./process/generatePrompts";
+import generateImages from "./process/generateImages";
 
 export default async function processPublication({ style, story }: { style?: Record<string, any>, story?: string } = {}) {
     // Load current publication state from disk or in-memory cache
@@ -28,12 +30,16 @@ export default async function processPublication({ style, story }: { style?: Rec
 
     await generateTextSummaries(publication);
 
-    // generatePrompts(publication);
-
-    // await generateImages(publication);
+    await generatePrompts(publication);
 
     // Save updated publication back to disk and update the hash state
     await savePublication(publication);
 
+    // Run image generation in the background so it does not block the webpage
+    generateImages(publication).catch(err => {
+        console.error("Failed to run image generation in background:", err);
+    });
+
     return publication;
 }
+

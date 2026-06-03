@@ -7,13 +7,15 @@ import FolderConnectorActions from "./FolderConnectorActions";
 type FolderConnectorProps = {
   name?: string;
   hasDirectory: boolean;
+  permissionGranted: boolean;
   directoryName?: string | null;
-  filesList: string[];
+  filesList: string[] | null;
 } & HTMLAttributes<HTMLDivElement>;
 
 export default function FolderConnector({
   name = "FolderConnector",
   hasDirectory,
+  permissionGranted,
   directoryName,
   filesList,
   ...rest
@@ -30,6 +32,7 @@ export default function FolderConnector({
         <div className="card-body py-2 text-left">
           <FolderConnectorStatus
             hasDirectory={hasDirectory}
+            permissionGranted={permissionGranted}
             directoryName={directoryName}
             filesList={filesList}
           />
@@ -38,6 +41,7 @@ export default function FolderConnector({
           <FolderConnectorActions
             className="w-full p-8"
             hasDirectory={hasDirectory}
+            permissionGranted={permissionGranted}
           />
         </div>
       </div>

@@ -84,6 +84,29 @@ export async function hasSavedDirectory(): Promise<boolean> {
 }
 
 /**
+ * Check if readwrite permission is already granted for the saved directory handle.
+ */
+export async function isPermissionGranted(): Promise<boolean> {
+  const handle = await loadHandle();
+  if (!handle) return false;
+  try {
+    const status = await handle.queryPermission({ mode: 'readwrite' });
+    return status === 'granted';
+  } catch (err) {
+    console.warn('Error querying directory handle permission:', err);
+    return false;
+  }
+}
+
+/**
+ * Get the name of the saved directory without querying/verifying permission.
+ */
+export async function getSavedDirectoryName(): Promise<string | null> {
+  const handle = await loadHandle();
+  return handle ? handle.name : null;
+}
+
+/**
  * Disconnect/Forget the current directory.
  */
 export async function disconnectDirectory(): Promise<void> {
@@ -173,6 +196,23 @@ export async function readFile(fileName: string): Promise<File> {
   const fileHandle = await targetDirHandle.getFileHandle(fileLeaf);
   return await fileHandle.getFile();
 }
+
+/**
+ * Delete a file from the saved directory, supporting subdirectories (e.g. "sub/dir/file.txt")
+ */
+export async function deleteFile(fileName: string): Promise<void> {
+  const dirHandle = await getDirectoryHandle();
+  if (!dirHandle) {
+    throw new Error('No directory selected or access not granted.');
+  }
+
+  const parts = fileName.split('/');
+  const fileLeaf = parts.pop()!;
+
+  const targetDirHandle = await getDirectoryHandleForPath(dirHandle, parts, false);
+  await targetDirHandle.removeEntry(fileLeaf);
+}
+
 
 /**
  * List all files in the saved directory recursively, returning relative paths.

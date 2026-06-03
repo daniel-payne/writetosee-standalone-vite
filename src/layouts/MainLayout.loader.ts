@@ -16,9 +16,18 @@ export async function clientLoader(): Promise<MainLayoutLoaderData> {
   const apiKey = window.sessionStorage.getItem("apiKey") ?? '';
   const safeMode = (window.localStorage.getItem("safeMode") ?? '1') === '1' ? true : false;
 
+  let permissionGranted = false;
+  let directoryName: string | null = null;
+
   try {
     hasDirectory = await fileStorage.hasSavedDirectory();
-    filesList = await fileStorage.listFiles();
+    if (hasDirectory) {
+      permissionGranted = await fileStorage.isPermissionGranted();
+      directoryName = await fileStorage.getSavedDirectoryName();
+      if (permissionGranted) {
+        filesList = await fileStorage.listFiles();
+      }
+    }
   } catch (err) {
     console.warn('Could not check directory status in MainLayout.', err);
   }
@@ -28,5 +37,5 @@ export async function clientLoader(): Promise<MainLayoutLoaderData> {
   const characters = filesList.find((file) => file === 'characters.json');
   const panels = filesList.find((file) => file === 'panels.json');
 
-  return { hasDirectory, apiKey, safeMode, story, images, characters, panels };
+  return { hasDirectory, permissionGranted, directoryName, apiKey, safeMode, story, images, characters, panels };
 }

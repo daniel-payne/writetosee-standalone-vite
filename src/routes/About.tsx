@@ -11,6 +11,7 @@ export default function About({
   // Pull state-mutex values from the welcome page to demonstrate active sync!
   const [prompt] = useLocalState<string>('llm_prompt', 'N/A');
   const [markdownContent] = useLocalState<string>('llm_markdown', 'N/A');
+  const [mutexVal, setMutexVal] = useLocalState<string>('image-generation-mutex', '');
 
   return (
     <div {...rest} className={`max-w-3xl mx-auto space-y-8 ${rest.className || ''}`}>
@@ -51,6 +52,36 @@ export default function About({
               <span className="font-bold text-secondary block text-xs uppercase tracking-wider mb-1">Active LLM Response Length:</span>
               <p className="text-base-content/80">{markdownContent.length} characters</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Troubleshooting Section */}
+      <section className="card bg-base-100 shadow-xl border border-base-content/5">
+        <div className="card-body">
+          <h2 className="card-title text-xl font-bold flex items-center gap-2">
+            <span className="p-1.5 bg-warning/10 rounded-lg text-warning">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </span>
+            Troubleshooting
+          </h2>
+          <p className="text-sm text-base-content/60">
+            If image generation gets stuck or is locked across tabs, you can clear the state mutex.
+          </p>
+
+          <div className="mt-4 flex flex-row items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setMutexVal('')}
+              className="btn btn-warning btn-sm font-semibold"
+            >
+              Clear Image Generation Lock
+            </button>
+            <span className="text-xs font-mono text-base-content/50">
+              Lock status: <span className={`font-bold ${mutexVal ? 'text-error animate-pulse' : 'text-success'}`}>{mutexVal ? `LOCKED (${mutexVal})` : 'UNLOCKED'}</span>
+            </span>
           </div>
         </div>
       </section>

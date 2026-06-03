@@ -44,5 +44,5 @@ When storing files received from LLMs (such as Markdown `.md` text and PNG `.png
 
 ## 5. Planning and Execution Guidelines
 
-*   **No Mandatory Planning:** Unless explicitly requested by the user, the developer agent does not need to create implementation plans, task checklists, or walkthrough artifacts. The agent should directly execute requested changes and verify them.
+*   **No Planning Mode Unless Explicitly Requested:** Do NOT create implementation plans, task checklists (e.g. `task.md`), or walkthrough artifacts (e.g. `walkthrough.md`) automatically at the start of a conversation. The agent must proceed directly to code changes and execution, skipping the implementation plan phase entirely, unless the user explicitly requests one.
 
