@@ -18,9 +18,9 @@ export default function FolderConnectorStatus({
   // const fileCount = filesList?.length || 0;
 
   const storyCount = filesList?.filter((file) => file.includes("story.md"))?.length ?? 0;
-  const styleCount = filesList?.filter((file) => file.includes("style.json"))?.length ?? 0;
-  const charactersCount = filesList?.filter((file) => file.includes("characters.json"))?.length ?? 0;
-  const panelsCount = filesList?.filter((file) => file.includes("panels.json"))?.length ?? 0;
+  // const styleCount = filesList?.filter((file) => file.includes("style.json"))?.length ?? 0;
+  // const charactersCount = filesList?.filter((file) => file.includes("characters.json"))?.length ?? 0;
+  // const panelsCount = filesList?.filter((file) => file.includes("panels.json"))?.length ?? 0;
   const imagesCount = filesList?.filter((file) => file.includes(".png") || file.includes(".jpg") || file.includes(".jpeg"))?.length ?? 0;
 
   return (
@@ -32,7 +32,8 @@ export default function FolderConnectorStatus({
             Not Connected
           </span>
         ) : !permissionGranted ? (
-          <span className="badge badge-warning bg-orange-500 text-white border-none gap-1">
+          <span className="
+          badge badge-warning bg-orange-500 text-white border-none gap-1">
             Access Required
           </span>
         ) : (
@@ -46,7 +47,7 @@ export default function FolderConnectorStatus({
           <div className="flex items-center gap-1">
             {storyCount === 1 ? <span className="text-success-content/70">🗹</span> : <span className="text-warning-content/70">🗷</span>}<span className="text-base-content/70">Story</span>
           </div>
-          <div className="flex items-center gap-1">
+          {/* <div className="flex items-center gap-1">
             {styleCount === 1 ? <span className="text-success-content/70">🗹</span> : <span className="text-warning-content/70">🗷</span>}<span className="text-base-content/70">Style</span>
           </div>
           <div className="flex items-center gap-1">
@@ -54,7 +55,7 @@ export default function FolderConnectorStatus({
           </div>
           <div className="flex items-center gap-1">
             {panelsCount === 1 ? <span className="text-success-content/70">🗹</span> : <span className="text-warning-content/70">🗷</span>}<span className="text-base-content/70">Panels</span>
-          </div>
+          </div> */}
           <div className="flex items-center gap-1">
             {imagesCount > 0 ? <span className="text-success-content/70">🗹</span> : <span className="text-warning-content/70">🗷</span>}<span className="text-base-content/70">{imagesCount === 0 ? 'No images' : imagesCount === 1 ? '1 image' : imagesCount + ' images'}</span>
           </div>

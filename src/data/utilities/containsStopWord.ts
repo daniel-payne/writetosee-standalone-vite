@@ -1,6 +1,6 @@
 
 
-function containsStopWord(text: string) {
+export default function containsStopWord(text: string) {
     const regex = new RegExp(STOP_WORDS, 'i'); // 'i' for case-insensitive
 
     return regex.test(text);

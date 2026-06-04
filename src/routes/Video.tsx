@@ -4,7 +4,6 @@ import { useLoaderData, useActionData } from "react-router-dom";
 type VideoProps = {} & HTMLAttributes<HTMLDivElement>;
 
 export default function Video({
-  children,
   ...rest
 }: PropsWithChildren<VideoProps>) {
   useLoaderData();

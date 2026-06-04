@@ -1,4 +1,5 @@
 import * as fileStorage from "@/data/storage/fileStorage";
+import { writeLog } from "@/data/storage/logStorage";
 
 export interface LogRecord {
   datetime: string;
@@ -57,14 +58,14 @@ export async function clientLoader() {
       if (error.name === 'NotFoundError' || error.message?.includes('NotFoundError') || error.message?.includes('does not exist')) {
         return { logs: [], warning: "logs.json not found in the connected directory." };
       } else {
-        console.error("Failed to read logs.json:", err);
+        await writeLog('error', 'Logs.loader', `Failed to read logs.json: ${error.message}`);
         return { logs: [], error: `Failed to read logs: ${error.message}` };
       }
     }
 
     return { logs };
   } catch (error: any) {
-    console.error("Failed to load logs in loader:", error);
+    await writeLog('error', 'Logs.loader', `Failed to load logs in loader: ${error instanceof Error ? error.message : String(error)}`);
     return { logs: [], error: error.message || "Failed to load directory or logs." };
   }
 }

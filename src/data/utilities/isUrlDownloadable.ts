@@ -1,4 +1,5 @@
-import { stat } from "node:fs/promises";
+import { readFile } from "@/data/storage/fileStorage";
+import { writeLog } from "@/data/storage/logStorage";
 
 /**
  * Checks if a given URL or file path points to a downloadable asset.
@@ -21,16 +22,16 @@ export default async function isUrlDownloadable(url: string): Promise<boolean> {
             }
             return getResponse.ok;
         } catch (error) {
-            console.error(`Error checking if URL is downloadable (${url}):`, error);
+            await writeLog('error', 'isUrlDownloadable', `Error checking if URL is downloadable (${url}): ${error instanceof Error ? error.message : String(error)}`);
             return false;
         }
     }
 
     // Not an HTTP URL, assume it's a local file path
     try {
-        const stats = await stat(url);
-        return stats.isFile();
-    } catch (error) {
+        const file = await readFile(url);
+        return file !== null;
+    } catch {
         // File doesn't exist or isn't accessible
         return false;
     }

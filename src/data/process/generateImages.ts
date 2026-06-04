@@ -2,11 +2,7 @@ import { listFiles, writeFile } from "@/data/storage/fileStorage";
 import { storeCost } from "@/data/storage/costStorage";
 import llmGenerateImage from "@/data/llm/llmGenerateImage";
 import { loadPublication, savePublication } from "@/data/managePublication";
-import { getState, setState, StoragePersistence } from '@keldan-systems/state-mutex';
-
-function sleep(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
+import { writeLog } from "@/data/storage/logStorage";
 
 async function updateImageRefOnDisk(digest: string, imagePath: string) {
     try {
@@ -33,9 +29,12 @@ async function updateImageRefOnDisk(digest: string, imagePath: string) {
 
         if (changed) {
             await savePublication(pub);
+            if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
+                self.postMessage({ type: 'PROGRESS' });
+            }
         }
     } catch (err) {
-        console.error("Failed to update image reference on disk:", err);
+        await writeLog('error', 'updateImageRefOnDisk', `Failed to update image reference on disk: ${err instanceof Error ? err.message : String(err)}`);
     }
 }
 
@@ -70,9 +69,12 @@ async function syncAllImageRefsOnDisk(existingSet: Set<string>) {
 
         if (changed) {
             await savePublication(pub);
+            if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
+                self.postMessage({ type: 'PROGRESS' });
+            }
         }
     } catch (err) {
-        console.error("Failed to sync all image references on disk:", err);
+        await writeLog('error', 'syncAllImageRefsOnDisk', `Failed to sync all image references on disk: ${err instanceof Error ? err.message : String(err)}`);
     }
 }
 
@@ -125,6 +127,9 @@ export default async function generateImages(publication: any) {
 
     if (initialChanged) {
         await savePublication(publication);
+        if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
+            self.postMessage({ type: 'PROGRESS' });
+        }
     }
 
     // Check if any prompts actually require generation
@@ -138,23 +143,8 @@ export default async function generateImages(publication: any) {
         return;
     }
 
-    // Acquire lock (State Mutex) using state-mutex library (backed by localStorage)
-    const lockId = Math.random().toString(36).substring(2, 9);
-    const pollInterval = 500; // ms
-
-    while (true) {
-        const currentLock = getState('image-generation-mutex');
-        if (!currentLock) {
-            setState('image-generation-mutex', lockId, StoragePersistence.local);
-            await sleep(50); // short delay to ensure no race collisions
-            if (getState('image-generation-mutex') === lockId) {
-                break;
-            }
-        }
-        await sleep(pollInterval);
-    }
-
-    try {
+    // Acquire lock using Web Locks API
+    await navigator.locks.request('image-generation', async (_lock) => {
         for (const prompt of prompts) {
             const digest = prompt.digest;
             if (!digest) continue;
@@ -184,7 +174,7 @@ export default async function generateImages(publication: any) {
                         costs.push(res.totalCost);
                     }
                 } catch (err) {
-                    console.error(`Failed to generate image for prompt ${digest}:`, err);
+                    await writeLog('error', 'generateImages', `Failed to generate image for prompt ${digest}: ${err instanceof Error ? err.message : String(err)}`);
                 }
             }
 
@@ -208,12 +198,7 @@ export default async function generateImages(publication: any) {
 
         // Final sync of all references to disk
         await syncAllImageRefsOnDisk(existingSet);
-    } finally {
-        // Release lock
-        if (getState('image-generation-mutex') === lockId) {
-            setState('image-generation-mutex', '', StoragePersistence.local);
-        }
-    }
+    });
 
     return;
 }

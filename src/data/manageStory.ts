@@ -3,6 +3,7 @@ import { useLocalState, useSharedState, setState, StoragePersistence } from '@ke
 import * as fileStorage from '@/data/storage/fileStorage';
 import generateTextDigest from '@/data/utilities/generateTextDigest';
 import processPublication from '@/data/processPublication';
+import { writeLog } from './storage/logStorage';
 
 // Module-level caches to keep a single, synchronous source of truth in memory
 // across all components using the useStory hooks.
@@ -60,7 +61,7 @@ export async function loadStory(): Promise<string> {
 
                 return defaultStory;
             } else {
-                console.error("Failed to load story in loadStory:", e);
+                await writeLog('error', 'loadStory', `Failed to load story in loadStory: ${e.message || String(e)}`);
                 setState('story-error', e.message || "Failed to load story", StoragePersistence.none);
                 throw e;
             }
@@ -111,7 +112,7 @@ export async function saveStory(
 
         return hash;
     } catch (e: any) {
-        console.error("Failed to save story in saveStory:", e);
+        await writeLog('error', 'saveStory', `Failed to save story in saveStory: ${e.message || String(e)}`);
         setState('story-error', e.message || "Failed to save story", StoragePersistence.none);
         throw e;
     } finally {

@@ -1,3 +1,5 @@
+import { writeLog } from "@/data/storage/logStorage";
+
 function extractMarkdownImages(text: string) {
     // Regex to match ![description](url)
     const regex = /!\[([^\]]*)\]\(([^)]+)\)/g;
@@ -16,7 +18,6 @@ type props = {
     imagePrompt: string;
     apiKey: string;
     references?: string[];
-    node?: { status: (status: any) => void } | null;
     model?: string;
     inputCostPerMillion?: number;
     outputCostPerMillion?: number;
@@ -31,13 +32,12 @@ export default async function processGoogleImage({
     imagePrompt,
     apiKey,
     references: _references = [],
-    node = null,
     model = "gemini-2.5-flash-image",
     inputCostPerMillion = 0.30,
     outputCostPerMillion = 30.00
 }: props): Promise<response> {
     try {
-        node?.status({ fill: "green", shape: "dot", text: "processing" });
+
 
         const imageParts: any[] = [];
 
@@ -94,7 +94,8 @@ export default async function processGoogleImage({
 
         if (!response.ok) {
             const errorText = await response.text();
-            node?.status({ fill: "red", shape: "dot", text: `API Error: ${response.status} ${errorText}` });
+
+            await writeLog('error', 'processGoogleImage', `API Error: ${response.status} - ${errorText}`);
             throw new Error(`API Error: ${response.status} - ${errorText}`);
         }
 
@@ -105,8 +106,9 @@ export default async function processGoogleImage({
         const imagePart = parts.find((p: any) => p.inlineData);
 
         if (!imagePart) {
-            node?.status({ fill: "red", shape: "dot", text: "No image returned from the API" });
 
+
+            await writeLog('error', 'processGoogleImage', 'No image data returned from the API. Check prompt/model configuration.');
             throw new Error("No image data returned from the API. Check prompt/model configuration.");
         }
 
@@ -130,13 +132,13 @@ export default async function processGoogleImage({
             totalCost = 0;
         }
 
-        // Output cost rounded to 6 decimal places for readability
-        node?.status({ fill: "grey", shape: "ring", text: "completed " + (typeof totalCost === 'number' ? `$${totalCost.toFixed(6)}` : totalCost) });
+
 
 
         return { content, totalCost };
     } catch (error: any) {
-        node?.status({ fill: "red", shape: "dot", text: error.message || error });
-        throw new Error(`Error: ${error.message}`);
+
+        await writeLog('error', 'processGoogleImage', `Error: ${error.message}`);
+        throw new Error(`Error: ${error.message}`, { cause: error });
     }
 }

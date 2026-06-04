@@ -34,10 +34,13 @@ export default function StoryEditor({
 
   const debounceTimeoutRef = useRef<any>(null);
 
+  const [prevDefaultValue, setPrevDefaultValue] = useState(defaultValue);
+
   // Sync state if defaultValue changes from the outside (e.g. loader loads another story)
-  useEffect(() => {
+  if (defaultValue !== prevDefaultValue) {
+    setPrevDefaultValue(defaultValue);
     setText(defaultValue);
-  }, [defaultValue]);
+  }
 
   // Clean up debounce timer on component unmount
   useEffect(() => {

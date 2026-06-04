@@ -7,7 +7,6 @@ type ImagesProps = {} & HTMLAttributes<HTMLDivElement>;
 // https://i.pinimg.com/474x/34/d3/0d/34d30dad987dc4bc1a8f7275b3a178e8.jpg
 
 export default function Images({
-  children,
   ...rest
 }: PropsWithChildren<ImagesProps>) {
   const loaderData = useLoaderData() as any;

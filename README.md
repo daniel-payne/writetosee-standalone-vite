@@ -79,5 +79,35 @@ npx skills add https://github.com/sickn33/antigravity-awesome-skills --skill sen
 npx skills add https://github.com/sickn33/antigravity-awesome-skills --skill react-patterns
 npx skills add https://github.com/sickn33/antigravity-awesome-skills --skill typescript-expert
 npx skills add https://github.com/sickn33/antigravity-awesome-skills --skill frontend-dev-guidelines 
+
+## Decoupled Saving and Processing Queue Design
+
+To optimize responsiveness, file saves are decoupled from publication processing. Saves write immediately to disk, while processing is delegated to a background Web Worker and managed via a cross-tab queue (needs-processing flag) coordinated by browser-native Web Locks:
+
+```mermaid
+sequenceDiagram
+    participant UI as Tab UI
+    participant LS as LocalStorage
+    participant Lock as Web Lock "publication-processing"
+    participant WW as Web Worker
+
+    UI->>LS: Save content
+    UI->>LS: publication-needs-processing = true
+    UI->>+Lock: Try acquire lock
+
+    alt Lock acquired
+        Lock->>WW: Start processing
+        WW-->>Lock: Done
+        Lock->>LS: Check flag
+        alt Flag == true
+            Lock->>WW: Start follow-up processing
+            WW-->>Lock: Done
+            Lock->>LS: publication-needs-processing = false
+        end
+        Lock->>-Lock: Release lock
+    else Lock busy
+        Note over UI,Lock: Wait for current processor to finish
+    end
+```
  
 

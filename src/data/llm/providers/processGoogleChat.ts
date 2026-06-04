@@ -1,4 +1,6 @@
 
+import { writeLog } from "@/data/storage/logStorage";
+
 type props = {
     systemPrompt: string;
     userPrompt: string;
@@ -86,6 +88,7 @@ export default async function processGoogleChat({
         if (!response.ok) {
             const errorMessage = await response.text();
 
+            await writeLog('error', 'processGoogleChat', `API Error: ${response.status} - ${errorMessage}`);
             throw new Error(`API Error: ${response.status} - ${errorMessage}`);
         }
 
@@ -96,6 +99,7 @@ export default async function processGoogleChat({
 
         if (!content || content.length === 0) {
 
+            await writeLog('error', 'processGoogleChat', 'No response returned from the API');
             throw new Error("No response returned from the API");
         }
 
@@ -116,6 +120,7 @@ export default async function processGoogleChat({
         return { content, totalCost };
     } catch (error: any) {
 
-        throw new Error(`Error: ${error.message}`);
+        await writeLog('error', 'processGoogleChat', `Error: ${error.message}`);
+        throw new Error(`Error: ${error.message}`, { cause: error });
     }
 }

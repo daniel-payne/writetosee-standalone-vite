@@ -30,19 +30,19 @@ export async function clientAction({ request }: ActionFunctionArgs) {
       return { error: errorMsg };
     }
   } else if (intent === 'UPDATE-STORY') {
-    const story = formData.get('story') as string;
+    // const story = formData.get('story') as string;
 
-    try {
-      // if (story !== null) {
-      //   await saveStory(story);
-      // }
+    // try {
+    //   // if (story !== null) {
+    //   //   await saveStory(story);
+    //   // }
 
-      await processPublication({ story })
+    //   await processPublication({ story })
 
-      return { success: true, message: 'Story updated successfully' };
-    } catch (err: any) {
-      return { error: err.message || 'Failed to save story' };
-    }
+    //   return { success: true, message: 'Story updated successfully' };
+    // } catch (err: any) {
+    //   return { error: err.message || 'Failed to save story' };
+    // }
   } else if (intent === 'REGENERATE-IMAGE') {
     const imagePath = formData.get('imagePath') as string;
     try {

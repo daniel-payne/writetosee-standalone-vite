@@ -24,5 +24,6 @@ Focus on:
 export default async function generateLlmSummary(text: string): Promise<string> {
     const prompt = PROMPT.replace('{{TEXT}}', text)
 
-    return await llmGenerateText(prompt)
+    const result = await llmGenerateText("", prompt);
+    return result.content || "";
 }

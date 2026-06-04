@@ -3,6 +3,7 @@ import { useLocalState, useSharedState, setState, StoragePersistence } from '@ke
 import * as fileStorage from '@/data/storage/fileStorage';
 import generateTextDigest from '@/data/utilities/generateTextDigest';
 import processPublication from './processPublication';
+import { writeLog } from './storage/logStorage';
 import markdownToJSON from './utilities/markdownToJSON';
 import jsonToMarkdown from './utilities/jsonToMarkdown';
 
@@ -78,7 +79,7 @@ export async function loadStyle(): Promise<any> {
 
                 return defaultStyle;
             } else {
-                console.error("Failed to load style in loadStyle:", e);
+                await writeLog('error', 'loadStyle', `Failed to load style in loadStyle: ${e.message || String(e)}`);
                 setState('style-error', e.message || "Failed to load style", StoragePersistence.none);
                 throw e;
             }
@@ -131,7 +132,7 @@ export async function saveStyle(
 
         return hash;
     } catch (e: any) {
-        console.error("Failed to save style in saveStyle:", e);
+        await writeLog('error', 'saveStyle', `Failed to save style in saveStyle: ${e.message || String(e)}`);
         setState('style-error', e.message || "Failed to save style", StoragePersistence.none);
         throw e;
     } finally {
@@ -168,7 +169,7 @@ export function useStyle(): [any, (valOrFunc: any) => Promise<void>] {
         }
     }, [styleHash]);
 
-    return [style || {}, setStyle];
+    return [style, setStyle];
 }
 
 /**

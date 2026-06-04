@@ -3,7 +3,7 @@
 import generateTextDigest from "@/data/utilities/generateTextDigest";
 
 export default function generateParagraphs(publication: Record<string, any>, characterThreshold = 20, paragraphSeparator = '\n\n') {
-  const text = publication.story
+  const text = publication.story as string;
 
   if (text == null) {
     return [];

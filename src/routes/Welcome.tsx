@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import SimpleConnector from '@/components/SimpleConnector';
 import DisclaimerModal from '@/components/DisclaimerModal';
 import NotificationDisplay from '@/components/NotificationDisplay';
-import LLMConector from '@/components/LLMConector';
-import FolderConnector from '@/components/FolderConnector';
+// import LLMConector from '@/components/LLMConector';
+// import FolderConnector from '@/components/FolderConnector';
 import type { HTMLAttributes, PropsWithChildren } from "react";
 import { useLoaderData, useActionData, Link } from 'react-router-dom';
 
@@ -13,7 +13,6 @@ type WelcomeProps = {
 } & HTMLAttributes<HTMLDivElement>;
 
 export default function Welcome({
-  children,
   ...rest
 }: PropsWithChildren<WelcomeProps>) {
 
@@ -22,41 +21,36 @@ export default function Welcome({
 
   const [hasDirectory, setHasDirectory] = useState<boolean | undefined>(loaderData?.hasDirectory);
   const [permissionGranted, setPermissionGranted] = useState<boolean | undefined>(loaderData?.permissionGranted);
-  const [filesList, setFilesList] = useState<string[] | undefined>(loaderData?.filesList);
+  // const [filesList, setFilesList] = useState<string[] | undefined>(loaderData?.filesList);
   const [directoryName, setDirectoryName] = useState<string | undefined>(loaderData?.directoryName);
   const [apiKey, setApiKey] = useState<string | undefined>(loaderData?.apiKey);
   const [savedKey, setSavedKey] = useState<string | undefined>(loaderData?.apiKey);
 
   const [errorMsg, setErrorMsg] = useState<string | undefined>(actionData?.errorMsg);
   const [successMsg, setSuccessMsg] = useState<string | undefined>(actionData?.successMsg);
-  const [showDisclaimer, setShowDisclaimer] = useState<boolean>(false);
-
-  const isStartDisabled = hasDirectory === false || permissionGranted === false || !((savedKey?.length ?? 0) > 0);
-
-  useEffect(() => {
-    const accepted = localStorage.getItem('disclamer-accecpted');
-    if (accepted !== 'true') {
-      setShowDisclaimer(true);
+  const [showDisclaimer, setShowDisclaimer] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('disclamer-accecpted') !== 'true';
     }
-  }, []);
+    return false;
+  });
 
-  const handleAcceptDisclaimer = () => {
-    localStorage.setItem('disclamer-accecpted', 'true');
-    setShowDisclaimer(false);
-  };
-
-  useEffect(() => {
+  const [prevLoaderData, setPrevLoaderData] = useState(loaderData);
+  if (loaderData !== prevLoaderData) {
+    setPrevLoaderData(loaderData);
     if (loaderData) {
-      setHasDirectory(loaderData.hasDirectory)
-      setPermissionGranted(loaderData.permissionGranted)
-      setFilesList(loaderData.filesList)
-      setDirectoryName(loaderData.directoryName)
-      setApiKey(loaderData.apiKey)
-      setSavedKey(loaderData.apiKey)
+      setHasDirectory(loaderData.hasDirectory);
+      setPermissionGranted(loaderData.permissionGranted);
+      // setFilesList(loaderData.filesList);
+      setDirectoryName(loaderData.directoryName);
+      setApiKey(loaderData.apiKey);
+      setSavedKey(loaderData.apiKey);
     }
-  }, [loaderData]);
+  }
 
-  useEffect(() => {
+  const [prevActionData, setPrevActionData] = useState(actionData);
+  if (actionData !== prevActionData) {
+    setPrevActionData(actionData);
     if (actionData) {
       if (actionData.success && actionData.message) {
         setSuccessMsg(actionData.message);
@@ -66,7 +60,14 @@ export default function Welcome({
         setSuccessMsg('');
       }
     }
-  }, [actionData]);
+  }
+
+  const isStartDisabled = hasDirectory === false || permissionGranted === false || !((savedKey?.length ?? 0) > 0);
+
+  const handleAcceptDisclaimer = () => {
+    localStorage.setItem('disclamer-accecpted', 'true');
+    setShowDisclaimer(false);
+  };
 
 
   return (
@@ -92,29 +93,32 @@ export default function Welcome({
             </Link>
           </h4>
         </div>
-        {loaderData?.safeMode ? (
-          <SimpleConnector
-            apiKey={apiKey ?? ''}
-            setApiKey={setApiKey}
-            hasDirectory={hasDirectory ?? false}
-          />
-        ) : (
-          <div className="flex flex-row justify-center items-center gap-6 flex-wrap">
-            <LLMConector
-              className="w-[360px] h-[280px]"
-              apiKey={apiKey ?? ''}
-              savedKey={savedKey ?? null}
-              setApiKey={setApiKey}
-            />
-            <FolderConnector
-              className="w-[360px] h-[280px]"
-              hasDirectory={hasDirectory ?? false}
-              permissionGranted={permissionGranted ?? false}
-              directoryName={directoryName}
-              filesList={filesList ?? []}
-            />
-          </div>
-        )}
+        {/* {loaderData?.safeMode ? ( */}
+        <SimpleConnector
+          apiKey={apiKey ?? ''}
+          setApiKey={setApiKey}
+          hasDirectory={hasDirectory ?? false}
+          directoryName={directoryName}
+        />
+        {/*
+         ) : (
+           <div className="flex flex-row justify-center items-center gap-6 flex-wrap">
+             <LLMConector
+                   className="w-[360px] h-[280px]"
+                   apiKey={apiKey ?? ''}
+                   savedKey={savedKey ?? null}
+                   setApiKey={setApiKey}
+                 />
+                 <FolderConnector
+                   className="w-[360px] h-[280px]"
+                   hasDirectory={hasDirectory ?? false}
+                   permissionGranted={permissionGranted ?? false}
+                   directoryName={directoryName}
+                   filesList={filesList ?? []}
+                 />
+               </div>
+             )}
+            */}
 
         <Link to="/story" className={isStartDisabled ? "pointer-events-none" : ""} tabIndex={isStartDisabled ? -1 : undefined}>
           <button className="btn btn-primary" disabled={isStartDisabled}>Start Creating Your Story</button>

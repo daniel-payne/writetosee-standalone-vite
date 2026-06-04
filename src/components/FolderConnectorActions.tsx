@@ -1,6 +1,7 @@
 import type { HTMLAttributes, PropsWithChildren } from "react";
 import { useFetcher, useRevalidator } from "react-router-dom";
 import { getDirectoryHandle } from '@/data/storage/fileStorage';
+import { writeLog } from '@/data/storage/logStorage';
 
 type FolderConnectorActionsProps = {
   hasDirectory: boolean;
@@ -36,7 +37,7 @@ export default function FolderConnectorActions({
         revalidator.revalidate();
       }
     } catch (err) {
-      console.error("Failed to grant directory permission:", err);
+      await writeLog('error', 'FolderConnectorActions', `Failed to grant directory permission: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 

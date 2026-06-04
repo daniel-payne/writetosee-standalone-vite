@@ -8,13 +8,13 @@ import { useStyle } from "@/data/manageStyle";
 type StyleProps = {} & HTMLAttributes<HTMLDivElement>;
 
 export default function Style({
-  children,
   ...rest
 }: PropsWithChildren<StyleProps>) {
   useLoaderData();
   const navigation = useNavigation();
 
   const [style] = useStyle();
+  const [prevStyle, setPrevStyle] = useState(style);
   const initialStyle = style ?? {};
 
   const safeJoin = (val: unknown): string => {
@@ -30,6 +30,17 @@ export default function Style({
     linkUrl: initialStyle.linkUrl || '',
     linkInstructions: safeJoin(initialStyle.linkInstructions),
   });
+
+  if (style !== prevStyle) {
+    setPrevStyle(style);
+    const updatedStyle = style ?? {};
+    setFormData({
+      storyTitle: updatedStyle.storyTitle || '',
+      drawingInstructions: safeJoin(updatedStyle.drawingInstructions),
+      linkUrl: updatedStyle.linkUrl || '',
+      linkInstructions: safeJoin(updatedStyle.linkInstructions),
+    });
+  }
 
   const isDirty =
     formData.storyTitle !== (initialStyle.storyTitle || '') ||
@@ -70,14 +81,7 @@ export default function Style({
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
 
-  useEffect(() => {
-    setFormData({
-      storyTitle: initialStyle.storyTitle || '',
-      drawingInstructions: safeJoin(initialStyle.drawingInstructions),
-      linkUrl: initialStyle.linkUrl || '',
-      linkInstructions: safeJoin(initialStyle.linkInstructions),
-    });
-  }, [initialStyle]);
+
 
   const handleChange = (e: any) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));

@@ -7,7 +7,6 @@ type DisclaimerModalProps = {
 
 export default function DisclaimerModal({
   onAccept,
-  children,
   ...rest
 }: PropsWithChildren<DisclaimerModalProps>) {
   return (

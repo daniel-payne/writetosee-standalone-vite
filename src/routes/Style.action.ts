@@ -1,4 +1,5 @@
 import { saveStyle } from "@/data/manageStyle";
+import { writeLog } from "@/data/storage/logStorage";
 
 export async function clientAction({ request }: any) {
   const formData = await request.formData();
@@ -25,7 +26,7 @@ export async function clientAction({ request }: any) {
       await saveStyle(style);
       return { success: true };
     } catch (error) {
-      console.error('Failed to save style.json:', error);
+      await writeLog('error', 'Style.action', `Failed to save style.json: ${error instanceof Error ? error.message : String(error)}`);
       return { success: false, error: 'Failed to save' };
     }
   }

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { readFile } from "@/data/storage/fileStorage";
+import { writeLog } from "@/data/storage/logStorage";
 
 // -------------------------------------------------------------
 // HELPER COMPONENTS
@@ -7,22 +8,27 @@ import { readFile } from "@/data/storage/fileStorage";
 
 // Local Image Loader & Previewer
 function LocalImagePreview({ filename }: { filename: string }) {
+  const [prevFilename, setPrevFilename] = useState(filename);
   const [src, setSrc] = useState<string>("");
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let objectUrl = "";
+  if (filename !== prevFilename) {
+    setPrevFilename(filename);
     setLoading(true);
     setError(false);
+  }
+
+  useEffect(() => {
+    let objectUrl = "";
     readFile(filename)
       .then((file) => {
         objectUrl = URL.createObjectURL(file);
         setSrc(objectUrl);
         setLoading(false);
       })
-      .catch((err) => {
-        console.error("Failed to load local image:", err);
+      .catch(async (err) => {
+        await writeLog('error', 'JSONExplorer', `Failed to load local image: ${err instanceof Error ? err.message : String(err)}`);
         setError(true);
         setLoading(false);
       });
@@ -79,7 +85,7 @@ function WebImagePreview({ url }: { url: string }) {
 // Keyword Highlight Component
 function HighlightText({ text, query }: { text: string; query: string }) {
   if (!query) return <>{text}</>;
-  const escaped = query.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+  const escaped = query.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
   const parts = text.split(new RegExp(`(${escaped})`, "gi"));
   return (
     <>

@@ -2,6 +2,8 @@ import * as fileStorage from '@/data/storage/fileStorage';
 
 export interface MainLayoutLoaderData {
   hasDirectory: boolean;
+  permissionGranted: boolean;
+  directoryName: string | null;
   apiKey: string | null;
   safeMode: boolean;
   story?: string;

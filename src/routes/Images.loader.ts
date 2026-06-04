@@ -1,4 +1,5 @@
 import { listFiles, readFile } from "@/data/storage/fileStorage";
+import { writeLog } from "@/data/storage/logStorage";
 
 export async function clientLoader() {
   try {
@@ -12,7 +13,7 @@ export async function clientLoader() {
 
     return { images };
   } catch (error) {
-    console.error("Failed to load images:", error);
+    await writeLog('error', 'Images.loader', `Failed to load images: ${error instanceof Error ? error.message : String(error)}`);
     return { images: [] };
   }
 }

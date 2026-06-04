@@ -39,7 +39,7 @@ export default function LLMConnectorForm({
           >
             https://aistudio.google.com/api-keys
           </Link>
-          <div className="label-text-alt text-xs">
+          {/* <div className="label-text-alt text-xs">
             xAI Grok: <Link
               to="https://console.x.ai"
               target="_blank"
@@ -48,7 +48,7 @@ export default function LLMConnectorForm({
             >
               https://console.x.ai
             </Link>
-          </div>
+          </div> */}
         </div>
       </label>
 

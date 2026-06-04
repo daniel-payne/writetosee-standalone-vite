@@ -4,7 +4,6 @@ import { useLoaderData, useActionData } from "react-router-dom";
 type ComicProps = {} & HTMLAttributes<HTMLDivElement>;
 
 export default function Comic({
-  children,
   ...rest
 }: PropsWithChildren<ComicProps>) {
   useLoaderData();

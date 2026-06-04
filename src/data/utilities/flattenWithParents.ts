@@ -44,7 +44,7 @@ export default function flattenWithParents(data: Record<string, unknown> | null,
   }
 
   // Also handle any array value that looks like children
-  for (const [key, value] of Object.entries(data)) {
+  for (const value of Object.values(data)) {
     if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object') {
       // This is likely a children-like array we haven't processed yet
       flattenWithParents(value as any, currentLevel, result);

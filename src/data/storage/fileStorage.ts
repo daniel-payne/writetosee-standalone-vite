@@ -3,8 +3,7 @@
  * Provides utility functions to interact with the local file system using the File System Access API.
  * It stores the DirectoryHandle in IndexedDB to persist access across sessions.
  */
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { writeLog } from './logStorage';
 
 const DB_NAME = 'WriteToSeeFileStorageDB';
 const STORE_NAME = 'handles';
@@ -66,6 +65,7 @@ async function removeHandle(): Promise<void> {
  */
 export async function selectDirectory(): Promise<any> {
   if (!('showDirectoryPicker' in window)) {
+    await writeLog('error', 'selectDirectory', 'File System Access API is not supported in this browser.');
     throw new Error('File System Access API is not supported in this browser.');
   }
   const handle = await (window as any).showDirectoryPicker({
@@ -139,6 +139,7 @@ export async function getDirectoryHandle(): Promise<any | null> {
 
   const hasPermission = await verifyPermission(handle, true);
   if (!hasPermission) {
+    await writeLog('error', 'getDirectoryHandle', 'Permission denied to access the directory.');
     throw new Error('Permission denied to access the directory.');
   }
   return handle;
@@ -167,6 +168,7 @@ async function getDirectoryHandleForPath(
 export async function writeFile(fileName: string, content: string | Blob): Promise<void> {
   const dirHandle = await getDirectoryHandle();
   if (!dirHandle) {
+    await writeLog('error', 'writeFile', `No directory selected or access not granted when writing to ${fileName}.`);
     throw new Error('No directory selected or access not granted.');
   }
 
@@ -186,6 +188,7 @@ export async function writeFile(fileName: string, content: string | Blob): Promi
 export async function readFile(fileName: string): Promise<File> {
   const dirHandle = await getDirectoryHandle();
   if (!dirHandle) {
+    await writeLog('error', 'readFile', `No directory selected or access not granted when reading ${fileName}.`);
     throw new Error('No directory selected or access not granted.');
   }
 
@@ -203,6 +206,7 @@ export async function readFile(fileName: string): Promise<File> {
 export async function deleteFile(fileName: string): Promise<void> {
   const dirHandle = await getDirectoryHandle();
   if (!dirHandle) {
+    await writeLog('error', 'deleteFile', `No directory selected or access not granted when deleting ${fileName}.`);
     throw new Error('No directory selected or access not granted.');
   }
 

@@ -2,8 +2,10 @@ import { useEffect } from 'react';
 import type { HTMLAttributes, PropsWithChildren } from "react";
 import { Link, useLocation, useLoaderData, useNavigation, useRevalidator, useNavigate } from 'react-router-dom';
 import type { MainLayoutLoaderData } from './MainLayout.loader';
-import { useLocalState } from '@keldan-systems/state-mutex';
+import { useLocalState, getState, setState, StoragePersistence } from '@keldan-systems/state-mutex';
 import { getDirectoryHandle, disconnectDirectory } from '@/data/storage/fileStorage';
+import processPublication from '@/data/processPublication';
+import { writeLog } from '@/data/storage/logStorage';
 
 type MainLayoutProps = {
 } & HTMLAttributes<HTMLDivElement>;
@@ -23,6 +25,36 @@ export default function MainLayout({
   const revalidator = useRevalidator();
   const navigate = useNavigate();
   const [theme, setTheme] = useLocalState<string>('writetosee-theme', DEFAULT_THEME);
+  const [processingStatus] = useLocalState<'idle' | 'processing'>('publication-processing-status', 'idle');
+
+  useEffect(() => {
+    const checkLockAndRecover = async () => {
+      if (typeof navigator !== 'undefined' && navigator.locks) {
+        const currentStatus = getState('publication-processing-status');
+        if (currentStatus === 'processing') {
+          await navigator.locks.request('publication-processing', { ifAvailable: true }, async (lock) => {
+            if (lock) {
+              setState('publication-processing-status', 'idle', StoragePersistence.local);
+              if (getState('publication-needs-processing') === true) {
+                setTimeout(() => {
+                  processPublication().catch(async (err) =>
+                    await writeLog('error', 'MainLayout', `Auto-recovery processing failed: ${err instanceof Error ? err.message : String(err)}`)
+                  );
+                }, 0);
+              }
+            }
+          });
+        }
+      }
+    };
+
+    checkLockAndRecover();
+
+    window.addEventListener('focus', checkLockAndRecover);
+    return () => {
+      window.removeEventListener('focus', checkLockAndRecover);
+    };
+  }, []);
 
   useEffect(() => {
     if (theme !== DEFAULT_THEME && theme !== DARK_THEME) {
@@ -51,7 +83,7 @@ export default function MainLayout({
         revalidator.revalidate();
       }
     } catch (err) {
-      console.error("Failed to grant directory permission:", err);
+      await writeLog('error', 'MainLayout', `Failed to grant directory permission: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -60,7 +92,7 @@ export default function MainLayout({
       await disconnectDirectory();
       navigate('/');
     } catch (err) {
-      console.error("Failed to disconnect directory:", err);
+      await writeLog('error', 'MainLayout', `Failed to disconnect directory: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -144,13 +176,19 @@ export default function MainLayout({
                 </svg>
               </div>
             </Link>
-            <div>
+            <div className="flex items-center">
               <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 WriteToSee
               </span>
-              {/* <span className="ml-2 px-2 py-0.5 text-xs font-semibold rounded-full bg-secondary/10 text-secondary border border-secondary/20">
-                Standalone
-              </span> */}
+              {processingStatus === 'processing' && (
+                <span className="ml-3 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary border border-primary/20 animate-pulse shadow-sm">
+                  <svg className="animate-spin h-3.5 w-3.5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Processing
+                </span>
+              )}
             </div>
           </div>
 
@@ -160,8 +198,8 @@ export default function MainLayout({
             {!loaderData?.safeMode && <Link to="/panels" className={panelsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Panels</Link>}
             {!loaderData?.safeMode && <Link to="/characters" className={charactersLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Characters</Link>}
             {!loaderData?.safeMode && <Link to="/images" className={imagesLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Images</Link>}
-            {!loaderData?.safeMode && <Link to="/publication" className={publicationLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Publication</Link>}
             {!loaderData?.safeMode && <Link to="/style" className={styleLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Style</Link>}
+            {!loaderData?.safeMode && <Link to="/publication" className={publicationLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Publication</Link>}
             {!loaderData?.safeMode && <Link to="/costs" className={costsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Costs</Link>}
             {!loaderData?.safeMode && <Link to="/logs" className={logsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Logs</Link>}
             <Link to="/about" className={aboutLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>About</Link>

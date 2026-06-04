@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useLocalState, useSharedState, setState, StoragePersistence } from '@keldan-systems/state-mutex';
 import * as fileStorage from '@/data/storage/fileStorage';
 import generateTextDigest from '@/data/utilities/generateTextDigest';
+import { writeLog } from './storage/logStorage';
 
 // Module-level caches to keep a single, synchronous source of truth in memory
 // across all components using the usePublication hooks.
@@ -57,7 +58,7 @@ export async function loadPublication(): Promise<any> {
 
                 return defaultPub;
             } else {
-                console.error("Failed to load publication in loadPublication:", e);
+                await writeLog('error', 'loadPublication', `Failed to load publication in loadPublication: ${e.message || String(e)}`);
                 setState('publication-error', e.message || "Failed to load publication", StoragePersistence.none);
                 throw e;
             }
@@ -107,7 +108,7 @@ export async function savePublication(
 
         return hash;
     } catch (e: any) {
-        console.error("Failed to save publication in savePublication:", e);
+        await writeLog('error', 'savePublication', `Failed to save publication in savePublication: ${e.message || String(e)}`);
         setState('publication-error', e.message || "Failed to save publication", StoragePersistence.none);
         throw e;
     } finally {
@@ -178,22 +179,22 @@ export function usePublicationLoadingError(): [string | null] {
 }
 
 
-export function getChapter(chapterNo) {
+export function getChapter(chapterNo: any) {
     return inMemoryPublication?.chapters?.find((c: any) => c.chapterNo === chapterNo);
 }
 
-export function getPage(chapterNo, pageNo) {
+export function getPage(chapterNo: any, pageNo: any) {
     return inMemoryPublication?.pages?.find((p: any) => p.chapterNo === chapterNo && p.pageNo === pageNo);
 }
 
-export function getParagraph(chapterNo, pageNo, paragraphNo) {
+export function getParagraph(chapterNo: any, pageNo: any, paragraphNo: any) {
     return inMemoryPublication?.paragraphs?.find((p: any) => p.chapterNo === chapterNo && p.pageNo === pageNo && p.paragraphNo === paragraphNo);
 }
 
-export function getPredicates(chapterNo, pageNo, paragraphNo) {
+export function getPredicates(chapterNo: any, pageNo: any, paragraphNo: any) {
     return inMemoryPublication?.predicates?.find((p: any) => p.chapterNo === chapterNo && p.pageNo === pageNo && p.paragraphNo === paragraphNo);
 }
 
-export function getPrompts(chapterNo, pageNo, paragraphNo) {
+export function getPrompts(chapterNo: any, pageNo: any, paragraphNo: any) {
     return inMemoryPublication?.prompts?.find((p: any) => p.chapterNo === chapterNo && p.pageNo === pageNo && p.paragraphNo === paragraphNo);
 }   

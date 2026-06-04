@@ -1,3 +1,5 @@
+import { writeLog } from "@/data/storage/logStorage";
+
 type props = {
     systemPrompt: string;
     userPrompt: string;
@@ -80,6 +82,7 @@ export default async function processxAIChat({
         if (!response.ok) {
             const errorMessage = await response.text();
 
+            await writeLog('error', 'processxAIChat', `API Error: ${response.status} - ${errorMessage}`);
             throw new Error(`API Error: ${response.status} - ${errorMessage}`);
         }
 
@@ -88,6 +91,7 @@ export default async function processxAIChat({
         const content = data.choices?.[0]?.message?.content?.trim();
 
         if (content?.trim().length === 0) {
+            await writeLog('error', 'processxAIChat', 'No response returned from the API');
             throw new Error("No response returned from the API");
         }
 
@@ -107,6 +111,7 @@ export default async function processxAIChat({
 
         return { content, totalCost };
     } catch (error: any) {
-        throw new Error(`Error: ${error.message}`);
+        await writeLog('error', 'processxAIChat', `Error: ${error.message}`);
+        throw new Error(`Error: ${error.message}`, { cause: error });
     }
 }

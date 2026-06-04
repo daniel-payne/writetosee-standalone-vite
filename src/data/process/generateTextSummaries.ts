@@ -2,8 +2,9 @@ import llmGenerateText from "@/data/llm/llmGenerateText";
 import { storeCost } from "@/data/storage/costStorage";
 import { readFile, writeFile } from "@/data/storage/fileStorage";
 import generateTextDigest from "@/data/utilities/generateTextDigest";
+import { writeLog } from "@/data/storage/logStorage";
 
-const MIN_SUMMARIZATION_LENGTH = 300;
+const MIN_SUMMARIZATION_LENGTH = 3000;
 
 const SYSTEM_PROMPT = `
 You are an assistant specialized in narrative summarization. 
@@ -63,12 +64,12 @@ async function generateTextSummary(item: SummaryItem): Promise<number | null> {
             try {
                 await writeFile(`summaries/${digest}.txt`, contentString);
             } catch (writeError) {
-                console.error("Failed to write summary cache file:", writeError);
+                await writeLog('error', 'generateTextSummary', `Failed to write summary cache file: ${writeError instanceof Error ? writeError.message : String(writeError)}`);
             }
 
             return totalCost ?? null;
         } else {
-            console.error("An unexpected error occurred:", error);
+            await writeLog('error', 'generateTextSummary', `An unexpected error occurred: ${error instanceof Error ? error.message : String(error)}`);
             return null;
         }
     }

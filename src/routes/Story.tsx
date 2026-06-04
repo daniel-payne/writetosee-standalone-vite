@@ -8,7 +8,6 @@ import ParagraphImageDisplay from "@/components/ParagraphImageDisplay";
 type StoryProps = {} & HTMLAttributes<HTMLDivElement>;
 
 export default function Story({
-  children,
   ...rest
 }: PropsWithChildren<StoryProps>) {
   useLoaderData();

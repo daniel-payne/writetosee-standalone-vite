@@ -8,7 +8,6 @@ type NotificationDisplayProps = {
 export default function NotificationDisplay({
   errorMsg,
   successMsg,
-  children,
   ...rest
 }: PropsWithChildren<NotificationDisplayProps>) {
   if (!errorMsg && !successMsg) return null;

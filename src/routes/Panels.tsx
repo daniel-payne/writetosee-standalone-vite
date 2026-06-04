@@ -4,7 +4,6 @@ import { useLoaderData, useActionData } from "react-router-dom";
 type PanelsProps = {} & HTMLAttributes<HTMLDivElement>;
 
 export default function Panels({
-  children,
   ...rest
 }: PropsWithChildren<PanelsProps>) {
   useLoaderData();

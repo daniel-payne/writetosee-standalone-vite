@@ -5,7 +5,7 @@ export async function clientLoader() {
     const style = await loadStyle();
     console.log('style', style);
     return { style };
-  } catch (e) {
+  } catch {
     return { style: {} };
   }
 }

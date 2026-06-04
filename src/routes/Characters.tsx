@@ -4,7 +4,6 @@ import { useLoaderData, useActionData } from "react-router-dom";
 type CharactersProps = {} & HTMLAttributes<HTMLDivElement>;
 
 export default function Characters({
-  children,
   ...rest
 }: PropsWithChildren<CharactersProps>) {
   useLoaderData();

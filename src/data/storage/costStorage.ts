@@ -47,9 +47,11 @@ export async function storeCost(
         // If the file does not exist, we start with an empty array
         if (err instanceof Error) {
             if (err.name !== 'NotFoundError' && !err.message.includes('NotFoundError') && !err.message.includes('does not exist')) {
+                await writeLog('error', 'storeCost', `Failed to read costs.json in storeCost: ${err.message}`);
                 throw err;
             }
         } else {
+            await writeLog('error', 'storeCost', `Failed to read costs.json in storeCost: ${String(err)}`);
             throw err;
         }
     }

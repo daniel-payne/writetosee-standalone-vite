@@ -3,6 +3,7 @@ import { clearLogs } from '@/data/storage/logStorage';
 
 export interface WelcomeLoaderData {
   hasDirectory: boolean;
+  permissionGranted: boolean;
   filesList: string[] | null;
   directoryName: string | null;
   apiKey: string | null;

@@ -1,6 +1,8 @@
 import { useState, useEffect, type HTMLAttributes, type PropsWithChildren } from "react";
 import { readFile } from "@/data/storage/fileStorage";
 import { useFetcher } from "react-router-dom";
+import { writeLog } from "@/data/storage/logStorage";
+import { useLocalState } from '@keldan-systems/state-mutex';
 
 type ComponentProps = {
   paragraph: any;
@@ -10,14 +12,25 @@ type ComponentProps = {
 export default function ParagraphImageDisplay({
   paragraph,
   name = 'ParagraphImageDisplay',
-  children,
   ...rest
 }: PropsWithChildren<ComponentProps>) {
+  const [prevImagePath, setPrevImagePath] = useState(paragraph?.imageUrl || paragraph?.image);
   const [src, setSrc] = useState<string>('');
   const [imgError, setImgError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [processingStatus] = useLocalState<'idle' | 'processing'>('publication-processing-status', 'idle');
 
   const imagePath = paragraph?.imageUrl || paragraph?.image;
+  const isAwaitingImage = processingStatus === 'processing' && !imagePath;
+
+  if (imagePath !== prevImagePath) {
+    setPrevImagePath(imagePath);
+    setImgError(false);
+    setLoading(imagePath ? true : false);
+    if (!imagePath) {
+      setSrc('');
+    }
+  }
 
   const fetcher = useFetcher();
   const isRegenerating = fetcher.state !== "idle";
@@ -31,14 +44,10 @@ export default function ParagraphImageDisplay({
   };
 
   useEffect(() => {
-    setImgError(false);
-    setLoading(false);
     if (!imagePath) {
-      setSrc('');
       return;
     }
 
-    setLoading(true);
     let objectUrl = '';
     
     readFile(imagePath)
@@ -47,8 +56,8 @@ export default function ParagraphImageDisplay({
         setSrc(objectUrl);
         setLoading(false);
       })
-      .catch(err => {
-        console.error("Failed to load paragraph image:", err);
+      .catch(async err => {
+        await writeLog('error', 'ParagraphImageDisplay', `Failed to load paragraph image: ${err instanceof Error ? err.message : String(err)}`);
         setImgError(true);
         setLoading(false);
       });
@@ -62,7 +71,7 @@ export default function ParagraphImageDisplay({
 
   return (
     <div {...rest} data-name={name}>
-      <div className="h-full w-full bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden relative group">
+      <div className={`h-full w-full bg-white dark:bg-slate-800 rounded-2xl shadow-md border flex flex-col overflow-hidden relative group transition-all duration-300 ${isAwaitingImage ? 'border-primary/30 bg-primary/[0.02]' : 'border-slate-200 dark:border-slate-700'}`}>
         {src && !imgError ? (
           <img
             src={src}
@@ -71,10 +80,16 @@ export default function ParagraphImageDisplay({
           />
         ) : (
           <div className="h-full w-full p-4 flex flex-col justify-between items-stretch">
-            {/* Fallback Text-only Card */}
             <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-700">
               <span className="text-[10px] font-bold text-base-content/40">Paragraph #{paragraph.paragraphNo}</span>
-              {loading && <span className="loading loading-spinner loading-xs text-primary"></span>}
+              {(loading || isAwaitingImage) && (
+                <div className="flex items-center gap-1.5">
+                  {isAwaitingImage && (
+                    <span className="text-[9px] text-primary/70 animate-pulse font-medium">Awaiting illustration...</span>
+                  )}
+                  <span className="loading loading-spinner loading-xs text-primary"></span>
+                </div>
+              )}
             </div>
             
             <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed overflow-y-auto flex-1 py-2 text-left select-all">

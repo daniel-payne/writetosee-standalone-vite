@@ -3,7 +3,7 @@ const originalAtob = window.atob;
 window.atob = function(str: string): string {
   try {
     return originalAtob(str);
-  } catch (e) {
+  } catch {
     return '';
   }
 };
@@ -23,7 +23,7 @@ window.localstate = {
     setState(key, null, StoragePersistence.local);
     try {
       localStorage.removeItem(key);
-    } catch (e) {
+    } catch {
       // Ignore security errors in some iframe contexts
     }
   }
@@ -36,7 +36,7 @@ const handleCleanup = () => {
       if (apiKey) {
         window.localstate.clear('publication-data');
       }
-    } catch (e) {
+    } catch {
       // Ignore security errors in some iframe contexts
     }
   }

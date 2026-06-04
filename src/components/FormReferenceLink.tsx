@@ -1,6 +1,7 @@
 import React, { useState, useEffect, type HTMLAttributes, type PropsWithChildren } from "react";
 import { useFetcher } from "react-router-dom";
 import { readFile, listFiles } from "@/data/storage/fileStorage";
+import { writeLog } from "@/data/storage/logStorage";
 
 type ComponentProps = {
     linkValue: string;
@@ -18,36 +19,39 @@ export default function FormReferenceLink({
     name = 'FormReferenceLink',
     ...rest
 }: PropsWithChildren<ComponentProps>) {
+    const [prevLinkValue, setPrevLinkValue] = useState(linkValue);
     const [imgError, setImgError] = useState(false);
-    const [displaySrc, setDisplaySrc] = useState<string>('');
+    const [localImageUrl, setLocalImageUrl] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [localImages, setLocalImages] = useState<LocalImage[]>([]);
     const fetcher = useFetcher();
+
+    if (linkValue !== prevLinkValue) {
+        setPrevLinkValue(linkValue);
+        setImgError(false);
+        setLocalImageUrl('');
+    }
+
+    const isLocalFile = linkValue && !linkValue.startsWith('http') && !linkValue.startsWith('blob:') && !linkValue.startsWith('data:');
+    const displaySrc = isLocalFile ? localImageUrl : linkValue;
 
     useEffect(() => {
         if (!isModalOpen) {
             localImages.forEach(img => URL.revokeObjectURL(img.url));
         }
-    }, [isModalOpen]);
+    }, [isModalOpen, localImages]);
 
     useEffect(() => {
-        setImgError(false);
-        if (!linkValue) {
-            setDisplaySrc('');
-            return;
-        }
-
-        if (linkValue.startsWith('http') || linkValue.startsWith('blob:') || linkValue.startsWith('data:')) {
-            setDisplaySrc(linkValue);
+        if (!isLocalFile) {
             return;
         }
 
         let objectUrl = '';
         readFile(linkValue).then(file => {
             objectUrl = URL.createObjectURL(file);
-            setDisplaySrc(objectUrl);
-        }).catch(err => {
-            console.error("Failed to load local file:", err);
+            setLocalImageUrl(objectUrl);
+        }).catch(async err => {
+            await writeLog('error', 'FormReferenceLink', `Failed to load local file: ${err instanceof Error ? err.message : String(err)}`);
             setImgError(true);
         });
 
@@ -56,7 +60,7 @@ export default function FormReferenceLink({
                 URL.revokeObjectURL(objectUrl);
             }
         };
-    }, [linkValue]);
+    }, [linkValue, isLocalFile]);
 
     const handleOpenModal = async () => {
         try {
@@ -71,7 +75,7 @@ export default function FormReferenceLink({
             setLocalImages(images);
             setIsModalOpen(true);
         } catch (e) {
-            console.error("Failed to list files:", e);
+            await writeLog('error', 'FormReferenceLink', `Failed to list files: ${e instanceof Error ? e.message : String(e)}`);
         }
     };
 

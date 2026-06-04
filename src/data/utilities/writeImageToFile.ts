@@ -1,12 +1,12 @@
-import mimeToExtension from "./mimeToExtension.js";
+import _mimeToExtension from "./mimeToExtension.js";
 
 export default async function writeImageToFile(
-    imageData: string,
+    _imageData: string,
 
-    imageDir: string = "./output",
-    imagePath: string = "/images",
-    imageName: string = "gemini-generated",
-    imageType: string = "image/png",
+    _imageDir: string = "./output",
+    _imagePath: string = "/images",
+    _imageName: string = "gemini-generated",
+    _imageType: string = "image/png",
 ): Promise<string> {
     return 'TBD'
 

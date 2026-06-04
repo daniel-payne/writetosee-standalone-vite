@@ -1,4 +1,5 @@
 import { readFile } from "@/data/storage/fileStorage";
+import { writeLog } from "@/data/storage/logStorage";
 
 export interface CostRecord {
   date: string;
@@ -30,13 +31,13 @@ export async function clientLoader() {
     } catch (err: unknown) {
       const error = err as Error;
       if (error.name !== 'NotFoundError' && !error.message?.includes('NotFoundError') && !error.message?.includes('does not exist')) {
-        console.error("Failed to read costs.json:", err);
+        await writeLog('error', 'Costs.loader', `Failed to read costs.json: ${error.message}`);
       }
     }
 
     return { costs };
   } catch (error) {
-    console.error("Failed to load costs in loader:", error);
+    await writeLog('error', 'Costs.loader', `Failed to load costs in loader: ${error instanceof Error ? error.message : String(error)}`);
     return { costs: [] };
   }
 }

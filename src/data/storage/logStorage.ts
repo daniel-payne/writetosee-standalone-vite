@@ -7,11 +7,18 @@ export interface LogEntry {
     message: string;
 }
 
+let isWritingLog = false;
+
 export async function writeLog(
     type: string,
     source: string,
     message: string
 ): Promise<void> {
+    if (isWritingLog) {
+        console.warn(`[Recursive Log Fallback] [${type}] [${source}]: ${message}`);
+        return;
+    }
+    isWritingLog = true;
     try {
         let logs: LogEntry[] = [];
 
@@ -50,7 +57,7 @@ export async function writeLog(
         } catch (err: unknown) {
             const error = err as Error;
             if (error.name !== 'NotFoundError' && !error.message?.includes('NotFoundError') && !error.message?.includes('does not exist')) {
-                console.error("Error reading logs file:", err);
+                console.warn("Error reading logs file:", err);
             }
         }
 
@@ -71,7 +78,9 @@ export async function writeLog(
         const content = logs.map(item => JSON.stringify(item)).join('\n');
         await writeFile('data/logs.json', content);
     } catch (e) {
-        console.error("Failed to store log:", e);
+        console.warn("Failed to store log:", e);
+    } finally {
+        isWritingLog = false;
     }
 }
 
@@ -79,6 +88,6 @@ export async function clearLogs(): Promise<void> {
     try {
         await writeFile('data/logs.json', '[]');
     } catch (e) {
-        console.error("Failed to clear logs:", e);
+        console.warn("Failed to clear logs:", e);
     }
 }
