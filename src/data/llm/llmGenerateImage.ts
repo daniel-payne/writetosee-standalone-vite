@@ -1,6 +1,7 @@
 import { writeLog } from "../storage/logStorage";
 import { identifyApiKeyProvider } from "../utilities/identifyApiKeyProvider";
 import processGoogleImage from "./providers/processGoogleImage";
+import processxAIImage from "./providers/processxAIImage";
 
 /*
 
@@ -29,17 +30,14 @@ export default async function llmGenerateImage(imagePrompt: string) {
     await writeLog('info', 'llmGenerateImage', imagePrompt.substring(0, 30));
 
     if (provider === 'GOOGLE') {
-        // const model = 'imagen-4.0-fast-generate-001'
-        // const inputCostPerMillion = 0.00
-        // const outputCostPerMillion = 17.85
-
         const model = "gemini-2.5-flash-image"
         const inputCostPerMillion = 0.30
         const outputCostPerMillion = 30.00
 
         result = await processGoogleImage({ imagePrompt, apiKey, model, inputCostPerMillion, outputCostPerMillion })
     } else if (provider === 'XAI') {
-        // result = await processxAIImage({ imagePrompt, apiKey })
+        const model = "grok-imagine-image-quality";
+        result = await processxAIImage({ imagePrompt, apiKey, model });
     }
 
 

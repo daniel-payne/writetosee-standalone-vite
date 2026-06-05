@@ -15,7 +15,8 @@ export async function clientLoader(): Promise<WelcomeLoaderData> {
   let filesList: string[] = [];
   let directoryName: string | null = null;
 
-  const safeMode = (window.localStorage.getItem("safeMode") ?? '1') === '1' ? true : false;
+  const rawSafeMode = window.localStorage.getItem("safeMode") ?? '1';
+  const safeMode = rawSafeMode === '1' || rawSafeMode === 'true';
 
   // Retrieve API Key directly from window.sessionStorage in clientLoader
   const apiKey = window.sessionStorage.getItem("apiKey") ?? '';

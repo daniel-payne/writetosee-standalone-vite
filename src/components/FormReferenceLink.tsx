@@ -14,7 +14,7 @@ type LocalImage = { name: string; url: string };
 
 export default function FormReferenceLink({
     linkValue,
-    instructionsValue,
+    instructionsValue: _instructionsValue,
     onChange,
     name = 'FormReferenceLink',
     ...rest
@@ -24,7 +24,7 @@ export default function FormReferenceLink({
     const [localImageUrl, setLocalImageUrl] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [localImages, setLocalImages] = useState<LocalImage[]>([]);
-    const fetcher = useFetcher();
+    const _fetcher = useFetcher();
 
     if (linkValue !== prevLinkValue) {
         setPrevLinkValue(linkValue);
@@ -130,11 +130,11 @@ export default function FormReferenceLink({
                 </div>
 
                 {displaySrc && !imgError && (
-                    <div className="mt-2 w-full flex justify-center">
+                    <div className="w-full flex justify-center">
                         <img
                             src={displaySrc}
                             alt="Style Reference"
-                            className="max-h-[25vh] object-contain rounded border border-slate-200 dark:border-slate-600 shadow-sm"
+                            className="max-h-[60vh] object-contain rounded border border-slate-200 dark:border-slate-600 shadow-sm"
                             onError={() => setImgError(true)}
                         />
                     </div>
@@ -144,7 +144,7 @@ export default function FormReferenceLink({
                         Image could not be loaded. If this is a local blob URL, it may have expired.
                     </div>
                 )}
-
+                {/* 
                 {displaySrc && !imgError && (
                     <div className="flex-1 flex flex-col min-h-0">
 
@@ -176,7 +176,7 @@ export default function FormReferenceLink({
                             className="w-full flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none dark:bg-slate-700 dark:text-white min-h-0"
                         />
                     </div>
-                )}
+                )} */}
             </div>
 
             {isModalOpen && (

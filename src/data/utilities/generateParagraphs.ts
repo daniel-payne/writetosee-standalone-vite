@@ -5,7 +5,8 @@ import generateTextDigest from "@/data/utilities/generateTextDigest";
 export default function generateParagraphs(publication: Record<string, any>, characterThreshold = 20, paragraphSeparator = '\n\n') {
   const text = publication.story as string;
 
-  if (text == null) {
+  if (text == null || text.trim() === '') {
+    publication.paragraphs = [];
     return [];
   }
 
@@ -23,6 +24,8 @@ export default function generateParagraphs(publication: Record<string, any>, cha
     chapterNo: number;
     pageNo: number;
     digest: string;
+    image?: string;
+    imageUrl?: string;
   }> = [];
 
   let chapterNo = 0;
@@ -30,6 +33,7 @@ export default function generateParagraphs(publication: Record<string, any>, cha
   let paragraphNo = 0;
 
   const currentPageParagraphs: string[] = [];
+  const oldParagraphs = publication.paragraphs || [];
 
   for (let i = 0; i < rawParagraphs.length; i++) {
     const block = rawParagraphs[i];
@@ -42,13 +46,18 @@ export default function generateParagraphs(publication: Record<string, any>, cha
       pageNo = 0;
       currentPageParagraphs.length = 0; // Clear paragraphs for the new chapter/page
     } else {
+      const digest = generateTextDigest(trimmed);
+      const existing = oldParagraphs.find((op: any) => op.digest === digest || op.text === trimmed);
+
       result.push({
         paragraphNo,
         paragraphIndex: i,
         text: trimmed,
         chapterNo,
         pageNo,
-        digest: generateTextDigest(trimmed)
+        digest,
+        image: existing?.image,
+        imageUrl: existing?.imageUrl
       });
 
       currentPageParagraphs.push(trimmed);

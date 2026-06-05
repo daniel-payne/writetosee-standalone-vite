@@ -35,10 +35,11 @@ export default function FormDrawingInstructions({ name = 'FormDrawingInstruction
           />
         </div>
         <div className="flex flex-row gap-2 justify-center items-center">
-          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('CHILDRENS_BOOK')}>Childrens Book</button>
+          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('CHILDRENS_BOOK')}>children's Book</button>
           <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('GRAPHIC_NOVEL')}>Graphic Novel</button>
           <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('GRAPHIC_NOVEL')}>Manga Comic</button>
-          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('GRAPHIC_NOVEL')}>Suprthero Comic</button>
+          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('GRAPHIC_NOVEL')}>Superhero Comic</button>
+          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('GRAPHIC_NOVEL')}>Reference Style</button>
         </div>
       </div>
     </div>

@@ -52,12 +52,21 @@ export default async function generatePrompts(publication: any) {
         const paragraph = paragraphs[index];
         const sceneText = paragraph.text || "";
 
-        const chapterText = (index - 1 >= 0 && publication.chapters?.[index - 1])
-            ? (publication.chapters[index - 1].summary ?? publication.chapters[index - 1].text ?? "")
-            : "";
-        const pageText = (index - 1 >= 0 && publication.pages?.[index - 1])
-            ? (publication.pages[index - 1].summary ?? publication.pages[index - 1].text ?? "")
-            : "";
+        const pages = publication.pages || [];
+        const chapters = publication.chapters || [];
+
+        const currentPageIndex = pages.findIndex(
+            (pg: any) => pg.chapterNo === paragraph.chapterNo && pg.pageNo === paragraph.pageNo
+        );
+        const prevPage = currentPageIndex > 0 ? pages[currentPageIndex - 1] : null;
+        const pageText = prevPage ? (prevPage.summary ?? prevPage.text ?? "") : "";
+
+        const currentChapterIndex = chapters.findIndex(
+            (ch: any) => ch.chapterNo === paragraph.chapterNo
+        );
+        const prevChapter = currentChapterIndex > 0 ? chapters[currentChapterIndex - 1] : null;
+        const chapterText = prevChapter ? (prevChapter.summary ?? prevChapter.text ?? "") : "";
+
         const predicateText = (publication.predicates?.[index]?.text) ?? "";
 
         // Combine narrative texts, filtered to exclude empty values

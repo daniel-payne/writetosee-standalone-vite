@@ -72,7 +72,7 @@ export default function Story({
           <div className="h-full w-full overflow-auto p-0 flex flex-row flex-wrap gap-0 items-start justify-start content-start">
             {publication?.paragraphs?.map((paragraph: any, idx: number) => (
               <ParagraphImageDisplay
-                key={paragraph.digest || idx}
+                key={idx}
                 paragraph={paragraph}
                 className="w-1/4 aspect-square p-2"
               />

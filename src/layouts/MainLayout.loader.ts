@@ -16,7 +16,8 @@ export async function clientLoader(): Promise<MainLayoutLoaderData> {
   let hasDirectory = false;
   let filesList: string[] = [];
   const apiKey = window.sessionStorage.getItem("apiKey") ?? '';
-  const safeMode = (window.localStorage.getItem("safeMode") ?? '1') === '1' ? true : false;
+  const rawSafeMode = window.localStorage.getItem("safeMode") ?? '1';
+  const safeMode = rawSafeMode === '1' || rawSafeMode === 'true';
 
   let permissionGranted = false;
   let directoryName: string | null = null;

@@ -34,54 +34,98 @@ export default function ParagraphImageDisplay({
 
   const fetcher = useFetcher();
   const isRegenerating = fetcher.state !== "idle";
+  const [prevIsRegenerating, setPrevIsRegenerating] = useState(false);
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+
+  if (isRegenerating !== prevIsRegenerating) {
+    setPrevIsRegenerating(isRegenerating);
+    if (!isRegenerating && prevIsRegenerating) {
+      setReloadTrigger(prev => prev + 1);
+    }
+  }
 
   const handleRegenerate = () => {
-    if (isRegenerating || !imagePath) return;
+    if (isRegenerating) return;
     fetcher.submit(
-      { intent: 'REGENERATE-IMAGE', imagePath: imagePath },
+      { intent: 'REGENERATE-IMAGE', imagePath: imagePath || '' },
       { method: 'post' }
     );
   };
 
+  // Keep track of the active load request to ignore outdated promises
   useEffect(() => {
     if (!imagePath) {
       return;
     }
 
-    let objectUrl = '';
+    let active = true;
     
     readFile(imagePath)
       .then(file => {
-        objectUrl = URL.createObjectURL(file);
-        setSrc(objectUrl);
+        if (!active) return;
+        const objectUrl = URL.createObjectURL(file);
+        
+        setSrc(prevSrc => {
+          // Defer revoking the old URL until the new one is ready to render
+          if (prevSrc && prevSrc.startsWith('blob:')) {
+            URL.revokeObjectURL(prevSrc);
+          }
+          return objectUrl;
+        });
         setLoading(false);
       })
       .catch(async err => {
+        if (!active) return;
         await writeLog('error', 'ParagraphImageDisplay', `Failed to load paragraph image: ${err instanceof Error ? err.message : String(err)}`);
         setImgError(true);
         setLoading(false);
       });
 
     return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
+      active = false;
     };
-  }, [imagePath]);
+  }, [imagePath, reloadTrigger]);
+
+  // Clean up the final object URL only when the component unmounts
+  useEffect(() => {
+    return () => {
+      setSrc(prevSrc => {
+        if (prevSrc && prevSrc.startsWith('blob:')) {
+          URL.revokeObjectURL(prevSrc);
+        }
+        return '';
+      });
+    };
+  }, []);
 
   return (
     <div {...rest} data-name={name}>
       <div className={`h-full w-full bg-white dark:bg-slate-800 rounded-2xl shadow-md border flex flex-col overflow-hidden relative group transition-all duration-300 ${isAwaitingImage ? 'border-primary/30 bg-primary/[0.02]' : 'border-slate-200 dark:border-slate-700'}`}>
         {src && !imgError ? (
-          <img
-            src={src}
-            alt="Paragraph illustration"
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
+          <>
+            <img
+              src={src}
+              alt="Paragraph illustration"
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+            {imagePath && (
+              <button
+                type="button"
+                onClick={handleRegenerate}
+                disabled={isRegenerating}
+                className={`absolute bottom-3 right-3 z-20 btn btn-circle btn-sm bg-slate-900/60 hover:bg-slate-900/80 border-none text-white backdrop-blur-md shadow-lg transition-all duration-200 ${isRegenerating ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                title="Regenerate Image"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+              </button>
+            )}
+          </>
         ) : (
           <div className="h-full w-full p-4 flex flex-col justify-between items-stretch">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-700">
-              <span className="text-[10px] font-bold text-base-content/40">Paragraph #{paragraph.paragraphNo}</span>
+              <span className="text-[10px] font-bold text-base-content/40">Picture {paragraph.paragraphNo + 1}</span>
               {(loading || isAwaitingImage) && (
                 <div className="flex items-center gap-1.5">
                   {isAwaitingImage && (
@@ -110,6 +154,20 @@ export default function ParagraphImageDisplay({
                   {isRegenerating ? "Regenerating..." : "Regenerate Image"}
                 </button>
               </div>
+            )}
+
+            {!(imagePath && imgError) && (
+              <button
+                type="button"
+                onClick={handleRegenerate}
+                disabled={isRegenerating}
+                className={`absolute bottom-3 right-3 z-20 btn btn-circle btn-sm bg-slate-900/60 hover:bg-slate-900/80 border-none text-white backdrop-blur-md shadow-lg transition-all duration-200 ${isRegenerating ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                title="Generate Image"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+              </button>
             )}
           </div>
         )}

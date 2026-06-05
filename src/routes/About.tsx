@@ -1,5 +1,6 @@
 import type { HTMLAttributes, PropsWithChildren } from "react";
 import { useLocalState } from '@keldan-systems/state-mutex';
+import { Link } from "react-router-dom";
 
 type AboutProps = {
 } & HTMLAttributes<HTMLDivElement>;
@@ -9,9 +10,12 @@ export default function About({
   ...rest
 }: PropsWithChildren<AboutProps>) {
   // Pull state-mutex values from the welcome page to demonstrate active sync!
-  const [prompt] = useLocalState<string>('llm_prompt', 'N/A');
-  const [markdownContent] = useLocalState<string>('llm_markdown', 'N/A');
+
   const [mutexVal, setMutexVal] = useLocalState<string>('image-generation-mutex', '');
+
+  const [isDEBUG, setIsDEBUG] = useLocalState<boolean>('isDEBUG', false);
+  const [safeModeVal, setSafeModeVal] = useLocalState<string | boolean>('safeMode', true);
+  const isSafeMode = safeModeVal === true || safeModeVal === '1' || safeModeVal === 'true';
 
   return (
     <div {...rest} className={`max-w-3xl mx-auto space-y-8 ${rest.className || ''}`}>
@@ -23,38 +27,78 @@ export default function About({
             About WriteToSee Standalone
           </h1>
           <p className="mt-4 text-base-content/70 leading-relaxed">
-            WriteToSee Standalone is a zero-dependency, locally distributed Single Page Application. It is built to operate directly from a static folder or locally served web directory, utilizing modern browser APIs to bypass standard backend requirements.
+            <span>WriteToSee Standalone is a zero-dependency, locally distributed Single Page Application. </span>
+            <span>It is built to operate directly from a static folder or locally served web directory, utilizing modern browser APIs to bypass standard backend requirements.</span>
           </p>
         </div>
       </section>
 
-      {/* State Mutex Sync Demo */}
+      {/* Teacher Usage Card */}
       <section className="card bg-base-100 shadow-xl border border-base-content/5">
         <div className="card-body">
           <h2 className="card-title text-xl font-bold flex items-center gap-2">
-            <span className="p-1.5 bg-primary/10 rounded-lg text-primary">
+            <span className="p-1.5 bg-secondary/10 rounded-lg text-secondary">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.656 48.656 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l-3 3m3-3l3 3" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-16.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-16.25v16.25" />
               </svg>
             </span>
-            Real-Time State Mutex Sync
+            Teacher Usage
           </h2>
-          <p className="text-sm text-base-content/60">
-            Below is the current data pulled from the `@keldan-systems/state-mutex` store. If you open this app in another tab, change these values on the Welcome page, and return here, you will see them stay in perfect sync!
-          </p>
-
-          <div className="mt-6 space-y-4 p-4 rounded-xl bg-base-200 text-sm font-mono text-left">
-            <div>
-              <span className="font-bold text-primary block text-xs uppercase tracking-wider mb-1">Active LLM Prompt:</span>
-              <p className="text-base-content/80 break-words">{prompt}</p>
+          <div className="mt-4 text-base-content/70 leading-relaxed">
+            <div className="mt-4">
+              If you want to use this in a school, you can provide this lin to students, replacing YOUR_API_KEY with your own API key.
+              This will cost you money, based on usage.
+              DO NOT LEAVE KEYS ACTIVE OUTSIDE OF CLASS TIMES.
             </div>
-            <div className="border-t border-base-content/10 pt-4">
-              <span className="font-bold text-secondary block text-xs uppercase tracking-wider mb-1">Active LLM Response Length:</span>
-              <p className="text-base-content/80">{markdownContent.length} characters</p>
+            <div className="my-4">
+              To start the application in simple mode, i.e. Story only, no character, style, panels, use this URL.
+            </div>
+            <code className="text-primary-content font-mono">https://writetosee.com/<strong>simple</strong>/?apiKey=YOUR_API_KEY</code>
+            <div className="my-4">
+              To start the application with all functionality, use this URL.
+            </div>
+            <code className="text-primary-content font-mono">https://writetosee.com/<strong>full</strong>/?apiKey=YOUR_API_KEY</code>
+            <div className="my-4">
+              You can email this a link to your students to use, it will automatically set the mode based on the URL.
             </div>
           </div>
         </div>
       </section>
+
+
+      {/* Debugging Section */}
+      <section className="card bg-base-100 shadow-xl border border-base-content/5">
+        <div className="card-body">
+          <h2 className="card-title text-xl font-bold flex items-center gap-2">
+            <span className="p-1.5 bg-warning/10 rounded-lg text-warning">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            </span>
+            Debugging
+          </h2>
+          <p className="text-sm text-base-content/60">
+            Display additional menu options for Publication, Costs and Logs.
+          </p>
+
+          <div className="mt-4 flex flex-col gap-4">
+            <div className="flex flex-row items-center gap-4">
+              <input type="checkbox" checked={isDEBUG} className="checkbox" id="debugModeCheckbox" onChange={(e) => setIsDEBUG(e.target.checked)} />
+              <label htmlFor="debugModeCheckbox" className="text-xs font-mono text-base-content/50 cursor-pointer select-none">
+                Debug Mode: <span className={`font-bold ${isDEBUG ? 'text-error animate-pulse' : 'text-success'}`}>{isDEBUG ? 'ON' : 'OFF'}</span>
+              </label>
+            </div>
+
+            <div className="flex flex-row items-center gap-4">
+              <input type="checkbox" checked={isSafeMode} className="checkbox" id="simpleModeCheckbox" onChange={(e) => setSafeModeVal(e.target.checked)} />
+              <label htmlFor="simpleModeCheckbox" className="text-xs font-mono text-base-content/50 cursor-pointer select-none">
+                Simple Mode (Story only): <span className={`font-bold ${isSafeMode ? 'text-error animate-pulse' : 'text-success'}`}>{isSafeMode ? 'ON' : 'OFF'}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
 
       {/* Troubleshooting Section */}
       <section className="card bg-base-100 shadow-xl border border-base-content/5">
@@ -97,7 +141,7 @@ export default function About({
             </span>
             Technology Stack
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div className="p-4 rounded-xl bg-base-100 border border-base-content/10">
               <h3 className="font-bold text-base-content">Tailwind CSS v4 & daisyUI v5</h3>
@@ -105,7 +149,7 @@ export default function About({
                 Modern utility styling paired with standard component classes, fully configured directly within CSS for simplified deployment.
               </p>
             </div>
-            
+
             <div className="p-4 rounded-xl bg-base-100 border border-base-content/10">
               <h3 className="font-bold text-base-content">File System Access API</h3>
               <p className="text-xs text-base-content/60 mt-1">
@@ -128,7 +172,25 @@ export default function About({
             </div>
           </div>
         </div>
-      </section>
-    </div>
+        <div className="m-4 p-4 rounded-xl bg-base-100 border border-base-content/10">
+          <p className="text-xs text-base-content/60 mt-1">
+            This application was written by Keldan (Kellie and Daniel), we used to run a technology company called Keldan Systems Ltd.
+            We developed several educational support software products, and provided consultancy.
+            However due to UK tax changes, we decided to give up and close down our business and are offering this free of charge.
+            It is a demonstration and proof of concept in the new world of agentic AI development using Google's antigravity.
+
+
+          </p>
+          <Link
+            to="https://en.wikipedia.org/wiki/Tang_ping"
+            className="text-xs text-primary-content/60 mt-1 no-underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Tang Ping comes to the uk
+          </Link>
+        </div>
+      </section >
+    </div >
   );
 };

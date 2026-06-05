@@ -26,6 +26,9 @@ export default function MainLayout({
   const navigate = useNavigate();
   const [theme, setTheme] = useLocalState<string>('writetosee-theme', DEFAULT_THEME);
   const [processingStatus] = useLocalState<'idle' | 'processing'>('publication-processing-status', 'idle');
+  const [isDEBUG] = useLocalState<boolean>('isDEBUG', false);
+  const [safeModeVal] = useLocalState<string | boolean>('safeMode', true);
+  const isSafeMode = safeModeVal === true || safeModeVal === '1' || safeModeVal === 'true';
 
   useEffect(() => {
     const checkLockAndRecover = async () => {
@@ -99,8 +102,8 @@ export default function MainLayout({
 
   let styleLinkStyle = unselectedStyle
   let storyLinkStyle = unselectedStyle;
-  let panelsLinkStyle = unselectedStyle;
-  let charactersLinkStyle = unselectedStyle;
+  let _panelsLinkStyle = unselectedStyle;
+  let _charactersLinkStyle = unselectedStyle;
   let imagesLinkStyle = unselectedStyle;
   let publicationLinkStyle = unselectedStyle;
   let costsLinkStyle = unselectedStyle;
@@ -116,11 +119,11 @@ export default function MainLayout({
   }
 
   if (isActive('/panels')) {
-    panelsLinkStyle = selectedStyle;
+    _panelsLinkStyle = selectedStyle;
   }
 
   if (isActive('/characters')) {
-    charactersLinkStyle = selectedStyle;
+    _charactersLinkStyle = selectedStyle;
   }
 
   if (isActive('/images')) {
@@ -144,8 +147,8 @@ export default function MainLayout({
   }
 
   if (isStoryDisabled) {
-    panelsLinkStyle = disabledStyle;
-    charactersLinkStyle = disabledStyle;
+    _panelsLinkStyle = disabledStyle;
+    _charactersLinkStyle = disabledStyle;
     imagesLinkStyle = disabledStyle;
     storyLinkStyle = disabledStyle;
     styleLinkStyle = disabledStyle;
@@ -194,14 +197,16 @@ export default function MainLayout({
 
           <nav className="flex items-center gap-2">
             {/* <Link to="/" className={welcomeLinkStyle} >Welcome</Link> */}
+            {!isSafeMode && <Link to="/style" className={styleLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Style</Link>}
             <Link to="/story" className={storyLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Story</Link>
-            {!loaderData?.safeMode && <Link to="/panels" className={panelsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Panels</Link>}
-            {!loaderData?.safeMode && <Link to="/characters" className={charactersLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Characters</Link>}
-            {!loaderData?.safeMode && <Link to="/images" className={imagesLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Images</Link>}
-            {!loaderData?.safeMode && <Link to="/style" className={styleLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Style</Link>}
-            {!loaderData?.safeMode && <Link to="/publication" className={publicationLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Publication</Link>}
-            {!loaderData?.safeMode && <Link to="/costs" className={costsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Costs</Link>}
-            {!loaderData?.safeMode && <Link to="/logs" className={logsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Logs</Link>}
+            {/* {!isSafeMode && <Link to="/characters" className={charactersLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Characters</Link>} */}
+            {!isSafeMode && <Link to="/images" className={imagesLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Images</Link>}
+
+            {/* {!isSafeMode && <Link to="/panels" className={panelsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Comic</Link>} */}
+
+            {!isSafeMode && isDEBUG && <Link to="/publication" className={publicationLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Publication</Link>}
+            {!isSafeMode && isDEBUG && <Link to="/costs" className={costsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Costs</Link>}
+            {!isSafeMode && isDEBUG && <Link to="/logs" className={logsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Logs</Link>}
             <Link to="/about" className={aboutLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>About</Link>
           </nav>
         </div>
