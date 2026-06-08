@@ -3,7 +3,8 @@ import SimpleConnector from '@/components/SimpleConnector';
 import DisclaimerModal from '@/components/DisclaimerModal';
 import NotificationDisplay from '@/components/NotificationDisplay';
 import type { HTMLAttributes, PropsWithChildren } from "react";
-import { useLoaderData, useActionData, Link } from 'react-router-dom';
+import { useLoaderData, useActionData, Link, useNavigate } from 'react-router-dom';
+import { identifyApiKeyProvider } from '@/data/utilities/identifyApiKeyProvider';
 
 
 
@@ -17,6 +18,7 @@ export default function Welcome({
 
   const loaderData = useLoaderData() as any;
   const actionData = useActionData() as any;
+  const navigate = useNavigate();
 
 
 
@@ -63,7 +65,9 @@ export default function Welcome({
     }
   }
 
-  const isStartDisabled = hasDirectory === false || permissionGranted === false || !((savedKey?.length ?? 0) > 0);
+  const apiKeyProvider = identifyApiKeyProvider(savedKey ?? '');
+  const isApiKeyValid = apiKeyProvider === 'GOOGLE' || apiKeyProvider === 'XAI';
+  const isStartDisabled = !hasDirectory || !permissionGranted || !isApiKeyValid;
 
   const handleAcceptDisclaimer = () => {
     localStorage.setItem('disclamer-accecpted', 'true');
@@ -103,9 +107,19 @@ export default function Welcome({
         />
 
 
-        <Link to={apiKey ? `/story?apiKey=${encodeURIComponent(apiKey)}` : "/story"} className={isStartDisabled ? "pointer-events-none" : ""} tabIndex={isStartDisabled ? -1 : undefined}>
+        <a
+          href={apiKey ? `/story?apiKey=${encodeURIComponent(apiKey)}` : '/story'}
+          className={isStartDisabled ? 'pointer-events-none' : ''}
+          tabIndex={isStartDisabled ? -1 : undefined}
+          onClick={(e) => {
+            if (isStartDisabled) return;
+            if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;
+            e.preventDefault();
+            navigate('/story');
+          }}
+        >
           <button className="btn btn-primary" disabled={isStartDisabled}>Start Creating Your Story</button>
-        </Link>
+        </a>
         <NotificationDisplay errorMsg={errorMsg} successMsg={successMsg} />
       </div>
 
