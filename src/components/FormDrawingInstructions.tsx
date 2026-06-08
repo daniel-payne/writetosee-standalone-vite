@@ -8,6 +8,7 @@ interface FormDrawingInstructionsProps extends Omit<React.HTMLAttributes<HTMLDiv
 }
 
 export default function FormDrawingInstructions({ name = 'FormDrawingInstructions', value, onChange, ...rest }: FormDrawingInstructionsProps) {
+
   const handleUseInstructions = (_style: string) => (e: any) => {
     e.preventDefault();
     e.stopPropagation();
@@ -35,11 +36,12 @@ export default function FormDrawingInstructions({ name = 'FormDrawingInstruction
           />
         </div>
         <div className="flex flex-row gap-2 justify-center items-center">
-          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('CHILDRENS_BOOK')}>children's Book</button>
-          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('GRAPHIC_NOVEL')}>Graphic Novel</button>
-          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('GRAPHIC_NOVEL')}>Manga Comic</button>
-          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('GRAPHIC_NOVEL')}>Superhero Comic</button>
-          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('GRAPHIC_NOVEL')}>Reference Style</button>
+          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('CHILDREN')}>Children's Book</button>
+          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('GRAPHIC')}>Graphic Novel</button>
+          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('MANGA')}>Manga Comic</button>
+          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('SUPERHERO')}>Superhero Comic</button>
+          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('CLAYMATION')}>Claymation</button>
+          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('REFERENCE')}>Reference Style</button>
         </div>
       </div>
     </div>

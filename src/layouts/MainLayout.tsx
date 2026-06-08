@@ -102,8 +102,8 @@ export default function MainLayout({
 
   let styleLinkStyle = unselectedStyle
   let storyLinkStyle = unselectedStyle;
-  let _panelsLinkStyle = unselectedStyle;
-  let _charactersLinkStyle = unselectedStyle;
+  // let _panelsLinkStyle = unselectedStyle;
+  // let _charactersLinkStyle = unselectedStyle;
   let imagesLinkStyle = unselectedStyle;
   let publicationLinkStyle = unselectedStyle;
   let costsLinkStyle = unselectedStyle;
@@ -118,13 +118,13 @@ export default function MainLayout({
     storyLinkStyle = selectedStyle;
   }
 
-  if (isActive('/panels')) {
-    _panelsLinkStyle = selectedStyle;
-  }
+  // if (isActive('/panels')) {
+  //   _panelsLinkStyle = selectedStyle;
+  // }
 
-  if (isActive('/characters')) {
-    _charactersLinkStyle = selectedStyle;
-  }
+  // if (isActive('/characters')) {
+  //   _charactersLinkStyle = selectedStyle;
+  // }
 
   if (isActive('/images')) {
     imagesLinkStyle = selectedStyle;
@@ -147,8 +147,8 @@ export default function MainLayout({
   }
 
   if (isStoryDisabled) {
-    _panelsLinkStyle = disabledStyle;
-    _charactersLinkStyle = disabledStyle;
+    // _panelsLinkStyle = disabledStyle;
+    // _charactersLinkStyle = disabledStyle;
     imagesLinkStyle = disabledStyle;
     storyLinkStyle = disabledStyle;
     styleLinkStyle = disabledStyle;

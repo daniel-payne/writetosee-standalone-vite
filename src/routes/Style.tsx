@@ -27,7 +27,7 @@ export default function Style({
   const [formData, setFormData] = useState({
     storyTitle: initialStyle.storyTitle || '',
     drawingInstructions: safeJoin(initialStyle.drawingInstructions),
-    linkUrl: initialStyle.linkUrl || '',
+    referenceUrl: initialStyle.referenceUrl || '',
     linkInstructions: safeJoin(initialStyle.linkInstructions),
   });
 
@@ -37,7 +37,7 @@ export default function Style({
     setFormData({
       storyTitle: updatedStyle.storyTitle || '',
       drawingInstructions: safeJoin(updatedStyle.drawingInstructions),
-      linkUrl: updatedStyle.linkUrl || '',
+      referenceUrl: updatedStyle.referenceUrl || '',
       linkInstructions: safeJoin(updatedStyle.linkInstructions),
     });
   }
@@ -45,7 +45,7 @@ export default function Style({
   const isDirty =
     formData.storyTitle !== (initialStyle.storyTitle || '') ||
     formData.drawingInstructions !== safeJoin(initialStyle.drawingInstructions) ||
-    formData.linkUrl !== (initialStyle.linkUrl || '') ||
+    formData.referenceUrl !== (initialStyle.referenceUrl || '') ||
     formData.linkInstructions !== safeJoin(initialStyle.linkInstructions);
 
   const blocker = useBlocker(
@@ -105,7 +105,7 @@ export default function Style({
 
         <div className="flex-1 card bg-base-100 shadow-xl border border-base-content/5 h-full flex flex-col overflow-hidden">
           <div className="card-body overflow-auto flex-1 flex flex-col min-h-0">
-            <FormReferenceLink linkValue={formData.linkUrl} instructionsValue={formData.linkInstructions} onChange={handleChange} />
+            <FormReferenceLink referenceValue={formData.referenceUrl} instructionsValue={formData.linkInstructions} onChange={handleChange} />
           </div>
         </div>
       </Form>

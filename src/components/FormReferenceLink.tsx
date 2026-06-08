@@ -1,10 +1,10 @@
 import React, { useState, useEffect, type HTMLAttributes, type PropsWithChildren } from "react";
-import { useFetcher } from "react-router-dom";
+
 import { readFile, listFiles } from "@/data/storage/fileStorage";
 import { writeLog } from "@/data/storage/logStorage";
 
 type ComponentProps = {
-    linkValue: string;
+    referenceValue: string;
     instructionsValue: string;
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
     name?: string;
@@ -13,27 +13,27 @@ type ComponentProps = {
 type LocalImage = { name: string; url: string };
 
 export default function FormReferenceLink({
-    linkValue,
+    referenceValue,
     instructionsValue: _instructionsValue,
     onChange,
     name = 'FormReferenceLink',
     ...rest
 }: PropsWithChildren<ComponentProps>) {
-    const [prevLinkValue, setPrevLinkValue] = useState(linkValue);
+    const [prevReferenceValue, setPrevReferenceValue] = useState(referenceValue);
     const [imgError, setImgError] = useState(false);
     const [localImageUrl, setLocalImageUrl] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [localImages, setLocalImages] = useState<LocalImage[]>([]);
-    const _fetcher = useFetcher();
 
-    if (linkValue !== prevLinkValue) {
-        setPrevLinkValue(linkValue);
+
+    if (referenceValue !== prevReferenceValue) {
+        setPrevReferenceValue(referenceValue);
         setImgError(false);
         setLocalImageUrl('');
     }
 
-    const isLocalFile = linkValue && !linkValue.startsWith('http') && !linkValue.startsWith('blob:') && !linkValue.startsWith('data:');
-    const displaySrc = isLocalFile ? localImageUrl : linkValue;
+    const isLocalFile = referenceValue && !referenceValue.startsWith('http') && !referenceValue.startsWith('blob:') && !referenceValue.startsWith('data:');
+    const displaySrc = isLocalFile ? localImageUrl : referenceValue;
 
     useEffect(() => {
         if (!isModalOpen) {
@@ -47,7 +47,7 @@ export default function FormReferenceLink({
         }
 
         let objectUrl = '';
-        readFile(linkValue).then(file => {
+        readFile(referenceValue).then(file => {
             objectUrl = URL.createObjectURL(file);
             setLocalImageUrl(objectUrl);
         }).catch(async err => {
@@ -60,7 +60,7 @@ export default function FormReferenceLink({
                 URL.revokeObjectURL(objectUrl);
             }
         };
-    }, [linkValue, isLocalFile]);
+    }, [referenceValue, isLocalFile]);
 
     const handleOpenModal = async () => {
         try {
@@ -82,7 +82,7 @@ export default function FormReferenceLink({
     const handleFileSelect = (filename: string) => {
         onChange({
             target: {
-                name: 'linkUrl',
+                name: 'referenceUrl',
                 value: filename
             }
         } as React.ChangeEvent<HTMLInputElement>);
@@ -111,14 +111,14 @@ export default function FormReferenceLink({
                 </div>
 
                 <div>
-                    <label htmlFor="linkUrl" className="ps-4 block text-sm font-medium text-slate-400 dark:text-slate-600 mb-1">
+                    <label htmlFor="referenceUrl" className="ps-4 block text-sm font-medium text-slate-400 dark:text-slate-600 mb-1">
                         URL or local file name
                     </label>
                     <input
                         type="text"
-                        name="linkUrl"
-                        id="linkUrl"
-                        value={linkValue}
+                        name="referenceUrl"
+                        id="referenceUrl"
+                        value={referenceValue}
                         onChange={(e) => {
                             onChange(e);
                             onChange({
@@ -139,7 +139,7 @@ export default function FormReferenceLink({
                         />
                     </div>
                 )}
-                {linkValue && imgError && (
+                {referenceValue && imgError && (
                     <div className="mt-2 w-full flex justify-center text-sm text-red-500">
                         Image could not be loaded. If this is a local blob URL, it may have expired.
                     </div>
@@ -158,7 +158,7 @@ export default function FormReferenceLink({
                                     className="btn btn-sm btn-secondary btn-outline"
                                     onClick={() => {
                                         fetcher.submit(
-                                            { intent: 'CREATE-INSTRUCTION', linkUrl: linkValue },
+                                            { intent: 'CREATE-INSTRUCTION', referenceUrl: referenceValue },
                                             { method: 'post' }
                                         );
                                     }}

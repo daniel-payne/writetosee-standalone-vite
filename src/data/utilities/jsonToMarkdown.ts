@@ -1,7 +1,7 @@
 const KEY_MAP: Record<string, string> = {
   storyTitle: 'StoryTitle',
   drawingInstructions: 'Drawing Instructions',
-  linkUrl: 'LinkUrl',
+  referenceUrl: 'ReferenceUrl',
   linkInstructions: 'Link Instructions',
 };
 
