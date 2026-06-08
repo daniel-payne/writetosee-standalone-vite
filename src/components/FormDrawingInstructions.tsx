@@ -2,16 +2,25 @@ import React from 'react';
 
 interface FormDrawingInstructionsProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   value: string;
+  isAnalyzing: boolean;
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-
+  onPresetSelect: (styleKey: string) => void;
   name?: string;
 }
 
-export default function FormDrawingInstructions({ name = 'FormDrawingInstructions', value, onChange, ...rest }: FormDrawingInstructionsProps) {
+export default function FormDrawingInstructions({ 
+  name = 'FormDrawingInstructions', 
+  value, 
+  isAnalyzing,
+  onChange, 
+  onPresetSelect,
+  ...rest 
+}: FormDrawingInstructionsProps) {
 
-  const handleUseInstructions = (_style: string) => (e: any) => {
+  const handleUseInstructions = (styleKey: string) => (e: any) => {
     e.preventDefault();
     e.stopPropagation();
+    onPresetSelect(styleKey);
   }
 
   return (
@@ -32,16 +41,17 @@ export default function FormDrawingInstructions({ name = 'FormDrawingInstruction
             id="drawingInstructions"
             value={value}
             onChange={onChange}
-            className="w-full flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none dark:bg-slate-700 dark:text-white min-h-0"
+            disabled={isAnalyzing}
+            className="w-full flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none dark:bg-slate-700 dark:text-white min-h-0 disabled:opacity-50"
           />
         </div>
         <div className="flex flex-row gap-2 justify-center items-center">
-          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('CHILDREN')}>Children's Book</button>
-          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('GRAPHIC')}>Graphic Novel</button>
-          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('MANGA')}>Manga Comic</button>
-          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('SUPERHERO')}>Superhero Comic</button>
-          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('CLAYMATION')}>Claymation</button>
-          <button className="btn btn-secondary btn-outline" onClick={handleUseInstructions('REFERENCE')}>Reference Style</button>
+          <button className="btn btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('CHILDREN')}>Children's Book</button>
+          <button className="btn btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('GRAPHIC')}>Graphic Novel</button>
+          <button className="btn btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('MANGA')}>Manga Comic</button>
+          <button className="btn btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('SUPERHERO')}>Superhero Comic</button>
+          <button className="btn btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('CLAYMATION')}>Claymation</button>
+          <button className="btn btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('REFERENCE')}>Reference Style</button>
         </div>
       </div>
     </div>

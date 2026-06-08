@@ -1,6 +1,7 @@
 import { saveStyle, loadStyle } from "@/data/manageStyle";
 import { writeLog } from "@/data/storage/logStorage";
 import { STYLE_PRESETS } from "@/data/stylePresets";
+import generateStyleReference from "@/data/process/generateStyleReference";
 
 export async function clientAction({ request }: any) {
   const formData = await request.formData();
@@ -34,14 +35,27 @@ export async function clientAction({ request }: any) {
   }
 
   if (intent === 'UPDATE_REFERENCE') {
-    // TODO: Implement UPDATE_REFERENCE action
+    const referenceUrl = formData.get('referenceUrl') as string;
+    if (!referenceUrl) {
+      return { success: false, error: 'No reference URL provided' };
+    }
+
+    try {
+      const generatedText = await generateStyleReference(referenceUrl);
+      return { success: true, linkInstructions: generatedText };
+    } catch (error) {
+      await writeLog('error', 'Style.action', `Failed to analyze reference style: ${error instanceof Error ? error.message : String(error)}`);
+      return { success: false, error: 'Failed to analyze reference style' };
+    }
   }
 
   if (intent === 'SAVE-UPDATES') {
-    const storyTitle = formData.get('storyTitle') as string;
-    const drawingInstructionsText = formData.get('drawingInstructions') as string;
-    const referenceUrl = formData.get('referenceUrl') as string;
-    const linkInstructionsText = formData.get('linkInstructions') as string;
+    const storyTitle = (formData.get('storyTitle') as string) || '';
+    const drawingInstructionsText = (formData.get('drawingInstructions') as string) || '';
+    const referenceUrl = (formData.get('referenceUrl') as string) || '';
+    const linkInstructionsText = (formData.get('linkInstructions') as string) || '';
+
+    console.log("Style.action SAVE-UPDATES:", { storyTitle, drawingInstructionsText, referenceUrl, linkInstructionsText });
 
     const style = {
       storyTitle,

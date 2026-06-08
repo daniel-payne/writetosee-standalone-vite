@@ -11,6 +11,7 @@ type props = {
     forceJson?: boolean;
     schema?: any;
     temperature?: number;
+    image?: { mimeType: string; base64Data: string } | null;
 }
 
 type response = {
@@ -27,15 +28,26 @@ export default async function processGoogleChat({
     outputCostPerMillion = 0.30,
     forceJson = false,
     schema = null,
-    temperature = 0.7
+    temperature = 0.7,
+    image = null
 }: props): Promise<response> {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+    const parts: any[] = [{ text: userPrompt }];
+    if (image) {
+        parts.push({
+            inlineData: {
+                mimeType: image.mimeType,
+                data: image.base64Data
+            }
+        });
+    }
 
     const payload = {
         contents: [
             {
                 role: "user",
-                parts: [{ text: userPrompt }]
+                parts
             }
         ],
         generationConfig: {
@@ -74,7 +86,7 @@ export default async function processGoogleChat({
     }
 
     try {
-
+        console.log("processGoogleChat: Calling Gemini API endpoint:", endpoint, "payload size:", JSON.stringify(payload).length, "API key present:", !!apiKey);
 
         // Gemini typically accepts the API key as a query parameter
         const response = await fetch(`${endpoint}?key=${apiKey}`, {
@@ -85,23 +97,28 @@ export default async function processGoogleChat({
             body: JSON.stringify(payload)
         });
 
+        console.log("processGoogleChat: Gemini response status:", response.status);
+
         if (!response.ok) {
             const errorMessage = await response.text();
-
+            console.error("processGoogleChat: Gemini API returned error status:", response.status, errorMessage);
             await writeLog('error', 'processGoogleChat', `API Error: ${response.status} - ${errorMessage}`);
             throw new Error(`API Error: ${response.status} - ${errorMessage}`);
         }
 
         const data = await response.json();
+        console.log("processGoogleChat: parsed JSON data:", data);
 
         // Extracting content from Gemini's nested response structure
         const content = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
         if (!content || content.length === 0) {
-
+            console.error("processGoogleChat: No candidates or text returned. Full response payload:", data);
             await writeLog('error', 'processGoogleChat', 'No response returned from the API');
             throw new Error("No response returned from the API");
         }
+
+        console.log("processGoogleChat: successfully generated style reference text!");
 
         let totalCost;
 
@@ -119,7 +136,7 @@ export default async function processGoogleChat({
 
         return { content, totalCost };
     } catch (error: any) {
-
+        console.error("processGoogleChat: caught error:", error);
         await writeLog('error', 'processGoogleChat', `Error: ${error.message}`);
         throw new Error(`Error: ${error.message}`, { cause: error });
     }

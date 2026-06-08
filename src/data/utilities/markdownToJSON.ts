@@ -51,7 +51,10 @@ export default function markdownToJSON(markdown: string): Record<string, any> {
     if (headingMatch) {
       const level = headingMatch[1].length;
       const headingText = headingMatch[2].trim();
-      const headingKey = toCamelCase(headingText);
+      let headingKey = toCamelCase(headingText);
+      if (headingKey === 'referenceStyle') {
+        headingKey = 'linkInstructions';
+      }
 
       const node: HeadingNode = {
         key: headingKey,

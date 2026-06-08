@@ -1,9 +1,10 @@
-import { Form, useLoaderData, useNavigation, useBlocker } from "react-router-dom";
-import { useState, useEffect, type HTMLAttributes, type PropsWithChildren } from "react";
+import { Form, useLoaderData, useNavigation, useBlocker, useFetcher } from "react-router-dom";
+import { useState, useEffect, useRef, type HTMLAttributes, type PropsWithChildren } from "react";
 import FormDrawingInstructions from "@/components/FormDrawingInstructions";
 import FormReferenceLink from "@/components/FormReferenceLink";
 import FormStoryTitle from "@/components/FormStoryTitle";
-import { useStyle } from "@/data/manageStyle";
+import { useStyle, useStyleHash } from "@/data/manageStyle";
+import { STYLE_PRESETS } from "@/data/stylePresets";
 
 type StyleProps = {} & HTMLAttributes<HTMLDivElement>;
 
@@ -14,7 +15,8 @@ export default function Style({
   const navigation = useNavigation();
 
   const [style] = useStyle();
-  const [prevStyle, setPrevStyle] = useState(style);
+  const [styleHash] = useStyleHash();
+  const [prevStyleHash, setPrevStyleHash] = useState(styleHash);
   const initialStyle = style ?? {};
 
   const safeJoin = (val: unknown): string => {
@@ -31,8 +33,36 @@ export default function Style({
     linkInstructions: safeJoin(initialStyle.linkInstructions),
   });
 
-  if (style !== prevStyle) {
-    setPrevStyle(style);
+  const fetcher = useFetcher();
+  const wasLoadingRef = useRef(false);
+  const isAnalyzing = fetcher.state !== 'idle';
+
+  useEffect(() => {
+    console.log("Style.tsx: Fetcher state changed:", fetcher.state, "wasLoadingRef:", wasLoadingRef.current);
+    if (fetcher.state !== 'idle') {
+      wasLoadingRef.current = true;
+    }
+  }, [fetcher.state]);
+
+  useEffect(() => {
+    console.log("Style.tsx: Fetcher idle check - state:", fetcher.state, "wasLoadingRef:", wasLoadingRef.current, "data:", fetcher.data);
+    if (fetcher.state === 'idle' && wasLoadingRef.current) {
+      wasLoadingRef.current = false;
+      console.log("Style.tsx: Fetcher completed! success:", fetcher.data?.success, "linkInstructions length:", fetcher.data?.linkInstructions?.length);
+      if (fetcher.data?.success && fetcher.data?.linkInstructions) {
+        Promise.resolve().then(() => {
+          setFormData(prev => ({
+            ...prev,
+            linkInstructions: fetcher.data.linkInstructions,
+            drawingInstructions: fetcher.data.linkInstructions
+          }));
+        });
+      }
+    }
+  }, [fetcher.state, fetcher.data]);
+
+  if (styleHash !== prevStyleHash) {
+    setPrevStyleHash(styleHash);
     const updatedStyle = style ?? {};
     setFormData({
       storyTitle: updatedStyle.storyTitle || '',
@@ -81,31 +111,68 @@ export default function Style({
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
 
-
-
   const handleChange = (e: any) => {
+    console.log("handleChange called: name =", e.target.name, "value =", e.target.value);
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const handlePresetSelect = (presetKey: string) => {
+    console.log("handlePresetSelect called in Style.tsx with key:", presetKey);
+    let newInstructions = '';
+    if (presetKey === 'CHILDREN') {
+      newInstructions = STYLE_PRESETS.CHILDRENS_BOOK.trim();
+    } else if (presetKey === 'GRAPHIC') {
+      newInstructions = STYLE_PRESETS.GRAPHIC_NOVEL.trim();
+    } else if (presetKey === 'MANGA') {
+      newInstructions = STYLE_PRESETS.MANGA_COMIC.trim();
+    } else if (presetKey === 'SUPERHERO') {
+      newInstructions = STYLE_PRESETS.SUPERHERO_COMIC.trim();
+    } else if (presetKey === 'CLAYMATION') {
+      newInstructions = STYLE_PRESETS.CLAYMATION.trim();
+    } else if (presetKey === 'REFERENCE') {
+      const existingRef = (formData.linkInstructions || '').trim();
+      if (!existingRef) {
+        if (formData.referenceUrl) {
+          fetcher.submit(
+            { intent: 'UPDATE_REFERENCE', referenceUrl: formData.referenceUrl },
+            { method: 'post' }
+          );
+        }
+        return;
+      } else {
+        newInstructions = existingRef;
+      }
+    }
 
+    setFormData(prev => ({
+      ...prev,
+      drawingInstructions: newInstructions
+    }));
+  };
 
   return (
     <div {...rest} className={`p-4 w-full mx-auto h-full overflow-auto ${rest.className || ''}`}>
-
       <Form id="main-form" method="post" className="flex flex-row w-full h-full items-strech justify-between gap-2">
-
         <div className="flex-1 card bg-base-100 shadow-xl border border-base-content/5 h-full flex flex-col overflow-hidden">
           <div className="card-body flex-1 flex flex-col min-h-0">
             <FormStoryTitle value={formData.storyTitle} onChange={handleChange} />
-
-            <FormDrawingInstructions value={formData.drawingInstructions} onChange={handleChange} />
+            <FormDrawingInstructions
+              value={formData.drawingInstructions}
+              isAnalyzing={isAnalyzing}
+              onChange={handleChange}
+              onPresetSelect={handlePresetSelect}
+            />
           </div>
         </div>
 
-
         <div className="flex-1 card bg-base-100 shadow-xl border border-base-content/5 h-full flex flex-col overflow-hidden">
           <div className="card-body overflow-auto flex-1 flex flex-col min-h-0">
-            <FormReferenceLink referenceValue={formData.referenceUrl} instructionsValue={formData.linkInstructions} onChange={handleChange} />
+            <FormReferenceLink
+              referenceValue={formData.referenceUrl}
+              instructionsValue={formData.linkInstructions}
+              isAnalyzing={isAnalyzing}
+              onChange={handleChange}
+            />
           </div>
         </div>
       </Form>

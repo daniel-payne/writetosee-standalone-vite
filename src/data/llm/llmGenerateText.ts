@@ -9,7 +9,11 @@ export function setApiKey(key: string) {
     activeApiKey = key;
 }
 
-export default async function llmGenerateText(systemPrompt: string, userPrompt: string) {
+export default async function llmGenerateText(
+    systemPrompt: string,
+    userPrompt: string,
+    image?: { mimeType: string; base64Data: string } | null
+) {
     const apiKey = activeApiKey || (typeof window !== 'undefined' ? window.sessionStorage.getItem("apiKey") : null) || '';
     const provider = identifyApiKeyProvider(apiKey);
 
@@ -18,9 +22,9 @@ export default async function llmGenerateText(systemPrompt: string, userPrompt: 
     await writeLog('info', 'llmGenerateText', userPrompt.substring(0, 30));
 
     if (provider === 'GOOGLE') {
-        result = await processGoogleChat({ systemPrompt, userPrompt, apiKey })
+        result = await processGoogleChat({ systemPrompt, userPrompt, apiKey, image })
     } else if (provider === 'XAI') {
-        result = await processxAIChat({ systemPrompt, userPrompt, apiKey })
+        result = await processxAIChat({ systemPrompt, userPrompt, apiKey, image })
     }
 
     return result

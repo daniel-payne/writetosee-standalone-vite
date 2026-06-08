@@ -6,6 +6,7 @@ import { writeLog } from "@/data/storage/logStorage";
 type ComponentProps = {
     referenceValue: string;
     instructionsValue: string;
+    isAnalyzing: boolean;
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
     name?: string;
 } & HTMLAttributes<HTMLDivElement>;
@@ -14,7 +15,8 @@ type LocalImage = { name: string; url: string };
 
 export default function FormReferenceLink({
     referenceValue,
-    instructionsValue: _instructionsValue,
+    instructionsValue,
+    isAnalyzing,
     onChange,
     name = 'FormReferenceLink',
     ...rest
@@ -24,7 +26,6 @@ export default function FormReferenceLink({
     const [localImageUrl, setLocalImageUrl] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [localImages, setLocalImages] = useState<LocalImage[]>([]);
-
 
     if (referenceValue !== prevReferenceValue) {
         setPrevReferenceValue(referenceValue);
@@ -99,44 +100,56 @@ export default function FormReferenceLink({
 
     return (
         <div {...rest} data-name={name} className={`flex-1 flex flex-col min-h-0 ${rest.className || ''}`}>
+            <input type="hidden" name="linkInstructions" value={instructionsValue} />
+            <input type="hidden" name="referenceUrl" value={referenceValue} />
             <div className="flex-1 flex flex-col gap-4 min-h-0">
                 <div>
                     <label htmlFor="drawingInstructions" className="ps-4 block text-md font-medium text-primary-content mb-1">
                         Reference Style
                     </label>
                     <label htmlFor="drawingInstructions" className="ps-4 block text-sm font-medium text-slate-400 dark:text-slate-600 mb-1">
-                        You can pick from your local files or provide a url.
+                        Pick an image from your local files to use as a style reference.
                     </label>
-                    <button type="button" onClick={handleOpenModal} className="btn btn-secondary btn-outline mt-2">Pick from local files</button>
-                </div>
-
-                <div>
-                    <label htmlFor="referenceUrl" className="ps-4 block text-sm font-medium text-slate-400 dark:text-slate-600 mb-1">
-                        URL or local file name
-                    </label>
-                    <input
-                        type="text"
-                        name="referenceUrl"
-                        id="referenceUrl"
-                        value={referenceValue}
-                        onChange={(e) => {
-                            onChange(e);
-                            onChange({
-                                target: { name: 'linkInstructions', value: '' }
-                            } as React.ChangeEvent<HTMLTextAreaElement>);
-                        }}
-                        className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all dark:bg-slate-700 dark:text-white"
-                    />
+                    <button
+                        type="button"
+                        onClick={handleOpenModal}
+                        disabled={isAnalyzing}
+                        className="btn btn-secondary btn-outline mt-2"
+                    >
+                        Pick from local files
+                    </button>
                 </div>
 
                 {displaySrc && !imgError && (
-                    <div className="w-full flex justify-center">
+                    <div className="w-full flex justify-center relative">
                         <img
                             src={displaySrc}
                             alt="Style Reference"
-                            className="max-h-[60vh] object-contain rounded border border-slate-200 dark:border-slate-600 shadow-sm"
+                            className={`max-h-[60vh] object-contain rounded border border-slate-200 dark:border-slate-600 shadow-sm ${isAnalyzing ? 'opacity-40 blur-[2px] transition-all' : ''}`}
                             onError={() => setImgError(true)}
                         />
+                        {isAnalyzing && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/10 dark:bg-black/30 rounded">
+                                <div className="bg-white/95 dark:bg-slate-800/95 p-4 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 flex flex-col items-center gap-3 animate-fade-in">
+                                    <svg className="animate-spin h-8 w-8 text-primary" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 animate-pulse">Analyzing style reference image...</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+                {isAnalyzing && !displaySrc && (
+                    <div className="w-full flex justify-center p-8">
+                        <div className="bg-base-200 p-6 rounded-xl border border-base-content/10 flex flex-col items-center gap-3">
+                            <svg className="animate-spin h-8 w-8 text-primary" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span className="text-sm font-semibold">Analyzing style reference image...</span>
+                        </div>
                     </div>
                 )}
                 {referenceValue && imgError && (
@@ -144,39 +157,6 @@ export default function FormReferenceLink({
                         Image could not be loaded. If this is a local blob URL, it may have expired.
                     </div>
                 )}
-                {/* 
-                {displaySrc && !imgError && (
-                    <div className="flex-1 flex flex-col min-h-0">
-
-                        <label htmlFor="drawingInstructions" className="ps-4 block text-sm font-medium text-slate-400 dark:text-slate-600">
-                            Text description of the picture, to be used as the prompt for generating images.
-                        </label>
-                        <div className="flex items-center justify-start m-2 gap-2">
-                            {!instructionsValue && (
-                                <button
-                                    type="button"
-                                    className="btn btn-sm btn-secondary btn-outline"
-                                    onClick={() => {
-                                        fetcher.submit(
-                                            { intent: 'CREATE-INSTRUCTION', referenceUrl: referenceValue },
-                                            { method: 'post' }
-                                        );
-                                    }}
-                                    disabled={fetcher.state !== 'idle'}
-                                >
-                                    {fetcher.state !== 'idle' ? 'Creating...' : 'Create Text Description'}
-                                </button>
-                            )}
-                        </div>
-                        <textarea
-                            name="linkInstructions"
-                            id="linkInstructions"
-                            value={instructionsValue}
-                            onChange={onChange}
-                            className="w-full flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none dark:bg-slate-700 dark:text-white min-h-0"
-                        />
-                    </div>
-                )} */}
             </div>
 
             {isModalOpen && (

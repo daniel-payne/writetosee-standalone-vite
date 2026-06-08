@@ -2,7 +2,7 @@ const KEY_MAP: Record<string, string> = {
   storyTitle: 'StoryTitle',
   drawingInstructions: 'Drawing Instructions',
   referenceUrl: 'ReferenceUrl',
-  linkInstructions: 'Link Instructions',
+  linkInstructions: 'Reference Style',
 };
 
 function fromCamelCase(key: string): string {
