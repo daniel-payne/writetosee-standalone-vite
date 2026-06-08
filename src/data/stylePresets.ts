@@ -12,6 +12,8 @@ The illustrations should be colorful, engaging, and simple enough for young chil
 Ensure that the illustrations complement the text and help to tell the story visually.
 `,
   GRAPHIC_NOVEL: `
+Graphic Novel
+
 You are an illustrator for an 18+ graphic novel / mature comic series.
 The target audience is young adults aged 18–25 (male or female readers).
 The lighting is dramatic and selective — strong chiaroscuro, neon accents, rim lighting, moody colored gels, or cinematic single-source light with deep shadows to create tension, intimacy, or atmosphere.
@@ -26,6 +28,8 @@ The overall mood is cinematic, atmospheric, slightly dangerous, sensual, rebelli
 Illustrations should feel mature, visually striking, and emotionally charged, enhancing a story that deals with adult themes (relationships, power dynamics, identity, desire, violence, moral ambiguity, hedonism, trauma, etc.).
 `,
   MANGA_COMIC: `
+Manga Comic
+
 Authentic Japanese manga art style, highly detailed black and white ink line art with professional screen tone (halftone) shading.
 Designed as a single, full-page splash illustration (splash page) with no panel borders, no gutters, and no multi-panel divisions.
 Strong, clean black ink line-work, bold black shadows, high-contrast chiaroscuro rendering, and detailed hatching.
@@ -36,6 +40,8 @@ No speech bubbles, no dialogue text, no sound effect lettering (onomatopoeia), a
 The overall atmosphere is dramatic, cinematic, and filled with energy, typical of high-quality manga splash art.
 `,
   SUPERHERO_COMIC: `
+Superhero Comic
+
 Bold, dynamic superhero comic book illustration style, inspired by modern Marvel and DC comic splash pages.
 Strong, clean ink line art with professional comic book coloring, rich color rendering, and dramatic high-contrast lighting.
 Designed as a single, full-page splash illustration with no panel borders, no gutters, and no multi-panel divisions.
@@ -46,6 +52,8 @@ Backgrounds are detailed environments (e.g., soaring skylines, epic battlefields
 No speech bubbles, no dialogue text, no sound effect lettering (like "POW" or "BOOM"), and no borders or frames.
 `,
   CLAYMATION: `
+Claymation 
+
 Charming claymation stop-motion animation style, inspired by the classic look of Aardman animations like Wallace and Gromit.
 Characters and objects have a tangible plasticine clay texture, with subtle thumbprints, visible seams, and soft hand-molded details.
 Warm, cozy, and slightly whimsical atmosphere, with British charm, soft studio lighting, and gentle ambient shadows.

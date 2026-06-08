@@ -103,7 +103,7 @@ export default function Welcome({
         />
 
 
-        <Link to="/story" className={isStartDisabled ? "pointer-events-none" : ""} tabIndex={isStartDisabled ? -1 : undefined}>
+        <Link to={apiKey ? `/story?apiKey=${encodeURIComponent(apiKey)}` : "/story"} className={isStartDisabled ? "pointer-events-none" : ""} tabIndex={isStartDisabled ? -1 : undefined}>
           <button className="btn btn-primary" disabled={isStartDisabled}>Start Creating Your Story</button>
         </Link>
         <NotificationDisplay errorMsg={errorMsg} successMsg={successMsg} />

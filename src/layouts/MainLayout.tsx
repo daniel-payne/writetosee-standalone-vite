@@ -79,6 +79,15 @@ export default function MainLayout({
 
   const isStoryDisabled = !loaderData?.hasDirectory || !loaderData?.permissionGranted || !loaderData?.apiKey;
 
+  const currentApiKey = loaderData?.apiKey || (typeof window !== 'undefined' ? window.sessionStorage.getItem("apiKey") : null) || '';
+
+  const withApiKey = (path: string) => {
+    if (currentApiKey) {
+      return `${path}?apiKey=${encodeURIComponent(currentApiKey)}`;
+    }
+    return path;
+  };
+
   const handleGrantPermission = async () => {
     try {
       const handle = await getDirectoryHandle();
@@ -168,7 +177,7 @@ export default function MainLayout({
         <div className="mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
-              to="/"
+              to={withApiKey("/")}
               tabIndex={isStoryDisabled ? -1 : undefined}
               aria-disabled={isStoryDisabled}
               className={isStoryDisabled ? 'pointer-events-none' : ''}
@@ -196,18 +205,18 @@ export default function MainLayout({
           </div>
 
           <nav className="flex items-center gap-2">
-            {/* <Link to="/" className={welcomeLinkStyle} >Welcome</Link> */}
-            {!isSafeMode && <Link to="/style" className={styleLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Style</Link>}
-            <Link to="/story" className={storyLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Story</Link>
-            {/* {!isSafeMode && <Link to="/characters" className={charactersLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Characters</Link>} */}
-            {!isSafeMode && <Link to="/images" className={imagesLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Images</Link>}
+            {/* <Link to={withApiKey("/")} className={welcomeLinkStyle} >Welcome</Link> */}
+            {!isSafeMode && <Link to={withApiKey("/style")} className={styleLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Style</Link>}
+            <Link to={withApiKey("/story")} className={storyLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Story</Link>
+            {/* {!isSafeMode && <Link to={withApiKey("/characters")} className={charactersLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Characters</Link>} */}
+            {!isSafeMode && <Link to={withApiKey("/images")} className={imagesLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Images</Link>}
 
-            {/* {!isSafeMode && <Link to="/panels" className={panelsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Comic</Link>} */}
+            {/* {!isSafeMode && <Link to={withApiKey("/panels")} className={panelsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Comic</Link>} */}
 
-            {!isSafeMode && isDEBUG && <Link to="/publication" className={publicationLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Publication</Link>}
-            {!isSafeMode && isDEBUG && <Link to="/costs" className={costsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Costs</Link>}
-            {!isSafeMode && isDEBUG && <Link to="/logs" className={logsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Logs</Link>}
-            <Link to="/about" className={aboutLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>About</Link>
+            {!isSafeMode && isDEBUG && <Link to={withApiKey("/publication")} className={publicationLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Publication</Link>}
+            {!isSafeMode && isDEBUG && <Link to={withApiKey("/costs")} className={costsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Costs</Link>}
+            {!isSafeMode && isDEBUG && <Link to={withApiKey("/logs")} className={logsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Logs</Link>}
+            <Link to={withApiKey("/about")} className={aboutLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>About</Link>
           </nav>
         </div>
       </header>

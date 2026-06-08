@@ -12,7 +12,28 @@ export interface MainLayoutLoaderData {
   panels?: string;
 }
 
-export async function clientLoader(): Promise<MainLayoutLoaderData> {
+export async function clientLoader({ request }: any): Promise<MainLayoutLoaderData> {
+  const url = new URL(request.url);
+  let urlApiKey = url.searchParams.get('apiKey');
+
+  // Fallback checks in case the API key is passed in the hash portion or window.location
+  if (!urlApiKey && typeof window !== 'undefined') {
+    const searchParams = new URLSearchParams(window.location.search);
+    urlApiKey = searchParams.get('apiKey');
+    if (!urlApiKey) {
+      const hash = window.location.hash;
+      if (hash.includes('?')) {
+        const hashSearch = hash.split('?')[1];
+        const hashParams = new URLSearchParams(hashSearch);
+        urlApiKey = hashParams.get('apiKey');
+      }
+    }
+  }
+
+  if (urlApiKey) {
+    window.sessionStorage.setItem("apiKey", urlApiKey);
+  }
+
   let hasDirectory = false;
   let filesList: string[] = [];
   const apiKey = window.sessionStorage.getItem("apiKey") ?? '';

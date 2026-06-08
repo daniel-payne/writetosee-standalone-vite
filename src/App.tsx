@@ -57,8 +57,6 @@ const router = createBrowserRouter([
 
       if (apiKey) {
         window.sessionStorage.setItem("apiKey", apiKey);
-      } else {
-        window.sessionStorage.removeItem("apiKey");
       }
 
       return redirect('/');
@@ -74,8 +72,6 @@ const router = createBrowserRouter([
 
       if (apiKey) {
         window.sessionStorage.setItem("apiKey", apiKey);
-      } else {
-        window.sessionStorage.removeItem("apiKey");
       }
 
       return redirect('/');

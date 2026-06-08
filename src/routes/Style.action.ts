@@ -23,7 +23,7 @@ export async function clientAction({ request }: any) {
       const currentStyle = await loadStyle();
       const updatedStyle = {
         ...currentStyle,
-        drawingInstructions: presetText.split('\n').map(line => line.trim()).filter(Boolean),
+        drawingInstructions: presetText.trim(),
       };
 
       await saveStyle(updatedStyle);
@@ -59,9 +59,9 @@ export async function clientAction({ request }: any) {
 
     const style = {
       storyTitle,
-      drawingInstructions: drawingInstructionsText.split('\n').map(line => line.trim()).filter(Boolean),
+      drawingInstructions: drawingInstructionsText.trim(),
       referenceUrl,
-      linkInstructions: linkInstructionsText.split('\n').map(line => line.trim()).filter(Boolean),
+      linkInstructions: linkInstructionsText.trim(),
     };
 
     try {

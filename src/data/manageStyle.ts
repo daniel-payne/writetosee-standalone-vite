@@ -18,7 +18,7 @@ const defaultStyle = {
         "Each illustration should be lively and expressive, conveying the emotions and actions of the characters clearly.",
         "The illustrations should be colorful, engaging, and simple enough for young children to understand.",
         "Ensure that the illustrations complement the text and help to tell the story visually."
-    ],
+    ].join('\n\n'),
 }
 
 // Module-level caches to keep a single, synchronous source of truth in memory
