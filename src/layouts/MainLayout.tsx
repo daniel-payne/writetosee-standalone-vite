@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
+import React from 'react';
 import type { HTMLAttributes, PropsWithChildren } from "react";
-import { Link, useLocation, useLoaderData, useNavigation, useRevalidator, useNavigate } from 'react-router-dom';
+import { useLocation, useLoaderData, useNavigation, useRevalidator, useNavigate } from 'react-router-dom';
 import type { MainLayoutLoaderData } from './MainLayout.loader';
 import { useLocalState, getState, setState, StoragePersistence } from '@keldan-systems/state-mutex';
 import { getDirectoryHandle, disconnectDirectory } from '@/data/storage/fileStorage';
@@ -16,6 +17,43 @@ const DARK_THEME = 'dim';
 const unselectedStyle = 'btn btn-sm btn-ghost rounded-xl';
 const selectedStyle = 'btn btn-sm btn-primary bg-button hover:bg-button/80 bg-primary text-primary-content shadow-md shadow-primary/20 rounded-xl';
 const disabledStyle = 'btn btn-sm btn-ghost btn-disabled pointer-events-none';
+
+// NavKeyLink: navigates cleanly (no apiKey) on regular click,
+// but sets href with apiKey so right-click → "Open in new window/tab" passes the key.
+function NavKeyLink({
+  to,
+  apiKey,
+  navigate,
+  className,
+  tabIndex,
+  'aria-disabled': ariaDisabled,
+  children,
+}: {
+  to: string;
+  apiKey: string;
+  navigate: (to: string) => void;
+  className?: string;
+  tabIndex?: number;
+  'aria-disabled'?: boolean;
+  children: React.ReactNode;
+}) {
+  const href = apiKey ? `${to}?apiKey=${encodeURIComponent(apiKey)}` : to;
+  return (
+    <a
+      href={href}
+      className={className}
+      tabIndex={tabIndex}
+      aria-disabled={ariaDisabled}
+      onClick={(e) => {
+        if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return; // let browser handle new-tab gestures
+        e.preventDefault();
+        navigate(to);
+      }}
+    >
+      {children}
+    </a>
+  );
+}
 
 export default function MainLayout({
   children,
@@ -81,12 +119,7 @@ export default function MainLayout({
 
   const currentApiKey = loaderData?.apiKey || (typeof window !== 'undefined' ? window.sessionStorage.getItem("apiKey") : null) || '';
 
-  const withApiKey = (path: string) => {
-    if (currentApiKey) {
-      return `${path}?apiKey=${encodeURIComponent(currentApiKey)}`;
-    }
-    return path;
-  };
+
 
   const handleGrantPermission = async () => {
     try {
@@ -176,8 +209,10 @@ export default function MainLayout({
       <header className="sticky top-0 z-50 backdrop-blur-md bg-base-100/70 border-b border-base-content/10 px-4 sm:px-8 py-3">
         <div className="mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link
-              to={withApiKey("/")}
+            <NavKeyLink
+              to="/"
+              apiKey={currentApiKey}
+              navigate={navigate}
               tabIndex={isStoryDisabled ? -1 : undefined}
               aria-disabled={isStoryDisabled}
               className={isStoryDisabled ? 'pointer-events-none' : ''}
@@ -187,7 +222,7 @@ export default function MainLayout({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.83 17.29a2.182 2.182 0 01-.504.34l-3.327 1.11a.488.488 0 01-.613-.613l1.11-3.328a2.182 2.182 0 01.34-.504l12.016-12.017zm0 0L19.5 7.125" />
                 </svg>
               </div>
-            </Link>
+            </NavKeyLink>
             <div className="flex items-center">
               <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 WriteToSee
@@ -205,18 +240,18 @@ export default function MainLayout({
           </div>
 
           <nav className="flex items-center gap-2">
-            {/* <Link to={withApiKey("/")} className={welcomeLinkStyle} >Welcome</Link> */}
-            {!isSafeMode && <Link to={withApiKey("/style")} className={styleLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Style</Link>}
-            <Link to={withApiKey("/story")} className={storyLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Story</Link>
-            {/* {!isSafeMode && <Link to={withApiKey("/characters")} className={charactersLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Characters</Link>} */}
-            {!isSafeMode && <Link to={withApiKey("/images")} className={imagesLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Images</Link>}
+            {/* <NavKeyLink to="/" apiKey={currentApiKey} navigate={navigate} className={welcomeLinkStyle}>Welcome</NavKeyLink> */}
+            {!isSafeMode && <NavKeyLink to="/style" apiKey={currentApiKey} navigate={navigate} className={styleLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Style</NavKeyLink>}
+            <NavKeyLink to="/story" apiKey={currentApiKey} navigate={navigate} className={storyLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Story</NavKeyLink>
+            {/* {!isSafeMode && <NavKeyLink to="/characters" apiKey={currentApiKey} navigate={navigate} className={charactersLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Characters</NavKeyLink>} */}
+            {!isSafeMode && <NavKeyLink to="/images" apiKey={currentApiKey} navigate={navigate} className={imagesLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Images</NavKeyLink>}
 
-            {/* {!isSafeMode && <Link to={withApiKey("/panels")} className={panelsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Comic</Link>} */}
+            {/* {!isSafeMode && <NavKeyLink to="/panels" apiKey={currentApiKey} navigate={navigate} className={panelsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Comic</NavKeyLink>} */}
 
-            {!isSafeMode && isDEBUG && <Link to={withApiKey("/publication")} className={publicationLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Publication</Link>}
-            {!isSafeMode && isDEBUG && <Link to={withApiKey("/costs")} className={costsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Costs</Link>}
-            {!isSafeMode && isDEBUG && <Link to={withApiKey("/logs")} className={logsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Logs</Link>}
-            <Link to={withApiKey("/about")} className={aboutLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>About</Link>
+            {!isSafeMode && isDEBUG && <NavKeyLink to="/publication" apiKey={currentApiKey} navigate={navigate} className={publicationLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Publication</NavKeyLink>}
+            {!isSafeMode && isDEBUG && <NavKeyLink to="/costs" apiKey={currentApiKey} navigate={navigate} className={costsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Costs</NavKeyLink>}
+            {!isSafeMode && isDEBUG && <NavKeyLink to="/logs" apiKey={currentApiKey} navigate={navigate} className={logsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Logs</NavKeyLink>}
+            <NavKeyLink to="/about" apiKey={currentApiKey} navigate={navigate} className={aboutLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>About</NavKeyLink>
           </nav>
         </div>
       </header>

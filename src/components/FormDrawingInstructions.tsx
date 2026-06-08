@@ -8,13 +8,13 @@ interface FormDrawingInstructionsProps extends Omit<React.HTMLAttributes<HTMLDiv
   name?: string;
 }
 
-export default function FormDrawingInstructions({ 
-  name = 'FormDrawingInstructions', 
-  value, 
+export default function FormDrawingInstructions({
+  name = 'FormDrawingInstructions',
+  value,
   isAnalyzing,
-  onChange, 
+  onChange,
   onPresetSelect,
-  ...rest 
+  ...rest
 }: FormDrawingInstructionsProps) {
 
   const handleUseInstructions = (styleKey: string) => (e: any) => {
@@ -45,13 +45,13 @@ export default function FormDrawingInstructions({
             className="w-full flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none dark:bg-slate-700 dark:text-white min-h-0 disabled:opacity-50"
           />
         </div>
-        <div className="flex flex-row gap-2 justify-center items-center">
-          <button className="btn btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('CHILDREN')}>Children's Book</button>
-          <button className="btn btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('GRAPHIC')}>Graphic Novel</button>
-          <button className="btn btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('MANGA')}>Manga Comic</button>
-          <button className="btn btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('SUPERHERO')}>Superhero Comic</button>
-          <button className="btn btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('CLAYMATION')}>Claymation</button>
-          <button className="btn btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('REFERENCE')}>Reference Style</button>
+        <div className="flex flex-row gap-2 flex-wrap justify-center items-center">
+          <button className="btn btn-xs btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('CHILDREN')}>Children's Book</button>
+          <button className="btn btn-xs btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('GRAPHIC')}>Graphic Novel</button>
+          <button className="btn btn-xs btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('MANGA')}>Manga Comic</button>
+          <button className="btn btn-xs btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('SUPERHERO')}>Superhero Comic</button>
+          <button className="btn btn-xs btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('CLAYMATION')}>Claymation</button>
+          <button className="btn btn-xs btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('REFERENCE')}>Reference Style</button>
         </div>
       </div>
     </div>
