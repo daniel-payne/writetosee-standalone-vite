@@ -16,8 +16,6 @@ export default function Style({
 
   const [style] = useStyle();
   const [styleHash] = useStyleHash();
-  const [prevStyleHash, setPrevStyleHash] = useState(styleHash);
-  const initialStyle = style ?? {};
 
   const safeJoin = (val: unknown): string => {
     if (Array.isArray(val)) {
@@ -25,6 +23,8 @@ export default function Style({
     }
     return typeof val === 'string' ? val : '';
   };
+
+  const initialStyle = style ?? {};
 
   const [formData, setFormData] = useState({
     storyTitle: initialStyle.storyTitle || '',
@@ -61,16 +61,27 @@ export default function Style({
     }
   }, [fetcher.state, fetcher.data]);
 
-  if (styleHash !== prevStyleHash) {
-    setPrevStyleHash(styleHash);
-    const updatedStyle = style ?? {};
-    setFormData({
-      storyTitle: updatedStyle.storyTitle || '',
-      drawingInstructions: safeJoin(updatedStyle.drawingInstructions),
-      referenceUrl: updatedStyle.referenceUrl || '',
-      linkInstructions: safeJoin(updatedStyle.linkInstructions),
-    });
-  }
+  // Cross-tab sync: when another tab saves, localStorage 'style-hash' changes which updates
+  // styleHash here. But the style data object only updates after the async loadStyle() call
+  // in the storage listener completes. We track both: only sync formData once BOTH have
+  // moved (new hash + new style object reference), preventing the race where styleHash is
+  // new but style still holds the previous tab's stale data.
+  const lastSyncedHashRef = useRef(styleHash);
+  const lastSyncedStyleRef = useRef(style);
+  useEffect(() => {
+    const hashChanged = styleHash && styleHash !== lastSyncedHashRef.current;
+    const dataChanged = style !== null && style !== lastSyncedStyleRef.current;
+    if (hashChanged && dataChanged) {
+      lastSyncedHashRef.current = styleHash;
+      lastSyncedStyleRef.current = style;
+      setFormData({
+        storyTitle: style.storyTitle || '',
+        drawingInstructions: safeJoin(style.drawingInstructions),
+        referenceUrl: style.referenceUrl || '',
+        linkInstructions: safeJoin(style.linkInstructions),
+      });
+    }
+  }, [styleHash, style]);
 
   const isDirty =
     formData.storyTitle !== (initialStyle.storyTitle || '') ||

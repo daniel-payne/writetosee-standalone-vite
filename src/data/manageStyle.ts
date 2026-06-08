@@ -27,6 +27,19 @@ let inMemoryStyle: any = null;
 let inMemoryHash: string | null = null;
 let activeLoadPromise: Promise<any> | null = null;
 
+// Synchronize style edits across open tabs when storage changes
+if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (event) => {
+        if (event.key === 'style-hash' && event.newValue && event.newValue !== inMemoryHash) {
+            inMemoryStyle = null;
+            inMemoryHash = null;
+            loadStyle().catch((err) => {
+                console.warn('Failed to auto-reload style from storage change:', err);
+            });
+        }
+    });
+}
+
 /**
  * Loads the style from disk, hashing it, and updating both the state-mutex shared data
  * and the loading/error states.
