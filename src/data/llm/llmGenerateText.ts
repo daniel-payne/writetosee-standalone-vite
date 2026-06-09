@@ -1,6 +1,7 @@
 import { identifyApiKeyProvider } from "@/data/utilities/identifyApiKeyProvider";
 import processxAIChat from "./providers/processxAIChat";
 import processGoogleChat from "./providers/processGoogleChat";
+import processOpenRouterChat from "./providers/processOpenRouterChat";
 import { writeLog } from "../storage/logStorage";
 
 let activeApiKey = '';
@@ -25,6 +26,8 @@ export default async function llmGenerateText(
         result = await processGoogleChat({ systemPrompt, userPrompt, apiKey, image })
     } else if (provider === 'XAI') {
         result = await processxAIChat({ systemPrompt, userPrompt, apiKey, image })
+    } else if (provider === 'OPENROUTER') {
+        result = await processOpenRouterChat({ systemPrompt, userPrompt, apiKey, image })
     }
 
     return result

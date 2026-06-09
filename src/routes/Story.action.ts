@@ -2,6 +2,7 @@ import { type ActionFunctionArgs } from 'react-router-dom';
 import { saveStory, loadStory } from '@/data/manageStory';
 import processPublication from '@/data/processPublication';
 import { deleteFile } from '@/data/storage/fileStorage';
+import { loadPublication, savePublication } from '@/data/managePublication';
 
 export async function clientAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -48,8 +49,46 @@ export async function clientAction({ request }: ActionFunctionArgs) {
     try {
       if (imagePath) {
         await deleteFile(imagePath).catch(err => {
-          console.warn("Failed to delete existing image (might not exist):", err);
+          const isNotFound = err && (
+            (err instanceof Error && err.name === 'NotFoundError') ||
+            (err.name === 'NotFoundError') ||
+            String(err).includes('NotFoundError')
+          );
+          if (!isNotFound) {
+            console.warn("Failed to delete existing image:", err);
+          }
         });
+
+        // Also clean up the image fields inside the publication JSON!
+        try {
+          const pub = await loadPublication();
+          let changed = false;
+          if (pub.prompts) {
+            for (const prompt of pub.prompts) {
+              if (prompt.image === imagePath || prompt.imageUrl === imagePath) {
+                delete prompt.image;
+                delete prompt.imageUrl;
+                delete prompt.error;
+                changed = true;
+              }
+            }
+          }
+          if (pub.paragraphs) {
+            for (const paragraph of pub.paragraphs) {
+              if (paragraph.image === imagePath || paragraph.imageUrl === imagePath) {
+                delete paragraph.image;
+                delete paragraph.imageUrl;
+                delete paragraph.error;
+                changed = true;
+              }
+            }
+          }
+          if (changed) {
+            await savePublication(pub);
+          }
+        } catch (pubErr) {
+          console.warn("Failed to clear image path references in publication:", pubErr);
+        }
       }
 
       // Re-run the publication pipeline to regenerate the missing image

@@ -54,7 +54,7 @@ export default function SimpleConnector({
     <div {...rest} className={`border border-base-content/20 shadow-md rounded-md p-6 flex flex-col gap-2 w-[360px] ${rest.className || ''}`}>
       <div className="flex items-center justify-between gap-2">
         <label className="text-xs font-semibold text-base-content/70 text-left">
-          Enter your Google or xAI API Key
+          Enter your Google, xAI or OpenRouter API Key
         </label>
         <button
           type="button"
@@ -153,6 +153,17 @@ export default function SimpleConnector({
                   className="link text-info-content text-sm break-all"
                 >
                   https://console.x.ai
+                </Link>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold text-base-content/60">OpenRouter Key:</span>
+                <Link
+                  to="https://openrouter.ai/keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link text-info-content text-sm break-all"
+                >
+                  https://openrouter.ai/keys
                 </Link>
               </div>
             </div>

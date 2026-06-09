@@ -150,10 +150,20 @@ export default async function generateImages(publication: any) {
             if (!digest) continue;
 
             const imagePath = `images/${digest}.png`;
-            const exists = existingSet.has(imagePath);
+            let exists = existingSet.has(imagePath);
 
             if (!exists) {
                 try {
+                    // Clear previous error on both memory and disk
+                    delete prompt.error;
+                    if (prompt.paragraphIndex != null && paragraphs[prompt.paragraphIndex]) {
+                        delete paragraphs[prompt.paragraphIndex].error;
+                    }
+                    await savePublication(publication);
+                    if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
+                        self.postMessage({ type: 'PROGRESS' });
+                    }
+
                     // Call llmGenerateImage with prompt text
                     const res = await llmGenerateImage(prompt.text);
                     
@@ -165,6 +175,7 @@ export default async function generateImages(publication: any) {
                         await writeFile(imagePath, blob);
                         
                         existingSet.add(imagePath);
+                        exists = true;
 
                         // Safely load latest publication, add this ref, and save to notify UI
                         await updateImageRefOnDisk(digest, imagePath);
@@ -173,20 +184,49 @@ export default async function generateImages(publication: any) {
                     if (res?.totalCost != null) {
                         costs.push(res.totalCost);
                     }
-                } catch (err) {
-                    await writeLog('error', 'generateImages', `Failed to generate image for prompt ${digest}: ${err instanceof Error ? err.message : String(err)}`);
+                } catch (err: any) {
+                    const errorMsg = err instanceof Error ? err.message : String(err);
+                    await writeLog('error', 'generateImages', `Failed to generate image for prompt ${digest}: ${errorMsg}`);
+                    
+                    prompt.error = errorMsg;
+                    if (prompt.paragraphIndex != null && paragraphs[prompt.paragraphIndex]) {
+                        paragraphs[prompt.paragraphIndex].error = errorMsg;
+                    }
+                    
+                    delete prompt.image;
+                    delete prompt.imageUrl;
+                    if (prompt.paragraphIndex != null && paragraphs[prompt.paragraphIndex]) {
+                        const paragraph = paragraphs[prompt.paragraphIndex];
+                        delete paragraph.image;
+                        delete paragraph.imageUrl;
+                    }
+
+                    await savePublication(publication);
+                    if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
+                        self.postMessage({ type: 'PROGRESS' });
+                    }
                 }
             }
 
-            // Link prompt to image path in-memory for the current process reference
-            prompt.image = imagePath;
-            prompt.imageUrl = imagePath;
+            if (exists) {
+                // Link prompt to image path in-memory for the current process reference
+                prompt.image = imagePath;
+                prompt.imageUrl = imagePath;
 
-            // Link corresponding paragraph to image path
-            if (prompt.paragraphIndex != null && paragraphs[prompt.paragraphIndex]) {
-                const paragraph = paragraphs[prompt.paragraphIndex];
-                paragraph.image = imagePath;
-                paragraph.imageUrl = imagePath;
+                // Link corresponding paragraph to image path
+                if (prompt.paragraphIndex != null && paragraphs[prompt.paragraphIndex]) {
+                    const paragraph = paragraphs[prompt.paragraphIndex];
+                    paragraph.image = imagePath;
+                    paragraph.imageUrl = imagePath;
+                }
+            } else {
+                delete prompt.image;
+                delete prompt.imageUrl;
+                if (prompt.paragraphIndex != null && paragraphs[prompt.paragraphIndex]) {
+                    const paragraph = paragraphs[prompt.paragraphIndex];
+                    delete paragraph.image;
+                    delete paragraph.imageUrl;
+                }
             }
         }
 

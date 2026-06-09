@@ -1,10 +1,10 @@
-type ApiKeyProvider = 'GOOGLE' | 'XAI' | 'UNKNOWN';
+type ApiKeyProvider = 'GOOGLE' | 'XAI' | 'OPENROUTER' | 'UNKNOWN';
 
 /**
- * Identifies if an API key is from Google (Gemini) or xAI (Grok).
+ * Identifies if an API key is from Google (Gemini), xAI (Grok), or OpenRouter.
  * 
  * @param apiKey The API key string to check.
- * @returns 'GOOGLE', 'XAI', or 'UNKNOWN'
+ * @returns 'GOOGLE', 'XAI', 'OPENROUTER', or 'UNKNOWN'
  */
 export function identifyApiKeyProvider(apiKey: string): ApiKeyProvider {
     if (!apiKey) {
@@ -12,6 +12,11 @@ export function identifyApiKeyProvider(apiKey: string): ApiKeyProvider {
     }
 
     const trimmedKey = apiKey.trim();
+
+    // OpenRouter API keys start with 'sk-or-v1-' or general 'sk-or-'
+    if (trimmedKey.startsWith('sk-or-v1-') || trimmedKey.startsWith('sk-or-')) {
+        return 'OPENROUTER';
+    }
 
     // xAI API keys start with the prefix 'xai-'
     if (trimmedKey.startsWith('xai-')) {

@@ -66,7 +66,7 @@ export default function Welcome({
   }
 
   const apiKeyProvider = identifyApiKeyProvider(savedKey ?? '');
-  const isApiKeyValid = apiKeyProvider === 'GOOGLE' || apiKeyProvider === 'XAI';
+  const isApiKeyValid = apiKeyProvider === 'GOOGLE' || apiKeyProvider === 'XAI' || apiKeyProvider === 'OPENROUTER';
   const isStartDisabled = !hasDirectory || !permissionGranted || !isApiKeyValid;
 
   const handleAcceptDisclaimer = () => {

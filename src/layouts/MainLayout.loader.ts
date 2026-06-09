@@ -13,6 +13,7 @@ export interface MainLayoutLoaderData {
 }
 
 export async function clientLoader({ request }: any): Promise<MainLayoutLoaderData> {
+  console.log("MainLayout.loader: starting clientLoader...");
   const url = new URL(request.url);
   let urlApiKey = url.searchParams.get('apiKey');
 
@@ -44,12 +45,18 @@ export async function clientLoader({ request }: any): Promise<MainLayoutLoaderDa
   let directoryName: string | null = null;
 
   try {
+    console.log("MainLayout.loader: checking saved directory...");
     hasDirectory = await fileStorage.hasSavedDirectory();
+    console.log("MainLayout.loader: hasDirectory =", hasDirectory);
     if (hasDirectory) {
+      console.log("MainLayout.loader: checking permission...");
       permissionGranted = await fileStorage.isPermissionGranted();
+      console.log("MainLayout.loader: permissionGranted =", permissionGranted);
       directoryName = await fileStorage.getSavedDirectoryName();
       if (permissionGranted) {
+        console.log("MainLayout.loader: listing files...");
         filesList = await fileStorage.listFiles();
+        console.log("MainLayout.loader: filesList =", filesList);
       }
     }
   } catch (err) {
@@ -61,5 +68,6 @@ export async function clientLoader({ request }: any): Promise<MainLayoutLoaderDa
   const characters = filesList.find((file) => file === 'characters.json');
   const panels = filesList.find((file) => file === 'panels.json');
 
+  console.log("MainLayout.loader: clientLoader finished!");
   return { hasDirectory, permissionGranted, directoryName, apiKey, safeMode, story, images, characters, panels };
 }

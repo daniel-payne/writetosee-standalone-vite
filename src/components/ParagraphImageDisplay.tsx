@@ -76,7 +76,14 @@ export default function ParagraphImageDisplay({
       })
       .catch(async err => {
         if (!active) return;
-        await writeLog('error', 'ParagraphImageDisplay', `Failed to load paragraph image: ${err instanceof Error ? err.message : String(err)}`);
+        const isNotFound = err && (
+          (err instanceof Error && err.name === 'NotFoundError') ||
+          (err.name === 'NotFoundError') ||
+          String(err).includes('NotFoundError')
+        );
+        if (!isNotFound) {
+          await writeLog('error', 'ParagraphImageDisplay', `Failed to load paragraph image: ${err instanceof Error ? err.message : String(err)}`);
+        }
         setImgError(true);
         setLoading(false);
       });
@@ -126,10 +133,12 @@ export default function ParagraphImageDisplay({
           <div className="h-full w-full p-4 flex flex-col justify-between items-stretch">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-700">
               <span className="text-[10px] font-bold text-base-content/40">Picture {paragraph.paragraphNo + 1}</span>
-              {(loading || isAwaitingImage) && (
+              {(loading || isAwaitingImage || isRegenerating) && (
                 <div className="flex items-center gap-1.5">
-                  {isAwaitingImage && (
-                    <span className="text-[9px] text-primary/70 animate-pulse font-medium">Awaiting illustration...</span>
+                  {(isAwaitingImage || isRegenerating) && (
+                    <span className="text-[9px] text-primary/70 animate-pulse font-medium">
+                      {isRegenerating ? "Regenerating..." : "Awaiting illustration..."}
+                    </span>
                   )}
                   <span className="loading loading-spinner loading-xs text-primary"></span>
                 </div>
@@ -140,7 +149,30 @@ export default function ParagraphImageDisplay({
               {paragraph.text}
             </p>
 
-            {imagePath && imgError && (
+            {paragraph.error ? (
+              <div className="flex flex-col gap-1.5 border-t border-error/10 pt-2 text-left mt-2">
+                <div className="bg-error/5 p-2 rounded-lg max-h-[100px] overflow-y-auto border border-error/10">
+                  <div className="text-[9px] text-error font-bold flex items-center gap-1 mb-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-error shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Generation Error
+                  </div>
+                  <div className="text-[9px] text-error/80 leading-normal break-words font-medium select-text">
+                    {paragraph.error}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRegenerate}
+                  disabled={isRegenerating}
+                  className="btn btn-xs btn-error btn-outline rounded-lg text-[9px] h-auto min-h-0 py-1 font-bold w-full normal-case flex items-center justify-center gap-1"
+                >
+                  {isRegenerating && <span className="loading loading-spinner loading-xs"></span>}
+                  {isRegenerating ? "Regenerating..." : "Regenerate Image"}
+                </button>
+              </div>
+            ) : imagePath && imgError ? (
               <div className="flex flex-col gap-1.5 border-t border-error/10 pt-1.5 text-left">
                 <div className="text-[9px] text-error font-semibold">
                   Illustration failed to load
@@ -149,14 +181,15 @@ export default function ParagraphImageDisplay({
                   type="button"
                   onClick={handleRegenerate}
                   disabled={isRegenerating}
-                  className="btn btn-xs btn-error btn-outline rounded-lg text-[9px] h-auto min-h-0 py-1 font-bold w-full normal-case"
+                  className="btn btn-xs btn-error btn-outline rounded-lg text-[9px] h-auto min-h-0 py-1 font-bold w-full normal-case flex items-center justify-center gap-1"
                 >
+                  {isRegenerating && <span className="loading loading-spinner loading-xs"></span>}
                   {isRegenerating ? "Regenerating..." : "Regenerate Image"}
                 </button>
               </div>
-            )}
+            ) : null}
 
-            {!(imagePath && imgError) && (
+            {!(imagePath && imgError) && !paragraph.error && (
               <button
                 type="button"
                 onClick={handleRegenerate}

@@ -1,5 +1,5 @@
 import { Form, useLoaderData, useNavigation, useBlocker, useFetcher } from "react-router-dom";
-import { useState, useEffect, useRef, type HTMLAttributes, type PropsWithChildren } from "react";
+import { useState, useEffect, useRef, useCallback, type HTMLAttributes, type PropsWithChildren } from "react";
 import FormDrawingInstructions from "@/components/FormDrawingInstructions";
 import FormReferenceLink from "@/components/FormReferenceLink";
 import FormStoryTitle from "@/components/FormStoryTitle";
@@ -89,14 +89,23 @@ export default function Style({
     formData.referenceUrl !== (initialStyle.referenceUrl || '') ||
     formData.linkInstructions !== safeJoin(initialStyle.linkInstructions);
 
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) => {
-      if (!isDirty) return false;
-      if (navigation.state !== 'idle') return false;
+  const isDirtyRef = useRef(isDirty);
+  isDirtyRef.current = isDirty;
+
+  const navigationStateRef = useRef(navigation.state);
+  navigationStateRef.current = navigation.state;
+
+  const blockerFunction = useCallback(
+    ({ currentLocation, nextLocation }: any) => {
+      if (!isDirtyRef.current) return false;
+      if (navigationStateRef.current !== 'idle') return false;
       if (currentLocation.pathname === nextLocation.pathname) return false;
       return true;
-    }
+    },
+    []
   );
+
+  const blocker = useBlocker(blockerFunction);
 
   useEffect(() => {
     if (blocker.state === 'blocked') {

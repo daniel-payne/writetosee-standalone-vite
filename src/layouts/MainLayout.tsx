@@ -45,6 +45,10 @@ function NavKeyLink({
       tabIndex={tabIndex}
       aria-disabled={ariaDisabled}
       onClick={(e) => {
+        if (ariaDisabled) {
+          e.preventDefault();
+          return;
+        }
         if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return; // let browser handle new-tab gestures
         e.preventDefault();
         navigate(to);
@@ -115,7 +119,9 @@ export default function MainLayout({
   const navigation = useNavigation();
   const isSubmitting = navigation.state === 'submitting';
 
+  const isProcessing = processingStatus === 'processing';
   const isStoryDisabled = !loaderData?.hasDirectory || !loaderData?.permissionGranted || !loaderData?.apiKey;
+  const isNavDisabled = isStoryDisabled || isProcessing;
 
   const currentApiKey = loaderData?.apiKey || (typeof window !== 'undefined' ? window.sessionStorage.getItem("apiKey") : null) || '';
 
@@ -188,7 +194,7 @@ export default function MainLayout({
     aboutLinkStyle = selectedStyle;
   }
 
-  if (isStoryDisabled) {
+  if (isNavDisabled) {
     // _panelsLinkStyle = disabledStyle;
     // _charactersLinkStyle = disabledStyle;
     imagesLinkStyle = disabledStyle;
@@ -213,11 +219,11 @@ export default function MainLayout({
               to="/"
               apiKey={currentApiKey}
               navigate={navigate}
-              tabIndex={isStoryDisabled ? -1 : undefined}
-              aria-disabled={isStoryDisabled}
-              className={isStoryDisabled ? 'pointer-events-none' : ''}
+              tabIndex={isNavDisabled ? -1 : undefined}
+              aria-disabled={isNavDisabled}
+              className={isNavDisabled ? 'pointer-events-none' : ''}
             >
-              <div className={`p-2 bg-primary rounded-xl text-primary-content shadow-lg shadow-primary/30 ${isStoryDisabled ? 'opacity-50' : 'animate-pulse'}`}>
+              <div className={`p-2 bg-primary rounded-xl text-primary-content shadow-lg shadow-primary/30 ${isNavDisabled ? 'opacity-50' : 'animate-pulse'}`}>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.83 17.29a2.182 2.182 0 01-.504.34l-3.327 1.11a.488.488 0 01-.613-.613l1.11-3.328a2.182 2.182 0 01.34-.504l12.016-12.017zm0 0L19.5 7.125" />
                 </svg>
@@ -241,17 +247,17 @@ export default function MainLayout({
 
           <nav className="flex items-center gap-2">
             {/* <NavKeyLink to="/" apiKey={currentApiKey} navigate={navigate} className={welcomeLinkStyle}>Welcome</NavKeyLink> */}
-            {!isSafeMode && <NavKeyLink to="/style" apiKey={currentApiKey} navigate={navigate} className={styleLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Style</NavKeyLink>}
-            <NavKeyLink to="/story" apiKey={currentApiKey} navigate={navigate} className={storyLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Story</NavKeyLink>
-            {/* {!isSafeMode && <NavKeyLink to="/characters" apiKey={currentApiKey} navigate={navigate} className={charactersLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Characters</NavKeyLink>} */}
-            {!isSafeMode && <NavKeyLink to="/images" apiKey={currentApiKey} navigate={navigate} className={imagesLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Images</NavKeyLink>}
+            {!isSafeMode && <NavKeyLink to="/style" apiKey={currentApiKey} navigate={navigate} className={styleLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Style</NavKeyLink>}
+            <NavKeyLink to="/story" apiKey={currentApiKey} navigate={navigate} className={storyLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Story</NavKeyLink>
+            {/* {!isSafeMode && <NavKeyLink to="/characters" apiKey={currentApiKey} navigate={navigate} className={charactersLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Characters</NavKeyLink>} */}
+            {!isSafeMode && <NavKeyLink to="/images" apiKey={currentApiKey} navigate={navigate} className={imagesLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Images</NavKeyLink>}
 
-            {/* {!isSafeMode && <NavKeyLink to="/panels" apiKey={currentApiKey} navigate={navigate} className={panelsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Comic</NavKeyLink>} */}
+            {/* {!isSafeMode && <NavKeyLink to="/panels" apiKey={currentApiKey} navigate={navigate} className={panelsLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Comic</NavKeyLink>} */}
 
-            {!isSafeMode && isDEBUG && <NavKeyLink to="/publication" apiKey={currentApiKey} navigate={navigate} className={publicationLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Publication</NavKeyLink>}
-            {!isSafeMode && isDEBUG && <NavKeyLink to="/costs" apiKey={currentApiKey} navigate={navigate} className={costsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Costs</NavKeyLink>}
-            {!isSafeMode && isDEBUG && <NavKeyLink to="/logs" apiKey={currentApiKey} navigate={navigate} className={logsLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>Logs</NavKeyLink>}
-            <NavKeyLink to="/about" apiKey={currentApiKey} navigate={navigate} className={aboutLinkStyle} tabIndex={isStoryDisabled ? -1 : undefined} aria-disabled={isStoryDisabled}>About</NavKeyLink>
+            {!isSafeMode && isDEBUG && <NavKeyLink to="/publication" apiKey={currentApiKey} navigate={navigate} className={publicationLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Publication</NavKeyLink>}
+            {!isSafeMode && isDEBUG && <NavKeyLink to="/costs" apiKey={currentApiKey} navigate={navigate} className={costsLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Costs</NavKeyLink>}
+            {!isSafeMode && isDEBUG && <NavKeyLink to="/logs" apiKey={currentApiKey} navigate={navigate} className={logsLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Logs</NavKeyLink>}
+            <NavKeyLink to="/about" apiKey={currentApiKey} navigate={navigate} className={aboutLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>About</NavKeyLink>
           </nav>
         </div>
       </header>
@@ -318,7 +324,7 @@ export default function MainLayout({
                   form="main-form"
                   name="intent"
                   value="CANCEL-UPDATES"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isProcessing}
                   className="btn btn-sm btn-ghost"
                 >
                   Cancel
@@ -328,7 +334,7 @@ export default function MainLayout({
                   form="main-form"
                   name="intent"
                   value="SAVE-UPDATES"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isProcessing}
                   className="btn btn-sm btn-success"
                 >
                   {isSubmitting ? 'Saving...' : 'Save Changes'}

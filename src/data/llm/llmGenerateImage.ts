@@ -2,8 +2,7 @@ import { writeLog } from "../storage/logStorage";
 import { identifyApiKeyProvider } from "../utilities/identifyApiKeyProvider";
 import processGoogleImage from "./providers/processGoogleImage";
 import processxAIImage from "./providers/processxAIImage";
-
-/*
+import processOpenRouterImage from "./providers/processOpenRouterImage";
 
 /*
 
@@ -38,9 +37,12 @@ export default async function llmGenerateImage(imagePrompt: string) {
     } else if (provider === 'XAI') {
         const model = "grok-imagine-image-quality";
         result = await processxAIImage({ imagePrompt, apiKey, model });
+    } else if (provider === 'OPENROUTER') {
+        const model = "openai/gpt-5-image-mini";
+        const inputCostPerMillion = 2.50;
+        const outputCostPerMillion = 2.00;
+        result = await processOpenRouterImage({ imagePrompt, apiKey, model, inputCostPerMillion, outputCostPerMillion });
     }
-
-
 
     return result
 }
