@@ -20,9 +20,9 @@ export default async function processOpenRouterImage({
     imagePrompt,
     apiKey,
     references: _references = [],
-    model = "openai/gpt-5-image-mini",
-    inputCostPerMillion = 2.50,
-    outputCostPerMillion = 2.00
+    model = "black-forest-labs/flux.2-pro",
+    inputCostPerMillion = 0.00,
+    outputCostPerMillion = 0.00
 }: props): Promise<response> {
     try {
         const markdownImages = extractMarkdownImages(imagePrompt);
@@ -90,7 +90,7 @@ export default async function processOpenRouterImage({
                     content: messageContent
                 }
             ],
-            modalities: ["image", "text"]
+            modalities: ["image"]
         };
 
         const response = await fetch(`https://openrouter.ai/api/v1/chat/completions`, {

@@ -38,9 +38,9 @@ export default async function llmGenerateImage(imagePrompt: string) {
         const model = "grok-imagine-image-quality";
         result = await processxAIImage({ imagePrompt, apiKey, model });
     } else if (provider === 'OPENROUTER') {
-        const model = "openai/gpt-5-image-mini";
-        const inputCostPerMillion = 2.50;
-        const outputCostPerMillion = 2.00;
+        const model = "black-forest-labs/flux.2-pro";
+        const inputCostPerMillion = 0.00;
+        const outputCostPerMillion = 7.94;
         result = await processOpenRouterImage({ imagePrompt, apiKey, model, inputCostPerMillion, outputCostPerMillion });
     }
 
