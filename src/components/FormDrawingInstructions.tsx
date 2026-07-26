@@ -48,6 +48,7 @@ export default function FormDrawingInstructions({
         <div className="flex flex-row gap-2 flex-wrap justify-center items-center">
           <button className="btn btn-xs btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('CHILDREN')}>Children's Book</button>
           <button className="btn btn-xs btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('GRAPHIC')}>Graphic Novel</button>
+          <button className="btn btn-xs btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('PHOTO_REALISTIC')}>Photo Realistic</button>
           <button className="btn btn-xs btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('MANGA')}>Manga Comic</button>
           <button className="btn btn-xs btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('SUPERHERO')}>Superhero Comic</button>
           <button className="btn btn-xs btn-secondary btn-outline" disabled={isAnalyzing} onClick={handleUseInstructions('CLAYMATION')}>Claymation</button>

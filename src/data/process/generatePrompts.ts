@@ -93,14 +93,20 @@ export default async function generatePrompts(publication: any) {
             existingPrompts.add(fileName);
         }
 
-        result.push({
+        const promptObj: any = {
             paragraphIndex: index,
             paragraphNo: paragraph.paragraphNo ?? 0,
             pageNo: paragraph.pageNo ?? 0,
             chapterNo: paragraph.chapterNo ?? 0,
             text: promptText,
             digest: digest
-        });
+        };
+
+        if (paragraph.needsRegenerate) {
+            promptObj.needsRegenerate = true;
+        }
+
+        result.push(promptObj);
     }
 
     publication.prompts = result;

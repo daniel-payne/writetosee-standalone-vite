@@ -24,6 +24,13 @@ async function updateImageRefOnDisk(digest: string, imagePath: string) {
                     paragraph.imageUrl = imagePath;
                     changed = true;
                 }
+                if (!paragraph.images) {
+                    paragraph.images = [];
+                }
+                if (!paragraph.images.includes(imagePath)) {
+                    paragraph.images.push(imagePath);
+                    changed = true;
+                }
             }
         }
 
@@ -46,19 +53,35 @@ async function syncAllImageRefsOnDisk(existingSet: Set<string>) {
         if (pub.prompts) {
             for (const prompt of pub.prompts) {
                 if (prompt.digest) {
-                    const imagePath = `images/${prompt.digest}.png`;
-                    if (existingSet.has(imagePath)) {
-                        if (prompt.image !== imagePath) {
-                            prompt.image = imagePath;
-                            prompt.imageUrl = imagePath;
+                    const matchingImages = Array.from(existingSet).filter(
+                        (filePath: string) => filePath.startsWith(`images/${prompt.digest}.png`) || filePath.startsWith(`images/${prompt.digest}_`)
+                    );
+
+                    if (matchingImages.length > 0) {
+                        const selectedImage = prompt.image && existingSet.has(prompt.image)
+                            ? prompt.image
+                            : matchingImages[matchingImages.length - 1];
+
+                        if (prompt.image !== selectedImage) {
+                            prompt.image = selectedImage;
+                            prompt.imageUrl = selectedImage;
                             changed = true;
                         }
                         
                         if (prompt.paragraphIndex != null && pub.paragraphs?.[prompt.paragraphIndex]) {
                             const paragraph = pub.paragraphs[prompt.paragraphIndex];
-                            if (paragraph.image !== imagePath) {
-                                paragraph.image = imagePath;
-                                paragraph.imageUrl = imagePath;
+                            if (!paragraph.images) {
+                                paragraph.images = [];
+                            }
+                            for (const imgFile of matchingImages) {
+                                if (!paragraph.images.includes(imgFile)) {
+                                    paragraph.images.push(imgFile);
+                                    changed = true;
+                                }
+                            }
+                            if (paragraph.image !== selectedImage) {
+                                paragraph.image = selectedImage;
+                                paragraph.imageUrl = selectedImage;
                                 changed = true;
                             }
                         }
@@ -106,20 +129,40 @@ export default async function generateImages(publication: any) {
         const digest = prompt.digest;
         if (!digest) continue;
 
-        const imagePath = `images/${digest}.png`;
-        if (existingSet.has(imagePath)) {
-            if (prompt.image !== imagePath || prompt.imageUrl !== imagePath) {
-                prompt.image = imagePath;
-                prompt.imageUrl = imagePath;
-                initialChanged = true;
-            }
+        const paragraph = prompt.paragraphIndex != null ? paragraphs[prompt.paragraphIndex] : null;
+        const isRegenerateRequested = prompt.needsRegenerate || paragraph?.needsRegenerate;
 
-            if (prompt.paragraphIndex != null && paragraphs[prompt.paragraphIndex]) {
-                const paragraph = paragraphs[prompt.paragraphIndex];
-                if (paragraph.image !== imagePath || paragraph.imageUrl !== imagePath) {
-                    paragraph.image = imagePath;
-                    paragraph.imageUrl = imagePath;
-                    initialChanged = true;
+        const matchingImages = Array.from(existingSet).filter(
+            (filePath: string) => filePath.startsWith(`images/${digest}.png`) || filePath.startsWith(`images/${digest}_`)
+        );
+
+        if (matchingImages.length > 0) {
+            if (paragraph) {
+                if (!paragraph.images) {
+                    paragraph.images = [];
+                }
+                for (const imgFile of matchingImages) {
+                    if (!paragraph.images.includes(imgFile)) {
+                        paragraph.images.push(imgFile);
+                        initialChanged = true;
+                    }
+                }
+
+                if (!isRegenerateRequested) {
+                    const selectedImage = paragraph.image && existingSet.has(paragraph.image)
+                        ? paragraph.image
+                        : matchingImages[matchingImages.length - 1];
+
+                    if (paragraph.image !== selectedImage || paragraph.imageUrl !== selectedImage) {
+                        paragraph.image = selectedImage;
+                        paragraph.imageUrl = selectedImage;
+                        initialChanged = true;
+                    }
+                    if (prompt.image !== selectedImage || prompt.imageUrl !== selectedImage) {
+                        prompt.image = selectedImage;
+                        prompt.imageUrl = selectedImage;
+                        initialChanged = true;
+                    }
                 }
             }
         }
@@ -132,10 +175,12 @@ export default async function generateImages(publication: any) {
         }
     }
 
-    // Check if any prompts actually require generation
+    // Check if any prompts actually require generation (i.e. prompt has no image set or regenerate is requested)
     const needsGeneration = prompts.some((prompt: any) => {
         const digest = prompt.digest;
-        return digest && !existingSet.has(`images/${digest}.png`);
+        const paragraph = prompt.paragraphIndex != null ? paragraphs[prompt.paragraphIndex] : null;
+        const isRegenerateRequested = prompt.needsRegenerate || paragraph?.needsRegenerate;
+        return digest && (isRegenerateRequested || !prompt.image || !existingSet.has(prompt.image));
     });
 
     // If no generations are needed, we can return now since they are already linked and saved
@@ -149,20 +194,28 @@ export default async function generateImages(publication: any) {
             const digest = prompt.digest;
             if (!digest) continue;
 
-            const imagePath = `images/${digest}.png`;
-            let exists = existingSet.has(imagePath);
+            const paragraph = prompt.paragraphIndex != null ? paragraphs[prompt.paragraphIndex] : null;
+            const isRegenerateRequested = prompt.needsRegenerate || paragraph?.needsRegenerate;
+            let currentImage = isRegenerateRequested ? null : (prompt.image || paragraph?.image);
+            let exists = currentImage ? existingSet.has(currentImage) : false;
 
             if (!exists) {
                 try {
-                    // Clear previous error on both memory and disk
+                    // Clear previous error and regenerate flags on both memory and disk
                     delete prompt.error;
-                    if (prompt.paragraphIndex != null && paragraphs[prompt.paragraphIndex]) {
-                        delete paragraphs[prompt.paragraphIndex].error;
+                    delete prompt.needsRegenerate;
+                    if (paragraph) {
+                        delete paragraph.error;
+                        delete paragraph.needsRegenerate;
                     }
                     await savePublication(publication);
                     if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
                         self.postMessage({ type: 'PROGRESS' });
                     }
+
+                    // Create unique image filename for new generation
+                    const timestamp = Date.now();
+                    const newImagePath = `images/${digest}_${timestamp}.png`;
 
                     // Call llmGenerateImage with prompt text
                     const res = await llmGenerateImage(prompt.text);
@@ -172,13 +225,13 @@ export default async function generateImages(publication: any) {
                         const blob = dataURLtoBlob(res.content);
                         
                         // Write binary image to file
-                        await writeFile(imagePath, blob);
+                        await writeFile(newImagePath, blob);
                         
-                        existingSet.add(imagePath);
+                        existingSet.add(newImagePath);
                         exists = true;
 
                         // Safely load latest publication, add this ref, and save to notify UI
-                        await updateImageRefOnDisk(digest, imagePath);
+                        await updateImageRefOnDisk(digest, newImagePath);
                     }
 
                     if (res?.totalCost != null) {
@@ -189,43 +242,23 @@ export default async function generateImages(publication: any) {
                     await writeLog('error', 'generateImages', `Failed to generate image for prompt ${digest}: ${errorMsg}`);
                     
                     prompt.error = errorMsg;
-                    if (prompt.paragraphIndex != null && paragraphs[prompt.paragraphIndex]) {
-                        paragraphs[prompt.paragraphIndex].error = errorMsg;
+                    if (paragraph) {
+                        paragraph.error = errorMsg;
                     }
                     
                     delete prompt.image;
                     delete prompt.imageUrl;
-                    if (prompt.paragraphIndex != null && paragraphs[prompt.paragraphIndex]) {
-                        const paragraph = paragraphs[prompt.paragraphIndex];
+                    delete prompt.needsRegenerate;
+                    if (paragraph) {
                         delete paragraph.image;
                         delete paragraph.imageUrl;
+                        delete paragraph.needsRegenerate;
                     }
 
                     await savePublication(publication);
                     if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
                         self.postMessage({ type: 'PROGRESS' });
                     }
-                }
-            }
-
-            if (exists) {
-                // Link prompt to image path in-memory for the current process reference
-                prompt.image = imagePath;
-                prompt.imageUrl = imagePath;
-
-                // Link corresponding paragraph to image path
-                if (prompt.paragraphIndex != null && paragraphs[prompt.paragraphIndex]) {
-                    const paragraph = paragraphs[prompt.paragraphIndex];
-                    paragraph.image = imagePath;
-                    paragraph.imageUrl = imagePath;
-                }
-            } else {
-                delete prompt.image;
-                delete prompt.imageUrl;
-                if (prompt.paragraphIndex != null && paragraphs[prompt.paragraphIndex]) {
-                    const paragraph = paragraphs[prompt.paragraphIndex];
-                    delete paragraph.image;
-                    delete paragraph.imageUrl;
                 }
             }
         }

@@ -26,6 +26,9 @@ export default function generateParagraphs(publication: Record<string, any>, cha
     digest: string;
     image?: string;
     imageUrl?: string;
+    images?: string[];
+    needsRegenerate?: boolean;
+    error?: string;
   }> = [];
 
   let chapterNo = 0;
@@ -57,7 +60,10 @@ export default function generateParagraphs(publication: Record<string, any>, cha
         pageNo,
         digest,
         image: existing?.image,
-        imageUrl: existing?.imageUrl
+        imageUrl: existing?.imageUrl,
+        images: existing?.images,
+        needsRegenerate: existing?.needsRegenerate,
+        error: existing?.error,
       });
 
       currentPageParagraphs.push(trimmed);

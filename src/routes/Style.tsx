@@ -143,6 +143,8 @@ export default function Style({
       newInstructions = STYLE_PRESETS.CHILDRENS_BOOK.trim();
     } else if (presetKey === 'GRAPHIC') {
       newInstructions = STYLE_PRESETS.GRAPHIC_NOVEL.trim();
+    } else if (presetKey === 'PHOTO_REALISTIC') {
+      newInstructions = STYLE_PRESETS.PHOTO_REALISTIC.trim();
     } else if (presetKey === 'MANGA') {
       newInstructions = STYLE_PRESETS.MANGA_COMIC.trim();
     } else if (presetKey === 'SUPERHERO') {

@@ -18,7 +18,16 @@ export default function Story({
 
   const [leftWidth, setLeftWidth] = useState(25);
   const [isDragging, setIsDragging] = useState(false);
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const containerRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    setExpandedIdx(null);
+  }, [publication]);
+
+  const handleToggleExpand = (idx: number) => {
+    setExpandedIdx((prev) => (prev === idx ? null : idx));
+  };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -70,13 +79,22 @@ export default function Story({
         />
         <div className="flex-1 h-full overflow-hidden">
           <div className="h-full w-full overflow-auto p-0 flex flex-row flex-wrap gap-0 items-start justify-start content-start">
-            {publication?.paragraphs?.map((paragraph: any, idx: number) => (
-              <ParagraphImageDisplay
-                key={idx}
-                paragraph={paragraph}
-                className="w-1/4 aspect-square p-2"
-              />
-            ))}
+            {publication?.paragraphs?.map((paragraph: any, idx: number) => {
+              const isExpanded = expandedIdx === idx;
+              if (expandedIdx !== null && !isExpanded) {
+                return null;
+              }
+
+              return (
+                <ParagraphImageDisplay
+                  key={idx}
+                  paragraph={paragraph}
+                  isExpanded={isExpanded}
+                  className={isExpanded ? "w-full h-full p-2" : "w-[400px] h-[400px] p-2"}
+                  onDoubleClick={() => handleToggleExpand(idx)}
+                />
+              );
+            })}
           </div>
         </div>
       </Form>
