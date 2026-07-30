@@ -1,11 +1,6 @@
 import { type ActionFunctionArgs } from 'react-router-dom';
 import { saveStory, loadStory } from '@/data/manageStory';
-<<<<<<< Updated upstream
-import processPublication from '@/data/processPublication';
-=======
 import processPublication, { processImageGeneration } from '@/data/processPublication';
-import { deleteFile } from '@/data/storage/fileStorage';
->>>>>>> Stashed changes
 import { loadPublication, savePublication } from '@/data/managePublication';
 
 export async function clientAction({ request }: ActionFunctionArgs) {
@@ -58,7 +53,6 @@ export async function clientAction({ request }: ActionFunctionArgs) {
         paragraphIndex = parseInt(paragraphIndexStr, 10);
       }
 
-<<<<<<< Updated upstream
       let changed = false;
 
       if (pub.paragraphs) {
@@ -69,6 +63,7 @@ export async function clientAction({ request }: ActionFunctionArgs) {
             delete p.imageUrl;
             delete p.error;
             p.needsRegenerate = true;
+            p.imageStatus = 'pending';
             changed = true;
           }
         }
@@ -81,6 +76,7 @@ export async function clientAction({ request }: ActionFunctionArgs) {
             delete prompt.imageUrl;
             delete prompt.error;
             prompt.needsRegenerate = true;
+            prompt.imageStatus = 'pending';
             changed = true;
           }
         }
@@ -90,46 +86,8 @@ export async function clientAction({ request }: ActionFunctionArgs) {
         await savePublication(pub);
       }
 
-      // Re-run the publication pipeline to generate the missing image
-      await processPublication();
-=======
-        // Also clean up the image fields inside the publication JSON!
-        try {
-          const pub = await loadPublication();
-          let changed = false;
-          if (pub.prompts) {
-            for (const prompt of pub.prompts) {
-              if (prompt.image === imagePath || prompt.imageUrl === imagePath) {
-                delete prompt.image;
-                delete prompt.imageUrl;
-                delete prompt.error;
-                prompt.imageStatus = 'pending';
-                changed = true;
-              }
-            }
-          }
-          if (pub.paragraphs) {
-            for (const paragraph of pub.paragraphs) {
-              if (paragraph.image === imagePath || paragraph.imageUrl === imagePath) {
-                delete paragraph.image;
-                delete paragraph.imageUrl;
-                delete paragraph.error;
-                paragraph.imageStatus = 'pending';
-                changed = true;
-              }
-            }
-          }
-          if (changed) {
-            await savePublication(pub);
-          }
-        } catch (pubErr) {
-          console.warn("Failed to clear image path references in publication:", pubErr);
-        }
-      }
-
       // Re-run the image generation pipeline to regenerate the missing image
       await processImageGeneration();
->>>>>>> Stashed changes
 
       return { success: true, message: 'Image regenerated successfully', timestamp: Date.now() };
     } catch (err: unknown) {

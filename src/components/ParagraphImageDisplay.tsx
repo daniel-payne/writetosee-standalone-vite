@@ -56,11 +56,10 @@ function ImageHistoryCard({
   return (
     <div
       onClick={onSelect}
-      className={`relative group rounded-xl border-2 overflow-hidden flex flex-col cursor-pointer transition-all duration-200 ${
-        isCurrent
+      className={`relative group rounded-xl border-2 overflow-hidden flex flex-col cursor-pointer transition-all duration-200 ${isCurrent
           ? 'border-primary ring-2 ring-primary/30 bg-primary/5 shadow-md'
           : 'border-slate-200 dark:border-slate-700 hover:border-primary/50 hover:shadow-lg bg-slate-50 dark:bg-slate-900'
-      }`}
+        }`}
     >
       <div className="aspect-square w-full relative bg-slate-100 dark:bg-slate-950 flex items-center justify-center overflow-hidden">
         {loading ? (
@@ -112,11 +111,7 @@ export default function ParagraphImageDisplay({
   const [src, setSrc] = useState<string>('');
   const [imgError, setImgError] = useState(false);
   const [loading, setLoading] = useState(false);
-<<<<<<< Updated upstream
   const [showModal, setShowModal] = useState(false);
-  const [processingStatus] = useLocalState<'idle' | 'processing'>('publication-processing-status', 'idle');
-=======
->>>>>>> Stashed changes
 
   const imagePath = paragraph?.imageUrl || paragraph?.image;
   const imageStatus = paragraph?.imageStatus || 'idle';
@@ -178,12 +173,12 @@ export default function ParagraphImageDisplay({
     }
 
     let active = true;
-    
+
     readFile(imagePath)
       .then(file => {
         if (!active) return;
         const objectUrl = URL.createObjectURL(file);
-        
+
         setSrc(prevSrc => {
           // Defer revoking the old URL until the new one is ready to render
           if (prevSrc && prevSrc.startsWith('blob:')) {
