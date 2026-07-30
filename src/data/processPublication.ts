@@ -7,7 +7,7 @@ import { writeLog } from './storage/logStorage';
 // Load Vite worker
 import ProcessWorker from './processPublication.worker?worker';
 
-function runInWorker(options: { style?: Record<string, any>, story?: string, apiKey: string }): Promise<any> {
+function runInWorker(options: { type: 'START_TEXT' | 'START_IMAGES', style?: Record<string, any>, story?: string, apiKey: string }): Promise<any> {
     return new Promise((resolve, reject) => {
         const worker = new ProcessWorker();
         
@@ -32,12 +32,51 @@ function runInWorker(options: { style?: Record<string, any>, story?: string, api
         };
 
         worker.postMessage({
-            type: 'START',
+            type: options.type,
             style: options.style,
             story: options.story,
             apiKey: options.apiKey
         });
     });
+}
+
+export async function processImageGeneration() {
+    // Set needs-image-generation flag to true
+    setState('image-generation-needs-processing', true, StoragePersistence.local);
+
+    // Try to acquire the image-generation-processing lock
+    const lockAcquired = await navigator.locks.request('image-generation-processing', { ifAvailable: true }, async (lock) => {
+        if (!lock) {
+            // Already processing image generation
+            return false;
+        }
+
+        try {
+            while (getState('image-generation-needs-processing') === true) {
+                // Reset the flag to false before running
+                setState('image-generation-needs-processing', false, StoragePersistence.local);
+                setState('publication-image-processing-status', 'processing', StoragePersistence.local);
+
+                const apiKey = window.sessionStorage.getItem("apiKey") ?? '';
+
+                await runInWorker({
+                    type: 'START_IMAGES',
+                    apiKey
+                });
+
+                // Reload the publication from disk to update main thread's local states and caches
+                await loadPublication().catch(async (err) =>
+                    await writeLog('error', 'processImageGeneration', `Failed to load publication after worker finished images: ${err instanceof Error ? err.message : String(err)}`)
+                );
+            }
+        } finally {
+            setState('publication-image-processing-status', 'idle', StoragePersistence.local);
+        }
+
+        return true;
+    });
+
+    return lockAcquired;
 }
 
 export default async function processPublication(options: { style?: Record<string, any>, story?: string } = {}) {
@@ -66,6 +105,7 @@ export default async function processPublication(options: { style?: Record<strin
                 const latestStyle = await loadStyle().catch(() => options.style || {});
 
                 await runInWorker({
+                    type: 'START_TEXT',
                     style: latestStyle,
                     story: latestStory,
                     apiKey
@@ -83,6 +123,12 @@ export default async function processPublication(options: { style?: Record<strin
         return true;
     });
 
-    // If we didn't acquire the lock, we return null or a status indicating it's queued
+    // If we successfully processed the text pipeline, trigger image generation in the background!
+    if (lockAcquired) {
+        processImageGeneration().catch(async (err) =>
+            await writeLog('error', 'processPublication', `Background image generation failed to start: ${err instanceof Error ? err.message : String(err)}`)
+        );
+    }
+
     return lockAcquired;
 }

@@ -1,5 +1,6 @@
 import * as fileStorage from '@/data/storage/fileStorage';
 import { writeLog } from "@/data/storage/logStorage";
+import { clearAllCaches } from '@/data/clearCaches';
 
 export interface WelcomeActionResult {
   success: boolean;
@@ -16,12 +17,14 @@ export async function clientAction({ request }: { request: Request }): Promise<W
   try {
     if (intent === 'SELECT-DIRECTORY') {
       await fileStorage.selectDirectory();
+      clearAllCaches();
 
       return { success: true, message: 'Successfully connected to local directory!' };
     }
 
     if (intent === 'DISCONNECT-DIRECTORY') {
       await fileStorage.disconnectDirectory();
+      clearAllCaches();
 
       return { success: true, message: 'Successfully disconnected from local directory!' };
     }

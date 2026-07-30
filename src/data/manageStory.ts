@@ -202,3 +202,15 @@ export function useStoryLoadingError(): [string | null] {
 export function isStoryLoaded(): boolean {
     return inMemoryHash !== null;
 }
+
+/**
+ * Resets the in-memory story cache and its state-mutex representations.
+ */
+export function clearStoryCache(): void {
+    inMemoryStory = "";
+    inMemoryHash = null;
+    activeLoadPromise = null;
+    setState('story-data', '', StoragePersistence.none);
+    setState('story-hash', '', StoragePersistence.local);
+}
+

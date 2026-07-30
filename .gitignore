@@ -34,3 +34,4 @@ deploy-prod.sh
 
 
 .agents/skills/*
+deploy-both.sh

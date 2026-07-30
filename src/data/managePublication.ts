@@ -198,3 +198,14 @@ export function getPredicates(chapterNo: any, pageNo: any, paragraphNo: any) {
 export function getPrompts(chapterNo: any, pageNo: any, paragraphNo: any) {
     return inMemoryPublication?.prompts?.find((p: any) => p.chapterNo === chapterNo && p.pageNo === pageNo && p.paragraphNo === paragraphNo);
 }   
+
+/**
+ * Resets the in-memory publication cache and its state-mutex representations.
+ */
+export function clearPublicationCache(): void {
+    inMemoryPublication = null;
+    inMemoryHash = null;
+    activeLoadPromise = null;
+    setState('publication-data', null, StoragePersistence.none);
+    setState('publication-hash', '', StoragePersistence.local);
+}

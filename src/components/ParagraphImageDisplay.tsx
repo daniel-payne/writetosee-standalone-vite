@@ -2,7 +2,6 @@ import { useState, useEffect, type HTMLAttributes, type PropsWithChildren } from
 import { readFile } from "@/data/storage/fileStorage";
 import { useFetcher } from "react-router-dom";
 import { writeLog } from "@/data/storage/logStorage";
-import { useLocalState } from '@keldan-systems/state-mutex';
 
 type ComponentProps = {
   paragraph: any;
@@ -113,11 +112,16 @@ export default function ParagraphImageDisplay({
   const [src, setSrc] = useState<string>('');
   const [imgError, setImgError] = useState(false);
   const [loading, setLoading] = useState(false);
+<<<<<<< Updated upstream
   const [showModal, setShowModal] = useState(false);
   const [processingStatus] = useLocalState<'idle' | 'processing'>('publication-processing-status', 'idle');
+=======
+>>>>>>> Stashed changes
 
   const imagePath = paragraph?.imageUrl || paragraph?.image;
-  const isAwaitingImage = processingStatus === 'processing' && !imagePath;
+  const imageStatus = paragraph?.imageStatus || 'idle';
+  const isAwaitingImage = imageStatus === 'pending' || imageStatus === 'generating';
+  const isCurrentlyGenerating = imageStatus === 'generating';
 
   if (imagePath !== prevImagePath) {
     setPrevImagePath(imagePath);
@@ -277,11 +281,11 @@ export default function ParagraphImageDisplay({
           <div className="h-full w-full p-4 flex flex-col justify-between items-stretch">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-700">
               <span className="text-[10px] font-bold text-base-content/40">Picture {paragraph.paragraphNo + 1}</span>
-              {(loading || isAwaitingImage || isRegenerating) && (
+              {(loading || isAwaitingImage || isRegenerating || isCurrentlyGenerating) && (
                 <div className="flex items-center gap-1.5">
-                  {(isAwaitingImage || isRegenerating) && (
+                  {(isAwaitingImage || isRegenerating || isCurrentlyGenerating) && (
                     <span className="text-[9px] text-primary/70 animate-pulse font-medium">
-                      {isRegenerating ? "Regenerating..." : "Awaiting illustration..."}
+                      {isCurrentlyGenerating ? "Generating..." : isRegenerating ? "Regenerating..." : "Awaiting illustration..."}
                     </span>
                   )}
                   <span className="loading loading-spinner loading-xs text-primary"></span>

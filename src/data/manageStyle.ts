@@ -223,3 +223,15 @@ export function useStyleLoadingError(): [string | null] {
 export function isStyleLoaded(): boolean {
     return inMemoryStyle !== null;
 }
+
+/**
+ * Resets the in-memory style cache and its state-mutex representations.
+ */
+export function clearStyleCache(): void {
+    inMemoryStyle = null;
+    inMemoryHash = null;
+    activeLoadPromise = null;
+    setState('style-data', null, StoragePersistence.none);
+    setState('style-hash', '', StoragePersistence.local);
+}
+
