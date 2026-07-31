@@ -1,7 +1,7 @@
 import { listFiles, writeFile } from "@/data/storage/fileStorage";
 import { storeCost } from "@/data/storage/costStorage";
 import llmGenerateImage from "@/data/llm/llmGenerateImage";
-import { savePublication } from "@/data/managePublication";
+import { savePublication } from "@/data/process/managePublication";
 import { writeLog } from "@/data/storage/logStorage";
 
 // Helper to convert base64 Data URL to Blob
@@ -44,7 +44,7 @@ export default async function generateImages(publication: any) {
         const expectedStatus = isRegenerateRequested
             ? 'pending'
             : (exists ? 'completed' : (prompt.error ? 'failed' : 'pending'));
-        
+
         prompt.imageStatus = expectedStatus;
 
         if (exists) {
@@ -153,10 +153,10 @@ export default async function generateImages(publication: any) {
 
     const doGenerationWork = async () => {
         const BATCH_SIZE = 10;
-        
+
         for (let i = 0; i < needsGenerationPrompts.length; i += BATCH_SIZE) {
             const batch = needsGenerationPrompts.slice(i, i + BATCH_SIZE);
-            
+
             // Run batch in parallel
             await Promise.all(batch.map(async (prompt: any) => {
                 const digest = prompt.digest;
@@ -185,7 +185,7 @@ export default async function generateImages(publication: any) {
 
                         // Call llmGenerateImage with prompt text
                         const res = await llmGenerateImage(prompt.text);
-                        
+
                         if (res?.content) {
                             // Convert base64 data URL to Blob and write to disk
                             const blob = dataURLtoBlob(res.content);
@@ -220,7 +220,7 @@ export default async function generateImages(publication: any) {
                     } catch (err: any) {
                         const errorMsg = err instanceof Error ? err.message : String(err);
                         await writeLog('error', 'generateImages', `Failed to generate image for prompt ${digest}: ${errorMsg}`);
-                        
+
                         // Mark as failed in memory and queue disk save
                         prompt.imageStatus = 'failed';
                         prompt.error = errorMsg;

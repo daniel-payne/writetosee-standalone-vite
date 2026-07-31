@@ -5,7 +5,7 @@ import { useLocation, useLoaderData, useNavigation, useRevalidator, useNavigate 
 import type { MainLayoutLoaderData } from './MainLayout.loader';
 import { useLocalState, getState, setState, StoragePersistence } from '@keldan-systems/state-mutex';
 import { getDirectoryHandle, disconnectDirectory } from '@/data/storage/fileStorage';
-import processPublication from '@/data/processPublication';
+import processPublication from '@/data/process/workflow/workflowPublication';
 import { writeLog } from '@/data/storage/logStorage';
 import { clearAllCaches } from '@/data/clearCaches';
 

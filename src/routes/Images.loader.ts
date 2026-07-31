@@ -1,5 +1,5 @@
 import { listFiles, readFile } from "@/data/storage/fileStorage";
-import { loadPublication } from "@/data/managePublication";
+import { loadPublication } from "@/data/process/managePublication";
 import { writeLog } from "@/data/storage/logStorage";
 
 function extractSceneText(text?: string): string {
@@ -28,13 +28,13 @@ export async function clientLoader() {
 
     const images = await Promise.all(imageNames.map(async name => {
       const file = await readFile(name);
-      
+
       // Extract digest and timestamp from filename if available (e.g., images/digest_timestamp.png)
       const baseName = name.replace(/^images\//, '').replace(/\.(png|jpe?g|gif|webp|svg)$/i, '');
       const parts = baseName.split('_');
       const digest = parts[0];
       const filenameTimestamp = parts.length > 1 ? parseInt(parts[1], 10) : NaN;
-      
+
       const creationTime = !isNaN(filenameTimestamp) ? filenameTimestamp : file.lastModified;
 
       // Find matching panel & prompt
@@ -42,7 +42,7 @@ export async function clientLoader() {
       let paragraphNo: number | undefined = undefined;
 
       // 1. Try to find panel directly by image name or digest
-      const foundPanel = panels.find((p: any) => 
+      const foundPanel = panels.find((p: any) =>
         p.digest === digest ||
         p.image === name ||
         p.imageUrl === name ||

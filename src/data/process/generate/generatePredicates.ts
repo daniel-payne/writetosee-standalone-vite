@@ -1,4 +1,4 @@
-import generateTextDigest from "@/data/utilities/generateTextDigest";
+import generateTextDigest from "@/data/process/generate/generateTextDigest";
 
 interface ParagraphItem {
   paragraphIndex: number;

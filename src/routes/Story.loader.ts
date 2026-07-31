@@ -1,6 +1,6 @@
-import { isStoryLoaded, loadStory } from '@/data/manageStory';
-import { isStyleLoaded, loadStyle } from '@/data/manageStyle';
-import processPublication from '@/data/processPublication';
+import { isStoryLoaded, loadStory } from '@/data/process/manageStory';
+import { isStyleLoaded, loadStyle } from '@/data/process/manageStyle';
+import processPublication from '@/data/process/workflow/workflowPublication';
 import { isPermissionGranted } from '@/data/storage/fileStorage';
 
 export interface StoryLoaderData {

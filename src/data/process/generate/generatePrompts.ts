@@ -1,5 +1,5 @@
 import { writeFile } from "@/data/storage/fileStorage";
-import generateTextDigest from "@/data/utilities/generateTextDigest";
+import generateTextDigest from "@/data/process/generate/generateTextDigest";
 
 const PROMPT = `
 # Role
@@ -10,11 +10,9 @@ The narrative-text lays out the story before the current scene, and the scene-te
 
 ## Drawing Instructions
 
-When creating a drawing please use these instructions in image creation.
-
-<instructions-text>
+<style-text>
 {{STYLE-TEXT}}
-</instructions-text>
+</style-text>
 
 ### Strict Rules
 1. A wide-angle, edge-to-edge scene that completely fills 100% of the image space from corner to corner.

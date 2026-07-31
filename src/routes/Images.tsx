@@ -39,7 +39,7 @@ export default function Images({
           <p className="text-slate-500 dark:text-slate-400">No images found in storage.</p>
         </div>
       ) : (
-        <div className={`w-full flex-1 min-h-0 ${expandedIdx !== null ? 'flex flex-col' : 'grid grid-cols-[repeat(auto-fill,minmax(400px,1fr))] gap-6'}`}>
+        <div className={`w-full flex-1 min-h-0 ${expandedIdx !== null ? 'flex flex-col' : 'grid grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))] gap-3 content-start'}`}>
           {images.map((image: any, idx: number) => {
             const isExpanded = expandedIdx === idx;
             if (expandedIdx !== null && !isExpanded) {
@@ -51,7 +51,7 @@ export default function Images({
                 key={image.name}
                 onDoubleClick={() => handleToggleExpand(idx)}
                 className={`bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col transition-all duration-300 ${
-                  isExpanded ? 'w-full h-full cursor-zoom-out' : 'w-[400px] h-[400px] cursor-pointer hover:shadow-lg group'
+                  isExpanded ? 'w-full h-full cursor-zoom-out' : 'w-full max-w-[500px] aspect-square mx-auto cursor-pointer hover:shadow-lg group'
                 }`}
                 title={isExpanded ? "Double click to make small" : "Double click to enlarge"}
               >

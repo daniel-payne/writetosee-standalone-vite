@@ -1,4 +1,4 @@
-import generateNumberWords from './generateNumberWords';
+import generateNumberWords from '../process/generate/generateNumberWords';
 
 function toCamelCase(text: string): string {
   // 1. Split camelCase words first (e.g. "HeadingOne" -> "Heading One")

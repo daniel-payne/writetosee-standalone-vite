@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 import { useLocalState, useSharedState, setState, StoragePersistence } from '@keldan-systems/state-mutex';
 import * as fileStorage from '@/data/storage/fileStorage';
-import generateTextDigest from '@/data/utilities/generateTextDigest';
-import { writeLog } from './storage/logStorage';
+import generateTextDigest from '@/data/process/generate/generateTextDigest';
+import { writeLog } from '../storage/logStorage';
+import storyToParagraphs from './generate/generateParagraphs';
+
 
 // Module-level caches to keep a single, synchronous source of truth in memory
 // across all components using the usePublication hooks.
@@ -18,40 +20,50 @@ export async function loadPublication(): Promise<any> {
     if (activeLoadPromise) {
         return activeLoadPromise;
     }
+    if (inMemoryPublication !== null) {
+        return inMemoryPublication;
+    }
 
     setState('publication-loading', true, StoragePersistence.none);
     setState('publication-error', null, StoragePersistence.none);
 
     activeLoadPromise = (async () => {
         try {
-            const file = await fileStorage.readFile('data/publication.json');
+            const file = await fileStorage.readFile('publication.json');
             const text = await file.text();
             const loadedPub = JSON.parse(text);
-            let panels = buildPanelsFromPublication(loadedPub);
-            if (panels.length === 0) {
-                const storyText = await fileStorage.readFile('story.md').then(f => f.text()).catch(() => "");
-                if (storyText && storyText.trim() !== "") {
-                    loadedPub.story = storyText;
+
+            let panels = loadedPub.panels || [];
+            if (panels.length === 0 && (loadedPub.story || loadedPub.paragraphs)) {
+                const storyText = loadedPub.story || "";
+                if (storyText) {
                     panels = buildPanelsFromStory(storyText, loadedPub.style);
                 }
             }
-            loadedPub.panels = panels;
-            const calculatedHash = generateTextDigest(text);
 
+            loadedPub.panels = panels;
+
+            const calculatedHash = generateTextDigest(text);
             inMemoryPublication = loadedPub;
             inMemoryHash = calculatedHash;
 
-            // Update state-mutex in-memory data and localStorage hash
             setState('publication-data', loadedPub, StoragePersistence.none);
             setState('publication-hash', calculatedHash, StoragePersistence.local);
 
             return loadedPub;
         } catch (e: any) {
-            // Initialize empty publication if file doesn't exist
             if (e.name === 'NotFoundError' || e.message?.includes('NotFoundError') || e.message?.includes('does not exist')) {
-                const defaultPub = { panels: [] };
-                const json = JSON.stringify(defaultPub, null, 2);
-                const defaultHash = generateTextDigest(json);
+                const defaultPub = {
+                    version: '1.0',
+                    lastUpdated: new Date().toISOString(),
+                    story: "",
+                    style: {},
+                    panels: [],
+                    prompts: [],
+                    images: []
+                };
+                const defaultText = JSON.stringify(defaultPub, null, 2);
+                const defaultHash = generateTextDigest(defaultText);
 
                 inMemoryPublication = defaultPub;
                 inMemoryHash = defaultHash;
@@ -60,14 +72,14 @@ export async function loadPublication(): Promise<any> {
                 setState('publication-hash', defaultHash, StoragePersistence.local);
 
                 try {
-                    await fileStorage.writeFile('data/publication.json', json);
+                    await fileStorage.writeFile('publication.json', defaultText);
                 } catch (writeErr) {
-                    console.warn("Could not write default data/publication.json:", writeErr);
+                    console.warn("Could not write default publication.json:", writeErr);
                 }
 
                 return defaultPub;
             } else {
-                await writeLog('error', 'loadPublication', `Failed to load publication in loadPublication: ${e.message || String(e)}`);
+                await writeLog('error', 'loadPublication', `Failed to load publication: ${e.message || String(e)}`);
                 setState('publication-error', e.message || "Failed to load publication", StoragePersistence.none);
                 throw e;
             }
@@ -87,14 +99,19 @@ export function buildPanelsFromStory(storyText: string, style?: any) {
         ? style.drawingInstructions.join('\n\n')
         : (style?.drawingInstructions || "");
 
-    const blocks = storyText.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
-    return blocks.map((blockText, idx) => {
-        const comboText = [blockText, "", styleInstructions].filter(Boolean).join("\n\n");
+    const tempPub = { story: storyText };
+    const paragraphs = storyToParagraphs(tempPub);
+
+    return paragraphs.map((p, idx) => {
+        const comboText = [p.text, "", styleInstructions].filter(Boolean).join("\n\n");
         const digest = generateTextDigest(comboText);
         return {
             panelNo: idx,
-            text: blockText,
-            sceneText: blockText,
+            paragraphNo: p.paragraphNo,
+            chapterNo: p.chapterNo,
+            pageNo: p.pageNo,
+            text: p.text,
+            sceneText: p.text,
             narrativeText: "",
             instructionsText: styleInstructions,
             digest,
@@ -125,19 +142,19 @@ export function buildPanelsFromPublication(pub: any) {
 
         pageGroups.forEach((items, pageNo) => {
             const combinedText = items.map(x => x.item.text || "").filter(Boolean).join("\n\n");
-            
+
             const allImagesSet = new Set<string>();
             let activeImage = "";
-            
+
             for (const x of items) {
                 const p = x.item;
                 const imgs = Array.isArray(p.images) && p.images.length > 0
                     ? p.images
                     : p.image
-                    ? [p.image]
-                    : p.imageUrl
-                    ? [p.imageUrl]
-                    : [];
+                        ? [p.image]
+                        : p.imageUrl
+                            ? [p.imageUrl]
+                            : [];
                 imgs.forEach((img: string) => allImagesSet.add(img));
                 if (!activeImage && (p.image || p.imageUrl)) {
                     activeImage = p.image || p.imageUrl;
@@ -190,11 +207,11 @@ export function buildPanelsFromPublication(pub: any) {
         const imagesList: string[] = Array.isArray(p.images) && p.images.length > 0
             ? p.images
             : p.image
-            ? [p.image]
-            : p.imageUrl
-            ? [p.imageUrl]
-            : [];
-        
+                ? [p.image]
+                : p.imageUrl
+                    ? [p.imageUrl]
+                    : [];
+
         const activeImage = p.image || p.imageUrl || imagesList[0] || "";
         const rawIndex = p.currentImageIndex ?? Math.max(0, imagesList.indexOf(activeImage));
         const currentImageIndex = rawIndex >= 0 ? rawIndex : 0;
@@ -364,7 +381,7 @@ export function getPredicates(chapterNo: any, pageNo: any, paragraphNo: any) {
 
 export function getPrompts(chapterNo: any, pageNo: any, paragraphNo: any) {
     return inMemoryPublication?.prompts?.find((p: any) => p.chapterNo === chapterNo && p.pageNo === pageNo && p.paragraphNo === paragraphNo);
-}   
+}
 
 /**
  * Resets the in-memory publication cache and its state-mutex representations.

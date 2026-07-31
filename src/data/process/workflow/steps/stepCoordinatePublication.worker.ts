@@ -1,4 +1,4 @@
-import processPublicationImpl, { processImageGenerationImpl } from "./processPublicationImpl";
+import processPublicationImpl, { processImageGenerationImpl } from "./stepCoordinatePublication";
 import { setApiKey as setApiKeyText } from "@/data/llm/llmGenerateText";
 import { setApiKey as setApiKeyImage } from "@/data/llm/llmGenerateImage";
 

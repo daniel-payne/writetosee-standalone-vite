@@ -1,14 +1,14 @@
-import { saveStyle, loadStyle } from "@/data/manageStyle";
+import { saveStyle, loadStyle } from "@/data/process/manageStyle";
 import { writeLog } from "@/data/storage/logStorage";
 import { STYLE_PRESETS } from "@/data/stylePresets";
-import generateStyleReference from "@/data/process/generateStyleReference";
+import generateStyleReference from "@/data/process/generate/generateStyleReference";
 
 export async function clientAction({ request }: any) {
   const formData = await request.formData();
   const intent = formData.get('intent') as string;
 
   if (intent === 'CANCEL-UPDATES') {
-    return { success: true };
+    return { success: true, cancelled: true, timestamp: Date.now() };
   }
 
   if (intent === 'UPDATE_STYLE') {

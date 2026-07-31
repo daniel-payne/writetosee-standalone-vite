@@ -1,7 +1,7 @@
 import { type ActionFunctionArgs } from 'react-router-dom';
-import { saveStory, loadStory } from '@/data/manageStory';
-import processPublication, { processImageGeneration } from '@/data/processPublication';
-import { loadPublication, savePublication } from '@/data/managePublication';
+import { saveStory, loadStory } from '@/data/process/manageStory';
+import processPublication, { workflowImageGeneration } from '@/data/process/workflow/workflowPublication';
+import { loadPublication, savePublication } from '@/data/process/managePublication';
 
 export async function clientAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -58,7 +58,10 @@ export async function clientAction({ request }: ActionFunctionArgs) {
       if (pub.panels) {
         for (let i = 0; i < pub.panels.length; i++) {
           const p = pub.panels[i];
-          if ((paragraphIndex >= 0 && i === paragraphIndex) || (imagePath && (p.image === imagePath || p.imageUrl === imagePath))) {
+          const isMatch = (!isNaN(paragraphIndex) && paragraphIndex >= 0 && (i === paragraphIndex || p.panelNo === paragraphIndex || p.paragraphNo === paragraphIndex))
+            || (imagePath && (p.image === imagePath || p.imageUrl === imagePath || (Array.isArray(p.images) && p.images.includes(imagePath))));
+
+          if (isMatch) {
             delete p.image;
             delete p.imageUrl;
             delete p.error;
@@ -70,8 +73,12 @@ export async function clientAction({ request }: ActionFunctionArgs) {
       }
 
       if (pub.prompts) {
-        for (const prompt of pub.prompts) {
-          if ((paragraphIndex >= 0 && prompt.paragraphIndex === paragraphIndex) || (imagePath && (prompt.image === imagePath || prompt.imageUrl === imagePath))) {
+        for (let i = 0; i < pub.prompts.length; i++) {
+          const prompt = pub.prompts[i];
+          const isMatch = (!isNaN(paragraphIndex) && paragraphIndex >= 0 && (i === paragraphIndex || prompt.paragraphIndex === paragraphIndex || prompt.paragraphNo === paragraphIndex || prompt.panelIndex === paragraphIndex))
+            || (imagePath && (prompt.image === imagePath || prompt.imageUrl === imagePath));
+
+          if (isMatch) {
             delete prompt.image;
             delete prompt.imageUrl;
             delete prompt.error;
@@ -87,7 +94,7 @@ export async function clientAction({ request }: ActionFunctionArgs) {
       }
 
       // Re-run the image generation pipeline to regenerate the missing image
-      await processImageGeneration();
+      await workflowImageGeneration();
 
       return { success: true, message: 'Image regenerated successfully', timestamp: Date.now() };
     } catch (err: unknown) {
@@ -97,12 +104,22 @@ export async function clientAction({ request }: ActionFunctionArgs) {
   } else if (intent === 'SELECT-PARAGRAPH-IMAGE') {
     const paragraphIndexStr = formData.get('paragraphIndex') as string;
     const imagePath = formData.get('imagePath') as string;
-    const paragraphIndex = parseInt(paragraphIndexStr, 10);
+    let paragraphIndex = parseInt(paragraphIndexStr, 10);
 
     try {
       const pub = await loadPublication();
-      const items = pub.panels;
-      if (!isNaN(paragraphIndex) && items?.[paragraphIndex]) {
+      const items = pub.panels || [];
+
+      if (isNaN(paragraphIndex) || paragraphIndex < 0 || !items[paragraphIndex]) {
+        const foundIdx = items.findIndex((p: any) =>
+          p.image === imagePath || p.imageUrl === imagePath || (Array.isArray(p.images) && p.images.includes(imagePath))
+        );
+        if (foundIdx >= 0) {
+          paragraphIndex = foundIdx;
+        }
+      }
+
+      if (!isNaN(paragraphIndex) && paragraphIndex >= 0 && items[paragraphIndex]) {
         const item = items[paragraphIndex];
         item.image = imagePath;
         item.imageUrl = imagePath;
@@ -111,6 +128,11 @@ export async function clientAction({ request }: ActionFunctionArgs) {
           if (idx >= 0) {
             item.currentImageIndex = idx;
           }
+        }
+
+        if (pub.prompts && pub.prompts[paragraphIndex]) {
+          pub.prompts[paragraphIndex].image = imagePath;
+          pub.prompts[paragraphIndex].imageUrl = imagePath;
         }
 
         await savePublication(pub);

@@ -1,4 +1,4 @@
-import { usePublication, usePublicationLoading, usePublicationLoadingError } from "@/data/managePublication";
+import { usePublication, usePublicationLoading, usePublicationLoadingError } from "@/data/process/managePublication";
 import type { HTMLAttributes } from "react";
 import { useLoaderData, useActionData } from "react-router-dom";
 import JSONExplorer from "@/components/JSONExplorer";

@@ -1,9 +1,9 @@
-import { Form, useLoaderData, useNavigation, useBlocker, useFetcher } from "react-router-dom";
+import { Form, useLoaderData, useNavigation, useBlocker, useFetcher, useActionData } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, type HTMLAttributes, type PropsWithChildren } from "react";
 import FormDrawingInstructions from "@/components/FormDrawingInstructions";
 import FormReferenceLink from "@/components/FormReferenceLink";
 import FormStoryTitle from "@/components/FormStoryTitle";
-import { useStyle, useStyleHash } from "@/data/manageStyle";
+import { useStyle, useStyleHash } from "@/data/process/manageStyle";
 import { STYLE_PRESETS } from "@/data/stylePresets";
 
 type StyleProps = {} & HTMLAttributes<HTMLDivElement>;
@@ -13,6 +13,7 @@ export default function Style({
 }: PropsWithChildren<StyleProps>) {
   useLoaderData();
   const navigation = useNavigation();
+  const actionData = useActionData() as any;
 
   const [style] = useStyle();
   const [styleHash] = useStyleHash();
@@ -32,6 +33,18 @@ export default function Style({
     referenceUrl: initialStyle.referenceUrl || '',
     linkInstructions: safeJoin(initialStyle.linkInstructions),
   });
+
+  useEffect(() => {
+    if (actionData?.cancelled) {
+      const currentSaved = style ?? {};
+      setFormData({
+        storyTitle: currentSaved.storyTitle || '',
+        drawingInstructions: safeJoin(currentSaved.drawingInstructions),
+        referenceUrl: currentSaved.referenceUrl || '',
+        linkInstructions: safeJoin(currentSaved.linkInstructions),
+      });
+    }
+  }, [actionData, style]);
 
   const fetcher = useFetcher();
   const wasLoadingRef = useRef(false);

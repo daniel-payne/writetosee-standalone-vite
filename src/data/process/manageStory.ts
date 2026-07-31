@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { useLocalState, useSharedState, setState, StoragePersistence } from '@keldan-systems/state-mutex';
 import * as fileStorage from '@/data/storage/fileStorage';
-import generateTextDigest from '@/data/utilities/generateTextDigest';
-import processPublication from '@/data/processPublication';
-import { writeLog } from './storage/logStorage';
+import generateTextDigest from '@/data/process/generate/generateTextDigest';
+import processPublication from '@/data/process/workflow/workflowPublication';
+import { writeLog } from '../storage/logStorage';
 
 // Module-level caches to keep a single, synchronous source of truth in memory
 // across all components using the useStory hooks.

@@ -144,9 +144,10 @@ export default function PanelImageDisplay({
       e.stopPropagation();
     }
     if (isRegenerating) return;
+    const panelIdx = paragraph?.panelNo ?? paragraph?.paragraphNo ?? 0;
     fetcher.submit(
-      { intent: 'REGENERATE-IMAGE', imagePath: imagePath || '', paragraphIndex: String(paragraph?.paragraphNo ?? '') },
-      { method: 'post' }
+      { intent: 'REGENERATE-IMAGE', imagePath: imagePath || '', paragraphIndex: String(panelIdx) },
+      { method: 'post', action: '/story' }
     );
   };
 
@@ -155,13 +156,14 @@ export default function PanelImageDisplay({
       setShowModal(false);
       return;
     }
+    const panelIdx = paragraph?.panelNo ?? paragraph?.paragraphNo ?? 0;
     fetcher.submit(
       {
         intent: 'SELECT-PARAGRAPH-IMAGE',
-        paragraphIndex: String(paragraph?.paragraphNo ?? ''),
+        paragraphIndex: String(panelIdx),
         imagePath: selectedPath
       },
-      { method: 'post' }
+      { method: 'post', action: '/story' }
     );
     setShowModal(false);
   };
@@ -225,27 +227,10 @@ export default function PanelImageDisplay({
     <div {...rest} data-name={name}>
       <div
         className={`h-full w-full bg-white dark:bg-slate-800 rounded-2xl shadow-md border flex flex-col overflow-hidden relative group transition-all duration-300 ${isExpanded ? 'cursor-zoom-out' : 'cursor-pointer'} ${isAwaitingImage ? 'border-primary/30 bg-primary/[0.02]' : 'border-slate-200 dark:border-slate-700'}`}
-        title={isExpanded ? "Double click to make small" : "Double click to enlarge"}
+        title={paragraph.text || paragraph.sceneText || (isExpanded ? "Double click to make small" : "Double click to enlarge")}
       >
-        {/* Panel Header & Text */}
-        <div className="p-3 border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30 flex flex-col gap-1 shrink-0">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-primary">
-              Panel {(paragraph.panelNo ?? paragraph.paragraphNo ?? 0) + 1}
-            </span>
-            {hasMultipleImages && (
-              <span className="badge badge-sm badge-ghost text-[10px] font-semibold">
-                {paragraph.images.length} images
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-slate-700 dark:text-slate-300 font-medium line-clamp-3 leading-relaxed">
-            {paragraph.text || paragraph.sceneText || "Empty panel text"}
-          </p>
-        </div>
-
         {src && !imgError ? (
-          <div className="flex-1 w-full relative overflow-hidden bg-slate-100 dark:bg-slate-900 min-h-0">
+          <div className="w-full h-full relative overflow-hidden bg-slate-100 dark:bg-slate-900">
             <img
               src={src}
               alt="Panel illustration"
@@ -409,7 +394,7 @@ export default function PanelImageDisplay({
             <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/80">
               <div>
                 <h3 className="font-bold text-lg text-slate-800 dark:text-white">
-                  Choose Illustration (Picture {paragraph.paragraphNo + 1})
+                  Choose Illustration (Picture {(paragraph?.panelNo ?? paragraph?.paragraphNo ?? 0) + 1})
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Select one of the {paragraph.images?.length || 0} generated images for this paragraph.

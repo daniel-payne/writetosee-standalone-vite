@@ -1,13 +1,13 @@
-import { loadPublication, savePublication, buildPanelsFromStory } from "@/data/managePublication";
-import generatePrompts from "./process/generatePrompts";
-import generateImages from "./process/generateImages";
-import { writeLog } from "./storage/logStorage";
-import { listFiles } from "./storage/fileStorage";
+import { loadPublication, savePublication, buildPanelsFromStory } from "@/data/process/managePublication";
+import generatePrompts from "../../generate/generatePrompts";
+import generateImages from "../../generate/generateImages";
+import { writeLog } from "../../../storage/logStorage";
+import { listFiles, readFile } from "../../../storage/fileStorage";
 
-import { loadStory } from "./manageStory";
-import { loadStyle } from "./manageStyle";
+import { loadStory } from "../../manageStory";
+import { loadStyle } from "../../manageStyle";
 
-export default async function processPublicationImpl({ style, story }: { style?: Record<string, any>, story?: string } = {}) {
+export default async function stepCoordinatePublication({ style, story }: { style?: Record<string, any>, story?: string } = {}) {
     // Load current publication state from disk or in-memory cache
     const publication = await loadPublication();
 
@@ -20,6 +20,14 @@ export default async function processPublicationImpl({ style, story }: { style?:
         style = await loadStyle().catch(() => ({}));
     }
     publication.style = style;
+
+    const styleInstructions = Array.isArray(style?.drawingInstructions)
+        ? style.drawingInstructions.join('\n\n')
+        : (style?.drawingInstructions || "");
+    publication.styleText = styleInstructions;
+
+    publication.characters = await readFile('characters.md').then(f => f.text()).catch(() => "");
+    publication.instructionsText = await readFile('instructions.md').then(f => f.text()).catch(() => "");
 
     await writeLog('info', 'processPublicationImpl', 'Started processing publication panels');
 
@@ -68,7 +76,7 @@ export default async function processPublicationImpl({ style, story }: { style?:
         );
         const exists = matchingImages.length > 0;
         const selectedImage = exists ? matchingImages[matchingImages.length - 1] : "";
-        
+
         const expectedStatus = exists ? 'completed' : (prompt.error ? 'failed' : 'pending');
         prompt.imageStatus = expectedStatus;
 

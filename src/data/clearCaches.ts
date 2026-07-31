@@ -1,7 +1,7 @@
 import { setState, StoragePersistence } from '@keldan-systems/state-mutex';
-import { clearStoryCache } from './manageStory';
-import { clearStyleCache } from './manageStyle';
-import { clearPublicationCache } from './managePublication';
+import { clearStoryCache } from './process/manageStory';
+import { clearStyleCache } from './process/manageStyle';
+import { clearPublicationCache } from './process/managePublication';
 
 /**
  * Resets all in-memory caches, state-mutex keys, and background processing flags

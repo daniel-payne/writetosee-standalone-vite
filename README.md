@@ -190,7 +190,7 @@ The JSON document   contains this zod structure,
 ```ts
 const Publication = z.object({
   story: z.object(Story),
-  style: z.string(),
+  styleText: z.string(),
   characters: z.string(),
   instructionsText: z.string(),
   panels: z.array(Panel),
@@ -203,13 +203,15 @@ const Story = z.object({
 
 const Chapter = z.object({
   chapterTitle: z.string(),
+  chapterText: z.string().optional(),,
   chapterSummary: z.string(),
   pages: z.array(Page),
 })
 
 const Page = z.object({
   pageTitle: z.string(),
-  pageSummary: z.string(),
+  pageText: z.string(),
+  pageSummary: z.string().optional(),
   paragraphs: z.array(Paragraph),
 })
 
@@ -217,6 +219,7 @@ const Paragraph = z.object({
   order: z.number(),
   paragraphText: z.string(),
   priorText: z.string(),
+  priorSummary: z.string(),
 })
 
 const Style = z.object({
@@ -246,3 +249,63 @@ const Prompt = z.object({
   
 })
 ```
+
+## Processing and Saving
+
+Processing takes time, so it must not be done in the UI.
+
+On "SAVE", the four markdown files are saved, and the publication is generated, any LLM calls are queued for processing.
+
+STEPS TO CREATE PUBLICATION
+
+1. Split the story.md into chapters, pages and paragraphs.
+2. For each paragraph, create a priorText for all text on a page before that paragraph.
+3. For each page, create a pageSummary for all text on a page.
+4. For each chapter, create a chapterSummary for all text in a chapter.
+5. For all chapterText, pageText and priorText, if larger than const MAX_SUMMARY_CHARACTERS = 500, use an LLM to summaries the text into xxxSummary. Batch together the summarization for efficiency.
+6. Generate a panel per paragraph or sceneText is the paragraphText or pageText, narrativeText is prior chapters summaries or texts, prior pages summaries or texts and the priorText if it is per paragraph. 
+7. publication.styleText comes from style.md - Drawing Instructions.
+
+
+## Prompt
+
+<xxx> use data in publication.json when constructing the prompt
+
+ ```md
+ # Role
+You are an illustrator for a book.
+Please draw an illustration for the scene-text bellow.
+The narrative-text lays out the story before the current scene, and the scene-text is the current scene.
+
+
+## Drawing Instructions
+
+<style-text>
+</style-text>
+
+### Strict Rules
+1. A wide-angle, edge-to-edge scene that completely fills 100% of the image space from corner to corner.
+2. The camera is pulled back so the environment extends fully to the very edges of the rectangular canvas.
+3. Keep the background in focus, and of the same style as the foreground object.
+4. Do not illustrate any words, signs, or speech bubbles unless specifically asked for in the text.
+5. Do not make any illustration with rounded edges; the completed illustration should be a rectangle.
+6. Do not draw any frame, boundary, or any decoration around the image.
+7. Do not draw any text in the image.
+8. Do not use copyright symbols (©, ™, ®) or any other markings in the illustration.
+
+### Output Format
+1. The illustration is to fill the complete drawing area.
+2. Do not make any illustration with rounded edges; the completed illustration should be a rectangle.
+3. Do not draw any frame, boundary, or any decoration around the image (i.e., fameless, full-bleed, no white margins, edge-to-edge environment). 
+4. Keep the background in focus and of the same style as the foreground. Do not make the background blurry or out of focus. The background should be as detailed as the foreground.
+5. Do not draw any text in the image. 
+6. Do not use copyright symbols (©, ™, ®) or any other markings in the illustration.
+
+## Scene Instructions
+
+<scene-text>
+</scene-text>
+
+<narrative-text>
+</narrative-text>
+ ```
