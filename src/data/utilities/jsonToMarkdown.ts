@@ -1,5 +1,6 @@
 const KEY_MAP: Record<string, string> = {
   storyTitle: 'StoryTitle',
+  imageDisplayMode: 'Image Display Mode',
   drawingInstructions: 'Drawing Instructions',
   referenceUrl: 'ReferenceUrl',
   linkInstructions: 'Reference Style',

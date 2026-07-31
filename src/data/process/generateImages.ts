@@ -19,7 +19,7 @@ function dataURLtoBlob(dataUrl: string): Blob {
 
 export default async function generateImages(publication: any) {
     const prompts = publication.prompts || [];
-    const paragraphs = publication.paragraphs || [];
+    const panels = publication.panels || [];
     const costs: number[] = [];
     let initialChanged = false;
 
@@ -32,8 +32,9 @@ export default async function generateImages(publication: any) {
         const digest = prompt.digest;
         if (!digest) continue;
 
-        const paragraph = prompt.paragraphIndex != null ? paragraphs[prompt.paragraphIndex] : null;
-        const isRegenerateRequested = prompt.needsRegenerate || paragraph?.needsRegenerate;
+        const panelIndex = prompt.paragraphIndex ?? prompt.panelIndex;
+        const panel = panelIndex != null ? panels[panelIndex] : null;
+        const isRegenerateRequested = prompt.needsRegenerate || panel?.needsRegenerate;
 
         const matchingImages = Array.from(existingSet).filter(
             (filePath: string) => filePath.startsWith(`images/${digest}.png`) || filePath.startsWith(`images/${digest}_`)
@@ -48,8 +49,8 @@ export default async function generateImages(publication: any) {
 
         if (exists) {
             if (!isRegenerateRequested) {
-                const selectedImage = paragraph && paragraph.image && existingSet.has(paragraph.image)
-                    ? paragraph.image
+                const selectedImage = panel && panel.image && existingSet.has(panel.image)
+                    ? panel.image
                     : matchingImages[matchingImages.length - 1];
 
                 if (prompt.image !== selectedImage || prompt.imageUrl !== selectedImage) {
@@ -59,45 +60,45 @@ export default async function generateImages(publication: any) {
                 }
                 delete prompt.error;
 
-                if (paragraph) {
-                    if (paragraph.image !== selectedImage || paragraph.imageUrl !== selectedImage) {
-                        paragraph.image = selectedImage;
-                        paragraph.imageUrl = selectedImage;
+                if (panel) {
+                    if (panel.image !== selectedImage || panel.imageUrl !== selectedImage) {
+                        panel.image = selectedImage;
+                        panel.imageUrl = selectedImage;
                         initialChanged = true;
                     }
-                    delete paragraph.error;
+                    delete panel.error;
                 }
             } else {
                 delete prompt.image;
                 delete prompt.imageUrl;
-                if (paragraph) {
-                    delete paragraph.image;
-                    delete paragraph.imageUrl;
+                if (panel) {
+                    delete panel.image;
+                    delete panel.imageUrl;
                 }
             }
         } else {
             delete prompt.image;
             delete prompt.imageUrl;
-            if (paragraph) {
-                delete paragraph.image;
-                delete paragraph.imageUrl;
+            if (panel) {
+                delete panel.image;
+                delete panel.imageUrl;
             }
         }
 
-        if (paragraph) {
-            paragraph.imageStatus = expectedStatus;
-            if (!paragraph.images) {
-                paragraph.images = [];
+        if (panel) {
+            panel.imageStatus = expectedStatus;
+            if (!panel.images) {
+                panel.images = [];
             }
             for (const imgFile of matchingImages) {
-                if (!paragraph.images.includes(imgFile)) {
-                    paragraph.images.push(imgFile);
+                if (!panel.images.includes(imgFile)) {
+                    panel.images.push(imgFile);
                     initialChanged = true;
                 }
             }
             if (expectedStatus === 'failed') {
                 if (prompt.error) {
-                    paragraph.error = prompt.error;
+                    panel.error = prompt.error;
                 }
             }
         }
@@ -113,8 +114,9 @@ export default async function generateImages(publication: any) {
     // Check if any prompts actually require generation (i.e. prompt has no image set or regenerate is requested)
     const needsGenerationPrompts = prompts.filter((prompt: any) => {
         const digest = prompt.digest;
-        const paragraph = prompt.paragraphIndex != null ? paragraphs[prompt.paragraphIndex] : null;
-        const isRegenerateRequested = prompt.needsRegenerate || paragraph?.needsRegenerate;
+        const panelIndex = prompt.paragraphIndex ?? prompt.panelIndex;
+        const panel = panelIndex != null ? panels[panelIndex] : null;
+        const isRegenerateRequested = prompt.needsRegenerate || panel?.needsRegenerate;
         return digest && (isRegenerateRequested || !prompt.image || !existingSet.has(prompt.image));
     });
 
@@ -149,8 +151,7 @@ export default async function generateImages(publication: any) {
         return saveQueue;
     };
 
-    // Acquire lock using Web Locks API
-    await navigator.locks.request('image-generation', async (_lock) => {
+    const doGenerationWork = async () => {
         const BATCH_SIZE = 10;
         
         for (let i = 0; i < needsGenerationPrompts.length; i += BATCH_SIZE) {
@@ -159,9 +160,10 @@ export default async function generateImages(publication: any) {
             // Run batch in parallel
             await Promise.all(batch.map(async (prompt: any) => {
                 const digest = prompt.digest;
-                const paragraph = prompt.paragraphIndex != null ? paragraphs[prompt.paragraphIndex] : null;
-                const isRegenerateRequested = prompt.needsRegenerate || paragraph?.needsRegenerate;
-                let currentImage = isRegenerateRequested ? null : (prompt.image || paragraph?.image);
+                const panelIndex = prompt.paragraphIndex ?? prompt.panelIndex;
+                const panel = panelIndex != null ? panels[panelIndex] : null;
+                const isRegenerateRequested = prompt.needsRegenerate || panel?.needsRegenerate;
+                let currentImage = isRegenerateRequested ? null : (prompt.image || panel?.image);
                 let exists = currentImage ? existingSet.has(currentImage) : false;
 
                 if (!exists) {
@@ -170,10 +172,10 @@ export default async function generateImages(publication: any) {
                         prompt.imageStatus = 'generating';
                         delete prompt.error;
                         delete prompt.needsRegenerate;
-                        if (paragraph) {
-                            paragraph.imageStatus = 'generating';
-                            delete paragraph.error;
-                            delete paragraph.needsRegenerate;
+                        if (panel) {
+                            panel.imageStatus = 'generating';
+                            delete panel.error;
+                            delete panel.needsRegenerate;
                         }
                         queueSave();
 
@@ -195,18 +197,21 @@ export default async function generateImages(publication: any) {
                             prompt.imageStatus = 'completed';
                             prompt.image = newImagePath;
                             prompt.imageUrl = newImagePath;
-                            if (paragraph) {
-                                paragraph.imageStatus = 'completed';
-                                paragraph.image = newImagePath;
-                                paragraph.imageUrl = newImagePath;
-                                if (!paragraph.images) {
-                                    paragraph.images = [];
+                            if (panel) {
+                                panel.imageStatus = 'completed';
+                                panel.image = newImagePath;
+                                panel.imageUrl = newImagePath;
+                                if (!panel.images) {
+                                    panel.images = [];
                                 }
-                                if (!paragraph.images.includes(newImagePath)) {
-                                    paragraph.images.push(newImagePath);
+                                if (!panel.images.includes(newImagePath)) {
+                                    panel.images.push(newImagePath);
                                 }
+                                panel.currentImageIndex = panel.images.indexOf(newImagePath);
                             }
                             queueSave();
+                        } else {
+                            throw new Error("No image data returned from provider");
                         }
 
                         if (res?.totalCost != null) {
@@ -223,12 +228,12 @@ export default async function generateImages(publication: any) {
                         delete prompt.imageUrl;
                         delete prompt.needsRegenerate;
 
-                        if (paragraph) {
-                            paragraph.imageStatus = 'failed';
-                            paragraph.error = errorMsg;
-                            delete paragraph.image;
-                            delete paragraph.imageUrl;
-                            delete paragraph.needsRegenerate;
+                        if (panel) {
+                            panel.imageStatus = 'failed';
+                            panel.error = errorMsg;
+                            delete panel.image;
+                            delete panel.imageUrl;
+                            delete panel.needsRegenerate;
                         }
                         queueSave();
                     }
@@ -252,7 +257,13 @@ export default async function generateImages(publication: any) {
         if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
             self.postMessage({ type: 'PROGRESS' });
         }
-    });
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.locks && typeof navigator.locks.request === 'function') {
+        await navigator.locks.request('image-generation', doGenerationWork);
+    } else {
+        await doGenerationWork();
+    }
 
     return;
 }

@@ -12,8 +12,9 @@ export async function clientAction({ request }: ActionFunctionArgs) {
 
     try {
       if (story !== null) {
-        // Save Story Process publication
+        // Save Story and Process publication
         await saveStory(story);
+        await processPublication({ story });
       }
 
       return { success: true, message: 'Story updated successfully' };
@@ -30,19 +31,18 @@ export async function clientAction({ request }: ActionFunctionArgs) {
       return { error: errorMsg };
     }
   } else if (intent === 'UPDATE-STORY') {
-    // const story = formData.get('story') as string;
+    const story = formData.get('story') as string;
 
-    // try {
-    //   // if (story !== null) {
-    //   //   await saveStory(story);
-    //   // }
+    try {
+      if (story !== null) {
+        await saveStory(story);
+        await processPublication({ story });
+      }
 
-    //   await processPublication({ story })
-
-    //   return { success: true, message: 'Story updated successfully' };
-    // } catch (err: any) {
-    //   return { error: err.message || 'Failed to save story' };
-    // }
+      return { success: true, message: 'Story updated successfully' };
+    } catch (err: any) {
+      return { error: err.message || 'Failed to save story' };
+    }
   } else if (intent === 'REGENERATE-IMAGE') {
     const imagePath = formData.get('imagePath') as string;
     const paragraphIndexStr = formData.get('paragraphIndex') as string;
@@ -55,9 +55,9 @@ export async function clientAction({ request }: ActionFunctionArgs) {
 
       let changed = false;
 
-      if (pub.paragraphs) {
-        for (let i = 0; i < pub.paragraphs.length; i++) {
-          const p = pub.paragraphs[i];
+      if (pub.panels) {
+        for (let i = 0; i < pub.panels.length; i++) {
+          const p = pub.panels[i];
           if ((paragraphIndex >= 0 && i === paragraphIndex) || (imagePath && (p.image === imagePath || p.imageUrl === imagePath))) {
             delete p.image;
             delete p.imageUrl;
@@ -101,16 +101,15 @@ export async function clientAction({ request }: ActionFunctionArgs) {
 
     try {
       const pub = await loadPublication();
-      if (!isNaN(paragraphIndex) && pub.paragraphs?.[paragraphIndex]) {
-        const paragraph = pub.paragraphs[paragraphIndex];
-        paragraph.image = imagePath;
-        paragraph.imageUrl = imagePath;
-
-        if (pub.prompts) {
-          const prompt = pub.prompts.find((p: any) => p.paragraphIndex === paragraphIndex);
-          if (prompt) {
-            prompt.image = imagePath;
-            prompt.imageUrl = imagePath;
+      const items = pub.panels;
+      if (!isNaN(paragraphIndex) && items?.[paragraphIndex]) {
+        const item = items[paragraphIndex];
+        item.image = imagePath;
+        item.imageUrl = imagePath;
+        if (Array.isArray(item.images)) {
+          const idx = item.images.indexOf(imagePath);
+          if (idx >= 0) {
+            item.currentImageIndex = idx;
           }
         }
 

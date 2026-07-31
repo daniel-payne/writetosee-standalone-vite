@@ -31,14 +31,16 @@ export async function clientAction({ request }: { request: Request }): Promise<W
 
     if (intent === 'SAVE-APIKEY') {
       window.sessionStorage.setItem("apiKey", apiKey);
+      window.localStorage.setItem("apiKey", apiKey);
 
-      return { success: true, message: 'Successfully connected to local directory!' };
+      return { success: true, message: 'API key saved successfully!' };
     }
 
     if (intent === 'CLEAR-APIKEY') {
       window.sessionStorage.removeItem("apiKey");
+      window.localStorage.removeItem("apiKey");
 
-      return { success: true, message: 'Successfully connected to local directory!' };
+      return { success: true, message: 'API key cleared!' };
     }
 
     return { success: false, message: `Invalid action intent: ${intent}` };

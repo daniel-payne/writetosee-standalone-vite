@@ -9,6 +9,7 @@ import jsonToMarkdown from './utilities/jsonToMarkdown';
 
 const defaultStyle = {
     storyTitle: "A story about [name]",
+    imageDisplayMode: "per_paragraph",
     drawingInstructions: [
         "Vibrant, colorful children's book illustration style, bright colors, clear shapes, happy atmosphere, fameless, full-bleed, no white margins, edge-to-edge environment. Keep the background in focus and of the same style as the foreground.",
         "Ensure that the illustrations complement the text, are lively and expressive, and simple enough for young children aged 4 to 8 years old to understand.",

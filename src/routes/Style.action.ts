@@ -51,14 +51,16 @@ export async function clientAction({ request }: any) {
 
   if (intent === 'SAVE-UPDATES') {
     const storyTitle = (formData.get('storyTitle') as string) || '';
+    const imageDisplayMode = (formData.get('imageDisplayMode') as string) || 'per_paragraph';
     const drawingInstructionsText = (formData.get('drawingInstructions') as string) || '';
     const referenceUrl = (formData.get('referenceUrl') as string) || '';
     const linkInstructionsText = (formData.get('linkInstructions') as string) || '';
 
-    console.log("Style.action SAVE-UPDATES:", { storyTitle, drawingInstructionsText, referenceUrl, linkInstructionsText });
+    console.log("Style.action SAVE-UPDATES:", { storyTitle, imageDisplayMode, drawingInstructionsText, referenceUrl, linkInstructionsText });
 
     const style = {
       storyTitle,
+      imageDisplayMode,
       drawingInstructions: drawingInstructionsText.trim(),
       referenceUrl,
       linkInstructions: linkInstructionsText.trim(),

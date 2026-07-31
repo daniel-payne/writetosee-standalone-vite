@@ -27,6 +27,15 @@ export async function loadPublication(): Promise<any> {
             const file = await fileStorage.readFile('data/publication.json');
             const text = await file.text();
             const loadedPub = JSON.parse(text);
+            let panels = buildPanelsFromPublication(loadedPub);
+            if (panels.length === 0) {
+                const storyText = await fileStorage.readFile('story.md').then(f => f.text()).catch(() => "");
+                if (storyText && storyText.trim() !== "") {
+                    loadedPub.story = storyText;
+                    panels = buildPanelsFromStory(storyText, loadedPub.style);
+                }
+            }
+            loadedPub.panels = panels;
             const calculatedHash = generateTextDigest(text);
 
             inMemoryPublication = loadedPub;
@@ -40,7 +49,7 @@ export async function loadPublication(): Promise<any> {
         } catch (e: any) {
             // Initialize empty publication if file doesn't exist
             if (e.name === 'NotFoundError' || e.message?.includes('NotFoundError') || e.message?.includes('does not exist')) {
-                const defaultPub = {};
+                const defaultPub = { panels: [] };
                 const json = JSON.stringify(defaultPub, null, 2);
                 const defaultHash = generateTextDigest(json);
 
@@ -71,6 +80,144 @@ export async function loadPublication(): Promise<any> {
     return activeLoadPromise;
 }
 
+export function buildPanelsFromStory(storyText: string, style?: any) {
+    if (!storyText || storyText.trim() === "") return [];
+
+    const styleInstructions = Array.isArray(style?.drawingInstructions)
+        ? style.drawingInstructions.join('\n\n')
+        : (style?.drawingInstructions || "");
+
+    const blocks = storyText.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+    return blocks.map((blockText, idx) => {
+        const comboText = [blockText, "", styleInstructions].filter(Boolean).join("\n\n");
+        const digest = generateTextDigest(comboText);
+        return {
+            panelNo: idx,
+            text: blockText,
+            sceneText: blockText,
+            narrativeText: "",
+            instructionsText: styleInstructions,
+            digest,
+            images: [],
+            image: "",
+            currentImageIndex: 0,
+            imageStatus: "pending"
+        };
+    });
+}
+
+export function buildPanelsFromPublication(pub: any) {
+    const rawItems = pub?.panels || [];
+    const isOnePerPage = pub?.style?.imageDisplayMode === 'one_per_page' || pub?.options?.imageDisplayMode === 'one_per_page';
+
+    if (isOnePerPage && rawItems.length > 0) {
+        const pageGroups: Map<number, any[]> = new Map();
+        rawItems.forEach((p: any, idx: number) => {
+            const pageNo = p.pageNo ?? 1;
+            if (!pageGroups.has(pageNo)) {
+                pageGroups.set(pageNo, []);
+            }
+            pageGroups.get(pageNo)!.push({ item: p, idx });
+        });
+
+        const panels: any[] = [];
+        let panelIndex = 0;
+
+        pageGroups.forEach((items, pageNo) => {
+            const combinedText = items.map(x => x.item.text || "").filter(Boolean).join("\n\n");
+            
+            const allImagesSet = new Set<string>();
+            let activeImage = "";
+            
+            for (const x of items) {
+                const p = x.item;
+                const imgs = Array.isArray(p.images) && p.images.length > 0
+                    ? p.images
+                    : p.image
+                    ? [p.image]
+                    : p.imageUrl
+                    ? [p.imageUrl]
+                    : [];
+                imgs.forEach((img: string) => allImagesSet.add(img));
+                if (!activeImage && (p.image || p.imageUrl)) {
+                    activeImage = p.image || p.imageUrl;
+                }
+            }
+
+            const imagesList = Array.from(allImagesSet);
+            if (!activeImage && imagesList.length > 0) {
+                activeImage = imagesList[0];
+            }
+
+            const firstItem = items[0]?.item || {};
+            const rawIndex = firstItem.currentImageIndex ?? Math.max(0, imagesList.indexOf(activeImage));
+            const currentImageIndex = rawIndex >= 0 ? rawIndex : 0;
+
+            const hasImage = imagesList.length > 0 && Boolean(activeImage);
+            const imageStatus = firstItem.imageStatus && firstItem.imageStatus !== 'completed'
+                ? firstItem.imageStatus
+                : (hasImage ? 'completed' : 'pending');
+
+            const styleInstructions = Array.isArray(pub?.style?.drawingInstructions)
+                ? pub.style.drawingInstructions.join('\n\n')
+                : (pub?.style?.drawingInstructions || "");
+
+            panels.push({
+                panelNo: panelIndex,
+                pageNo,
+                text: combinedText,
+                sceneText: combinedText,
+                narrativeText: firstItem.narrativeText || "",
+                instructionsText: firstItem.instructionsText || styleInstructions,
+                digest: firstItem.digest || "",
+                images: imagesList,
+                image: activeImage,
+                currentImageIndex,
+                imageStatus
+            });
+
+            panelIndex++;
+        });
+
+        return panels;
+    }
+
+    const styleInstructions = Array.isArray(pub?.style?.drawingInstructions)
+        ? pub.style.drawingInstructions.join('\n\n')
+        : (pub?.style?.drawingInstructions || "");
+
+    return rawItems.map((p: any, idx: number) => {
+        const imagesList: string[] = Array.isArray(p.images) && p.images.length > 0
+            ? p.images
+            : p.image
+            ? [p.image]
+            : p.imageUrl
+            ? [p.imageUrl]
+            : [];
+        
+        const activeImage = p.image || p.imageUrl || imagesList[0] || "";
+        const rawIndex = p.currentImageIndex ?? Math.max(0, imagesList.indexOf(activeImage));
+        const currentImageIndex = rawIndex >= 0 ? rawIndex : 0;
+        const hasImage = imagesList.length > 0 && Boolean(activeImage);
+        const imageStatus = p.imageStatus && p.imageStatus !== 'completed'
+            ? p.imageStatus
+            : (hasImage ? 'completed' : 'pending');
+
+        return {
+            panelNo: p.panelNo ?? p.paragraphNo ?? idx,
+            text: p.text || p.sceneText || "",
+            sceneText: p.sceneText || p.text || "",
+            narrativeText: p.narrativeText || "",
+            instructionsText: p.instructionsText || styleInstructions,
+            digest: p.digest || "",
+            images: imagesList,
+            image: activeImage,
+            currentImageIndex,
+            imageStatus
+        };
+    });
+}
+
 /**
  * Saves a publication object to disk, updates the in-memory cache, and updates state-mutex.
  * 
@@ -86,11 +233,31 @@ export async function savePublication(
     setState('publication-error', null, StoragePersistence.none);
 
     try {
-        const json = JSON.stringify(pub, null, 2);
+        const panels = pub && typeof pub === 'object' ? buildPanelsFromPublication(pub) : [];
+        const cleanPub: any = {
+            panels
+        };
+
+        // Persist prompts so image generation can read them back from disk
+        if (pub?.prompts && Array.isArray(pub.prompts) && pub.prompts.length > 0) {
+            cleanPub.prompts = pub.prompts;
+        }
+
+        // Persist image generation status
+        if (pub?.imageGenerationStatus) {
+            cleanPub.imageGenerationStatus = pub.imageGenerationStatus;
+        }
+
+        const json = JSON.stringify(cleanPub, null, 2);
         const hash = generateTextDigest(json);
 
         // Save to disk
         await fileStorage.writeFile('data/publication.json', json);
+
+        // Ensure in-memory object contains panels
+        if (pub && typeof pub === 'object') {
+            pub.panels = panels;
+        }
 
         // Update in-memory references
         inMemoryPublication = pub;

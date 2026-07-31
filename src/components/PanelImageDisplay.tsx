@@ -101,9 +101,9 @@ function ImageHistoryCard({
   );
 }
 
-export default function ParagraphImageDisplay({
+export default function PanelImageDisplay({
   paragraph,
-  name = 'ParagraphImageDisplay',
+  name = 'PanelImageDisplay',
   isExpanded = false,
   ...rest
 }: PropsWithChildren<ComponentProps>) {
@@ -227,11 +227,28 @@ export default function ParagraphImageDisplay({
         className={`h-full w-full bg-white dark:bg-slate-800 rounded-2xl shadow-md border flex flex-col overflow-hidden relative group transition-all duration-300 ${isExpanded ? 'cursor-zoom-out' : 'cursor-pointer'} ${isAwaitingImage ? 'border-primary/30 bg-primary/[0.02]' : 'border-slate-200 dark:border-slate-700'}`}
         title={isExpanded ? "Double click to make small" : "Double click to enlarge"}
       >
+        {/* Panel Header & Text */}
+        <div className="p-3 border-b border-slate-100 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-900/30 flex flex-col gap-1 shrink-0">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-primary">
+              Panel {(paragraph.panelNo ?? paragraph.paragraphNo ?? 0) + 1}
+            </span>
+            {hasMultipleImages && (
+              <span className="badge badge-sm badge-ghost text-[10px] font-semibold">
+                {paragraph.images.length} images
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-slate-700 dark:text-slate-300 font-medium line-clamp-3 leading-relaxed">
+            {paragraph.text || paragraph.sceneText || "Empty panel text"}
+          </p>
+        </div>
+
         {src && !imgError ? (
-          <div className="h-full w-full relative overflow-hidden bg-slate-100 dark:bg-slate-900">
+          <div className="flex-1 w-full relative overflow-hidden bg-slate-100 dark:bg-slate-900 min-h-0">
             <img
               src={src}
-              alt="Paragraph illustration"
+              alt="Panel illustration"
               className={`w-full h-full ${isExpanded ? 'object-contain bg-slate-950/20' : 'object-cover group-hover:scale-105'} transition-all duration-300`}
             />
             {!isExpanded && (
@@ -273,9 +290,9 @@ export default function ParagraphImageDisplay({
             )}
           </div>
         ) : (
-          <div className="h-full w-full p-4 flex flex-col justify-between items-stretch">
+          <div className="flex-1 w-full p-4 flex flex-col justify-between items-stretch min-h-0">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-700">
-              <span className="text-[10px] font-bold text-base-content/40">Picture {paragraph.paragraphNo + 1}</span>
+              <span className="text-[10px] font-bold text-base-content/40">Status</span>
               {(loading || isAwaitingImage || isRegenerating || isCurrentlyGenerating) && (
                 <div className="flex items-center gap-1.5">
                   {(isAwaitingImage || isRegenerating || isCurrentlyGenerating) && (

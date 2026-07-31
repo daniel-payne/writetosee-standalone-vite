@@ -1,64 +1,61 @@
-import generateParagraphs from "@/data/utilities/generateParagraphs";
-import generatePages from "@/data/utilities/generatePages";
-import generateChapters from "@/data/utilities/generateChapters";
-import { loadPublication, savePublication } from "@/data/managePublication";
-import generateTextSummaries from "@/data/process/generateTextSummaries";
-import generatePredicates from "./utilities/generatePredicates";
+import { loadPublication, savePublication, buildPanelsFromStory } from "@/data/managePublication";
 import generatePrompts from "./process/generatePrompts";
 import generateImages from "./process/generateImages";
 import { writeLog } from "./storage/logStorage";
 import { listFiles } from "./storage/fileStorage";
 
+import { loadStory } from "./manageStory";
+import { loadStyle } from "./manageStyle";
+
 export default async function processPublicationImpl({ style, story }: { style?: Record<string, any>, story?: string } = {}) {
     // Load current publication state from disk or in-memory cache
     const publication = await loadPublication();
 
-    if (style != null) {
-        publication.style = style;
+    if (!story || story.trim() === '') {
+        story = await loadStory().catch(() => "");
     }
+    publication.story = story;
 
-    if (story != null) {
-        publication.story = story;
+    if (!style || Object.keys(style).length === 0) {
+        style = await loadStyle().catch(() => ({}));
     }
+    publication.style = style;
 
-    await writeLog('info', 'processPublicationImpl', 'Started processing publication prompts');
+    await writeLog('info', 'processPublicationImpl', 'Started processing publication panels');
 
-    // Processes mutate the object
-    generateParagraphs(publication);
+    // 1. story + style => panels
+    const existingPanelsMap = new Map((publication.panels || []).map((p: any) => [p.digest || p.text, p]));
+    const newPanels = buildPanelsFromStory(story, style);
+
+    publication.panels = newPanels.map((np: any) => {
+        const existing: any = existingPanelsMap.get(np.digest) || existingPanelsMap.get(np.text);
+        if (existing) {
+            const imagesList = existing.images || (existing.image ? [existing.image] : []);
+            const hasImage = imagesList.length > 0 && Boolean(existing.image || imagesList[0]);
+            return {
+                ...np,
+                images: imagesList,
+                image: existing.image || imagesList[0] || "",
+                currentImageIndex: existing.currentImageIndex ?? 0,
+                imageStatus: existing.imageStatus && existing.imageStatus !== 'completed'
+                    ? existing.imageStatus
+                    : (hasImage ? 'completed' : 'pending')
+            };
+        }
+        return np;
+    });
+
     await savePublication(publication);
     if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
         self.postMessage({ type: 'PROGRESS' });
     }
 
-    generatePages(publication);
-    await savePublication(publication);
-    if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
-        self.postMessage({ type: 'PROGRESS' });
-    }
-
-    generateChapters(publication);
-    await savePublication(publication);
-    if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
-        self.postMessage({ type: 'PROGRESS' });
-    }
-
-    generatePredicates(publication);
-    await savePublication(publication);
-    if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
-        self.postMessage({ type: 'PROGRESS' });
-    }
-
-    await generateTextSummaries(publication);
-    await savePublication(publication);
-    if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
-        self.postMessage({ type: 'PROGRESS' });
-    }
-
+    // 2. panels => prompts
     await generatePrompts(publication);
 
     // Initial check of image file statuses so the UI receives status data instantly
     const prompts = publication.prompts || [];
-    const paragraphs = publication.paragraphs || [];
+    const panels = publication.panels || [];
     const existingFiles = await listFiles().catch(() => []);
     const existingSet = new Set(existingFiles);
 
@@ -66,35 +63,43 @@ export default async function processPublicationImpl({ style, story }: { style?:
         const digest = prompt.digest;
         if (!digest) continue;
 
-        const imagePath = `images/${digest}.png`;
-        const exists = existingSet.has(imagePath);
+        const matchingImages = Array.from(existingSet).filter(
+            (filePath: string) => filePath.startsWith(`images/${digest}.png`) || filePath.startsWith(`images/${digest}_`)
+        );
+        const exists = matchingImages.length > 0;
+        const selectedImage = exists ? matchingImages[matchingImages.length - 1] : "";
         
         const expectedStatus = exists ? 'completed' : (prompt.error ? 'failed' : 'pending');
         prompt.imageStatus = expectedStatus;
 
         if (exists) {
-            prompt.image = imagePath;
-            prompt.imageUrl = imagePath;
+            prompt.image = selectedImage;
+            prompt.imageUrl = selectedImage;
             delete prompt.error;
         } else {
             delete prompt.image;
             delete prompt.imageUrl;
         }
 
-        if (prompt.paragraphIndex != null && paragraphs[prompt.paragraphIndex]) {
-            const paragraph = paragraphs[prompt.paragraphIndex];
-            paragraph.imageStatus = expectedStatus;
+        const panelIndex = prompt.paragraphIndex ?? prompt.panelIndex;
+        if (panelIndex != null && panels[panelIndex]) {
+            const panel = panels[panelIndex];
+            panel.imageStatus = expectedStatus;
             if (exists) {
-                paragraph.image = imagePath;
-                paragraph.imageUrl = imagePath;
-                delete paragraph.error;
+                panel.image = selectedImage;
+                panel.imageUrl = selectedImage;
+                if (!panel.images) panel.images = [];
+                matchingImages.forEach(img => {
+                    if (!panel.images.includes(img)) panel.images.push(img);
+                });
+                delete panel.error;
             } else {
-                delete paragraph.image;
-                delete paragraph.imageUrl;
+                delete panel.image;
+                delete panel.imageUrl;
                 if (prompt.error) {
-                    paragraph.error = prompt.error;
+                    panel.error = prompt.error;
                 } else {
-                    delete paragraph.error;
+                    delete panel.error;
                 }
             }
         }
@@ -109,7 +114,7 @@ export default async function processPublicationImpl({ style, story }: { style?:
         self.postMessage({ type: 'PROGRESS' });
     }
 
-    await writeLog('info', 'processPublicationImpl', 'Finished processing publication prompts');
+    await writeLog('info', 'processPublicationImpl', 'Finished processing publication panels');
 
     return publication;
 }

@@ -21,19 +21,31 @@ export function setApiKey(key: string) {
 }
 
 export default async function llmGenerateImage(imagePrompt: string) {
-    const apiKey = activeApiKey || (typeof window !== 'undefined' ? window.sessionStorage.getItem("apiKey") : null) || '';
+    const apiKey = activeApiKey
+        || (typeof window !== 'undefined' ? (window.sessionStorage.getItem("apiKey") || window.localStorage.getItem("apiKey")) : null)
+        || (typeof import.meta !== 'undefined' && (import.meta as any).env ? ((import.meta as any).env.VITE_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY) : '')
+        || '';
+
     const provider = identifyApiKeyProvider(apiKey);
+
+    await writeLog('info', 'llmGenerateImage', `Generating image with provider ${provider} for prompt: ${imagePrompt.substring(0, 40)}...`);
+
+    if (provider === 'UNKNOWN') {
+        const errorMsg = !apiKey
+            ? "No API key configured. Please enter your Google, xAI, or OpenRouter API key in the application."
+            : `Unrecognized API key format. Please provide a valid Google (AIza/AQ), xAI (xai-), or OpenRouter (sk-or-) key.`;
+        await writeLog('error', 'llmGenerateImage', errorMsg);
+        throw new Error(errorMsg);
+    }
 
     let result: { content?: string; totalCost?: number } = {};
 
-    await writeLog('info', 'llmGenerateImage', imagePrompt.substring(0, 30));
-
     if (provider === 'GOOGLE') {
-        const model = "gemini-2.5-flash-image"
-        const inputCostPerMillion = 0.30
-        const outputCostPerMillion = 30.00
+        const model = "gemini-2.5-flash-image";
+        const inputCostPerMillion = 0.30;
+        const outputCostPerMillion = 30.00;
 
-        result = await processGoogleImage({ imagePrompt, apiKey, model, inputCostPerMillion, outputCostPerMillion })
+        result = await processGoogleImage({ imagePrompt, apiKey, model, inputCostPerMillion, outputCostPerMillion });
     } else if (provider === 'XAI') {
         const model = "grok-imagine-image-quality";
         result = await processxAIImage({ imagePrompt, apiKey, model });
@@ -44,5 +56,5 @@ export default async function llmGenerateImage(imagePrompt: string) {
         result = await processOpenRouterImage({ imagePrompt, apiKey, model, inputCostPerMillion, outputCostPerMillion });
     }
 
-    return result
+    return result;
 }

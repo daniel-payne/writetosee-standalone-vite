@@ -121,17 +121,41 @@ export default async function processOpenRouterImage({
             base64Url = firstImg.image_url?.url || firstImg.url || (typeof firstImg === 'string' ? firstImg : "");
         }
 
+        if (!base64Url && message?.content) {
+            if (typeof message.content === 'string' && message.content.startsWith('data:image')) {
+                base64Url = message.content;
+            } else if (Array.isArray(message.content)) {
+                for (const part of message.content) {
+                    if (part.type === 'image_url' && part.image_url?.url) {
+                        base64Url = part.image_url.url;
+                        break;
+                    }
+                }
+            }
+        }
+
         if (!base64Url) {
             if (message?.content) {
-                await writeLog('error', 'processOpenRouterImage', `OpenRouter model returned a text response instead of an image: ${message.content}`);
-                throw new Error(`OpenRouter model returned a text response instead of an image: "${message.content}"`);
+                await writeLog('error', 'processOpenRouterImage', `OpenRouter model returned a text response instead of an image: ${typeof message.content === 'string' ? message.content : JSON.stringify(message.content)}`);
+                throw new Error(`OpenRouter model returned a text response instead of an image: "${typeof message.content === 'string' ? message.content : JSON.stringify(message.content)}"`);
             }
             await writeLog('error', 'processOpenRouterImage', `No image data returned from OpenRouter API. Response: ${JSON.stringify(data)}`);
             throw new Error(`No image data returned from the OpenRouter API. Response: ${JSON.stringify(data)}`);
         }
 
-        // Ensure it starts with standard data URI prefix
-        const content = base64Url.startsWith('data:') ? base64Url : `data:image/png;base64,${base64Url}`;
+        let content = "";
+        if (base64Url.startsWith('http://') || base64Url.startsWith('https://')) {
+            const imgRes = await fetch(base64Url);
+            const blob = await imgRes.blob();
+            content = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } else {
+            content = base64Url.startsWith('data:') ? base64Url : `data:image/png;base64,${base64Url}`;
+        }
         
         let totalCost = 0;
         if (data.usage) {

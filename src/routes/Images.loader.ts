@@ -24,7 +24,7 @@ export async function clientLoader() {
     }
 
     const prompts = publication?.prompts || [];
-    const paragraphs = publication?.paragraphs || [];
+    const panels = publication?.panels || [];
 
     const images = await Promise.all(imageNames.map(async name => {
       const file = await readFile(name);
@@ -37,33 +37,33 @@ export async function clientLoader() {
       
       const creationTime = !isNaN(filenameTimestamp) ? filenameTimestamp : file.lastModified;
 
-      // Find matching paragraph & prompt
+      // Find matching panel & prompt
       let text = "";
       let paragraphNo: number | undefined = undefined;
 
-      // 1. Try to find paragraph directly by image name or digest
-      const foundParagraph = paragraphs.find((p: any) => 
+      // 1. Try to find panel directly by image name or digest
+      const foundPanel = panels.find((p: any) => 
         p.digest === digest ||
         p.image === name ||
         p.imageUrl === name ||
         (p.images && Array.isArray(p.images) && p.images.includes(name))
       );
 
-      if (foundParagraph) {
-        text = foundParagraph.text || "";
-        paragraphNo = foundParagraph.paragraphNo != null ? foundParagraph.paragraphNo + 1 : (foundParagraph.paragraphIndex != null ? foundParagraph.paragraphIndex + 1 : undefined);
+      if (foundPanel) {
+        text = foundPanel.text || "";
+        paragraphNo = foundPanel.panelNo != null ? foundPanel.panelNo + 1 : (foundPanel.paragraphNo != null ? foundPanel.paragraphNo + 1 : undefined);
       }
 
-      // 2. If not found in paragraph directly, find prompt by digest
+      // 2. If not found in panel directly, find prompt by digest
       if (!text) {
         const prompt = prompts.find((p: any) => p.digest === digest);
         if (prompt) {
           if (paragraphNo == null) {
             paragraphNo = prompt.paragraphNo != null ? prompt.paragraphNo + 1 : (prompt.paragraphIndex != null ? prompt.paragraphIndex + 1 : undefined);
           }
-          const linkedParagraph = prompt.paragraphIndex != null ? paragraphs[prompt.paragraphIndex] : paragraphs.find((p: any) => p.paragraphNo === prompt.paragraphNo);
-          if (linkedParagraph && linkedParagraph.text) {
-            text = linkedParagraph.text;
+          const linkedPanel = prompt.paragraphIndex != null ? panels[prompt.paragraphIndex] : panels.find((p: any) => p.panelNo === prompt.paragraphNo);
+          if (linkedPanel && linkedPanel.text) {
+            text = linkedPanel.text;
           } else if (prompt.text) {
             text = extractSceneText(prompt.text);
           }

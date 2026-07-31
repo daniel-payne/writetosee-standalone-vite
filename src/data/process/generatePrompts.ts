@@ -1,4 +1,4 @@
-import { listFiles, writeFile } from "@/data/storage/fileStorage";
+import { writeFile } from "@/data/storage/fileStorage";
 import generateTextDigest from "@/data/utilities/generateTextDigest";
 
 const PROMPT = `
@@ -9,7 +9,12 @@ The narrative-text lays out the story before the current scene, and the scene-te
 
 
 ## Drawing Instructions
+
+When creating a drawing please use these instructions in image creation.
+
+<instructions-text>
 {{STYLE-TEXT}}
+</instructions-text>
 
 ### Strict Rules
 1. A wide-angle, edge-to-edge scene that completely fills 100% of the image space from corner to corner.
@@ -41,28 +46,24 @@ The narrative-text lays out the story before the current scene, and the scene-te
 `;
 
 export default async function generatePrompts(publication: any) {
-    const paragraphs = publication.paragraphs || [];
+    const panels = publication.panels || publication.paragraphs || [];
     const result: any[] = [];
 
-    // Query existing files in storage once to avoid async disk hits in loop
-    const existingFiles = await listFiles().catch(() => []);
-    const existingPrompts = new Set(existingFiles);
-
-    for (let index = 0; index < paragraphs.length; index++) {
-        const paragraph = paragraphs[index];
-        const sceneText = paragraph.text || "";
+    for (let index = 0; index < panels.length; index++) {
+        const item = panels[index];
+        const sceneText = item.sceneText || item.text || "";
 
         const pages = publication.pages || [];
         const chapters = publication.chapters || [];
 
         const currentPageIndex = pages.findIndex(
-            (pg: any) => pg.chapterNo === paragraph.chapterNo && pg.pageNo === paragraph.pageNo
+            (pg: any) => pg.chapterNo === item.chapterNo && pg.pageNo === item.pageNo
         );
         const prevPage = currentPageIndex > 0 ? pages[currentPageIndex - 1] : null;
         const pageText = prevPage ? (prevPage.summary ?? prevPage.text ?? "") : "";
 
         const currentChapterIndex = chapters.findIndex(
-            (ch: any) => ch.chapterNo === paragraph.chapterNo
+            (ch: any) => ch.chapterNo === item.chapterNo
         );
         const prevChapter = currentChapterIndex > 0 ? chapters[currentChapterIndex - 1] : null;
         const chapterText = prevChapter ? (prevChapter.summary ?? prevChapter.text ?? "") : "";
@@ -71,7 +72,7 @@ export default async function generatePrompts(publication: any) {
 
         // Combine narrative texts, filtered to exclude empty values
         const narrativeParts = [chapterText, pageText, predicateText].filter(Boolean);
-        const narrativeText = narrativeParts.join("\n");
+        const narrativeText = item.narrativeText || narrativeParts.join("\n");
 
         const styleText = Array.isArray(publication.style?.drawingInstructions)
             ? publication.style.drawingInstructions.join('\n')
@@ -82,27 +83,31 @@ export default async function generatePrompts(publication: any) {
             .replace("{{SCENE-TEXT}}", sceneText)
             .replace("{{NARRATIVE-TEXT}}", narrativeText);
 
-        const digest = generateTextDigest(promptText);
+        const digestSource = [sceneText, narrativeText, styleText].filter(Boolean).join("\n\n");
+        const digest = generateTextDigest(digestSource);
 
-        // Save prompt text to file if it does not exist
+        // Save prompt text to file
         const fileName = `prompts/${digest}.txt`;
-        const exists = existingPrompts.has(fileName);
+        await writeFile(fileName, promptText);
 
-        if (!exists) {
-            await writeFile(fileName, promptText);
-            existingPrompts.add(fileName);
-        }
+        item.sceneText = sceneText;
+        item.narrativeText = narrativeText;
+        item.instructionsText = styleText;
+        item.digest = digest;
 
         const promptObj: any = {
             paragraphIndex: index,
-            paragraphNo: paragraph.paragraphNo ?? 0,
-            pageNo: paragraph.pageNo ?? 0,
-            chapterNo: paragraph.chapterNo ?? 0,
+            paragraphNo: item.panelNo ?? item.paragraphNo ?? 0,
+            pageNo: item.pageNo ?? 0,
+            chapterNo: item.chapterNo ?? 0,
+            sceneText,
+            narrativeText,
+            instructionsText: styleText,
             text: promptText,
             digest: digest
         };
 
-        if (paragraph.needsRegenerate) {
+        if (item.needsRegenerate) {
             promptObj.needsRegenerate = true;
         }
 

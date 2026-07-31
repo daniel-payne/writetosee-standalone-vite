@@ -3,7 +3,7 @@ import StoryEditor from "@/components/StoryEditor";
 import { useLoaderData, useActionData, Form } from "react-router-dom";
 import { usePublication } from "@/data/managePublication";
 import { useStory } from "@/data/manageStory";
-import ParagraphImageDisplay from "@/components/ParagraphImageDisplay";
+import PanelImageDisplay from "@/components/PanelImageDisplay";
 
 type StoryProps = {} & HTMLAttributes<HTMLDivElement>;
 
@@ -66,6 +66,7 @@ export default function Story({
 
   return (
     <div {...rest} className={`h-full w-full min-h-0 ${rest.className || ''}`}>
+      <pre>{JSON.stringify(publication, null, 2)}</pre>
       <Form id="main-form" method="post" className="flex flex-row gap-0 justify-between items-stretch h-full w-full min-h-0" ref={containerRef}>
         <div className="h-full overflow-hidden" style={{ width: `${leftWidth}%` }}>
           <StoryEditor
@@ -79,14 +80,14 @@ export default function Story({
         />
         <div className="flex-1 h-full overflow-hidden">
           <div className="h-full w-full overflow-auto p-0 flex flex-row flex-wrap gap-0 items-start justify-start content-start">
-            {publication?.paragraphs?.map((paragraph: any, idx: number) => {
+            {publication?.panels?.map((paragraph: any, idx: number) => {
               const isExpanded = expandedIdx === idx;
               if (expandedIdx !== null && !isExpanded) {
                 return null;
               }
 
               return (
-                <ParagraphImageDisplay
+                <PanelImageDisplay
                   key={idx}
                   paragraph={paragraph}
                   isExpanded={isExpanded}

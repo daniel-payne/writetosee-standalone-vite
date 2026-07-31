@@ -110,4 +110,139 @@ sequenceDiagram
     end
 ```
  
+# Storage
 
+There are four documents that store data as markdown files. 
+They are all located in the `root` directory, read on startup and written on "SAVE".
+
+There is one JSON document that is created from the four markdown files. 
+It lives in memory and is saved for debugging purposes, along with costs amd logs.
+
+Sources, can be edited in the UI, but only used to generate publication on SAVE.
+
+story.md
+style.md
+characters.md
+instructions.md
+
+## story.md
+
+This is the main story content. It contains a number of paragraphs that are turned into prompts for drawing generation.
+
+If there are titles, then if one level they are page titles.
+If two level they are chapter and page titles.
+If three levels then story, chapter and page titles.
+Otherwise all paragraphs sit in chapter 1 page 1.
+
+
+```md
+# Story Title
+
+## Chapter Title
+
+
+### Page Title
+
+
+paragraph text 
+
+paragraph text 
+
+paragraph text 
+
+```
+
+## style.md
+
+This contains the drawing instructions for the LLM.
+
+We can also take an image and ask for LLM drawing instructions based on that image.  
+If we add that to the reference style section, it will be used when generating images.
+
+```md
+# Drawing Instructions
+
+instructions text
+
+# Reference Url
+url to local storage image file.  
+
+# Reference Style
+
+LLM drawing instructions based on the image.
+
+```
+
+## characters.md
+
+TO BE DEFINED
+
+
+## instructions.md
+
+TO BE DEFINED
+
+
+## publication.json
+  
+The JSON document   contains this zod structure, 
+
+```ts
+const Publication = z.object({
+  story: z.object(Story),
+  style: z.string(),
+  characters: z.string(),
+  instructionsText: z.string(),
+  panels: z.array(Panel),
+})
+
+const Story = z.object({
+  storyTitle: z.string(),
+  chapters: z.array(Chapter),
+})
+
+const Chapter = z.object({
+  chapterTitle: z.string(),
+  chapterSummary: z.string(),
+  pages: z.array(Page),
+})
+
+const Page = z.object({
+  pageTitle: z.string(),
+  pageSummary: z.string(),
+  paragraphs: z.array(Paragraph),
+})
+
+const Paragraph = z.object({
+  order: z.number(),
+  paragraphText: z.string(),
+  priorText: z.string(),
+})
+
+const Style = z.object({
+  drawingInstructions: z.string(),
+  panelPerParagraph: z.boolean().default(true),
+  referenceUrl: z.string().optional(),
+  referenceInstructions: z.string().optional(),
+  useReferenceStyle: z.boolean().default(false),
+})
+
+
+const Panel = z.object({
+  order: z.number(),
+  sceneText: z.string(),
+  narrativeText: z.string(),
+  panels: z.array(Image),
+})
+
+const Image = z.object({
+  digest: z.string(),
+  prompt: z.object(Prompt),
+  
+})
+
+const Prompt = z.object({
+  digest: z.string(),
+  
+})
+```
