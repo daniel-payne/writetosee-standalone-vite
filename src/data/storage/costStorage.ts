@@ -3,7 +3,7 @@ import { writeLog } from "@/data/storage/logStorage";
 
 export async function storeCost(
     cost: number | (number | null | undefined)[] | null | undefined,
-    type: 'summary' | 'image' = 'summary'
+    type: 'summary' | 'image' | 'character' = 'summary'
 ) {
     if (cost === null || cost === undefined) {
         return;

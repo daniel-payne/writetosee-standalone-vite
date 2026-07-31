@@ -1,3 +1,6 @@
+import { loadCharacters } from '@/data/process/manageCharacters';
+
 export async function clientLoader() {
-  return {};
+  const characters = await loadCharacters().catch(() => []);
+  return { characters };
 }
