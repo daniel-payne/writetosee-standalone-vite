@@ -153,8 +153,8 @@ export default function MainLayout({
 
   let styleLinkStyle = unselectedStyle
   let storyLinkStyle = unselectedStyle;
+  let charactersLinkStyle = unselectedStyle;
   // let _panelsLinkStyle = unselectedStyle;
-  // let _charactersLinkStyle = unselectedStyle;
   let imagesLinkStyle = unselectedStyle;
   let publicationLinkStyle = unselectedStyle;
   let costsLinkStyle = unselectedStyle;
@@ -173,9 +173,9 @@ export default function MainLayout({
   //   _panelsLinkStyle = selectedStyle;
   // }
 
-  // if (isActive('/characters')) {
-  //   _charactersLinkStyle = selectedStyle;
-  // }
+  if (isActive('/characters')) {
+    charactersLinkStyle = selectedStyle;
+  }
 
   if (isActive('/images')) {
     imagesLinkStyle = selectedStyle;
@@ -199,7 +199,7 @@ export default function MainLayout({
 
   if (isNavDisabled) {
     // _panelsLinkStyle = disabledStyle;
-    // _charactersLinkStyle = disabledStyle;
+    charactersLinkStyle = disabledStyle;
     imagesLinkStyle = disabledStyle;
     storyLinkStyle = disabledStyle;
     styleLinkStyle = disabledStyle;
@@ -261,7 +261,7 @@ export default function MainLayout({
             {/* <NavKeyLink to="/" apiKey={currentApiKey} navigate={navigate} className={welcomeLinkStyle}>Welcome</NavKeyLink> */}
             {!isSafeMode && <NavKeyLink to="/style" apiKey={currentApiKey} navigate={navigate} className={styleLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Style</NavKeyLink>}
             <NavKeyLink to="/story" apiKey={currentApiKey} navigate={navigate} className={storyLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Story</NavKeyLink>
-            {/* {!isSafeMode && <NavKeyLink to="/characters" apiKey={currentApiKey} navigate={navigate} className={charactersLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Characters</NavKeyLink>} */}
+            {!isSafeMode && <NavKeyLink to="/characters" apiKey={currentApiKey} navigate={navigate} className={charactersLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Characters</NavKeyLink>}
             {!isSafeMode && <NavKeyLink to="/images" apiKey={currentApiKey} navigate={navigate} className={imagesLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Images</NavKeyLink>}
 
             {/* {!isSafeMode && <NavKeyLink to="/panels" apiKey={currentApiKey} navigate={navigate} className={panelsLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Comic</NavKeyLink>} */}
