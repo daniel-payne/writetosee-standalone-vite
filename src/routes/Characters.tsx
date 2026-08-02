@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, type HTMLAttributes, type Pro
 import { Form, useLoaderData, useActionData, useNavigation, useBlocker, useFetcher } from "react-router-dom";
 import { useCharacters, useCharactersHash, analyzeCharacterStory, analyzeCharacterImage, type Character } from "@/data/process/manageCharacters";
 import { writeFile } from "@/data/storage/fileStorage";
+import ImageCropModal from "@/components/ImageCropModal";
 
 type CharactersProps = {} & HTMLAttributes<HTMLDivElement>;
 
@@ -27,6 +28,7 @@ export default function Characters({
   const [deletingCharIdx, setDeletingCharIdx] = useState<number | null>(null);
   const [analyzingStoryIdx, setAnalyzingStoryIdx] = useState<number | null>(null);
   const [analyzingImageIdx, setAnalyzingImageIdx] = useState<number | null>(null);
+  const [cropModalCharIdx, setCropModalCharIdx] = useState<number | null>(null);
   const [imageSearchQuery, setImageSearchQuery] = useState<string>('');
 
   const hiddenFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -228,7 +230,7 @@ export default function Characters({
 
     setAnalyzingImageIdx(index);
     try {
-      const { instructions } = await analyzeCharacterImage(char.image, char.name);
+      const { instructions } = await analyzeCharacterImage(char.image, char.name, char.cropBox);
       if (instructions) {
         handleCharacterChange(index, 'instructions', instructions);
         setCardTab(index, 'instructions');
@@ -453,36 +455,58 @@ export default function Characters({
                     {getCardTab(index) === 'picture' && (
                       imageSrc ? (
                         <div className="flex-1 min-h-[300px] flex flex-col items-center justify-between bg-base-100/40 border border-base-content/10 rounded-xl p-3 relative group">
-                          <div className="flex-1 w-full flex items-center justify-center overflow-hidden rounded-lg bg-base-200/50 min-h-[220px]">
-                            <img
-                              src={imageSrc}
-                              alt={char.name}
-                              className="max-h-[260px] w-full object-contain rounded-lg shadow-sm"
-                            />
+                          <div
+                            onDoubleClick={() => setCropModalCharIdx(index)}
+                            title="Double click to enlarge"
+                            className="flex-1 w-full flex items-center justify-center overflow-hidden rounded-lg bg-base-200/50 min-h-[220px] cursor-pointer p-1"
+                          >
+                            <div className="relative inline-block max-h-[260px] max-w-full">
+                              <img
+                                src={imageSrc}
+                                alt={char.name}
+                                className="max-h-[260px] w-auto max-w-full object-contain rounded-lg shadow-sm block"
+                              />
+                              {char.cropBox && char.cropBox.width > 0 && (
+                                <div
+                                  className="absolute border-2 border-primary bg-primary/20 shadow-[0_0_10px_rgba(59,130,246,0.6)] rounded pointer-events-none"
+                                  style={{
+                                    left: `${char.cropBox.x * 100}%`,
+                                    top: `${char.cropBox.y * 100}%`,
+                                    width: `${char.cropBox.width * 100}%`,
+                                    height: `${char.cropBox.height * 100}%`,
+                                  }}
+                                >
+                                  <span className="absolute -top-4 left-0 bg-primary text-primary-content text-[9px] font-bold px-1 rounded shadow-sm truncate max-w-[120px]">
+                                    {char.name}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <div className="w-full mt-3 flex items-center justify-between gap-2 border-t border-base-content/10 pt-2 shrink-0">
-                            <div className="text-[11px] font-mono text-base-content/60 truncate max-w-[180px]" title={char.image}>
+                            <div className="text-[11px] font-mono text-base-content/60 truncate max-w-[120px]" title={char.image}>
                               {char.image?.replace(/^images\//, '')}
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
+                              {/* 1. Isolate Box */}
                               <button
                                 type="button"
-                                onClick={() => setSelectingImageIdx(index)}
+                                onClick={() => setCropModalCharIdx(index)}
                                 className="btn btn-xs btn-outline btn-primary rounded-lg gap-1"
-                                title="Select another image from storage"
+                                title="Expand image & draw bounding box around character"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 3.75H6A2.25 2.25 0 0 0 3.75 6v1.5M16.5 3.75H18A2.25 2.25 0 0 1 20.25 6v1.5m0 9V18A2.25 2.25 0 0 1 18 20.25h-1.5m-9 0H6A2.25 2.25 0 0 1 3.75 18v-1.5" />
                                 </svg>
-                                Change
+                                {char.cropBox ? 'Edit Box' : 'Isolate Box'}
                               </button>
-                              {/* Analyze Image Button (Bottom) */}
+                              {/* 2. Analyze Image */}
                               <button
                                 type="button"
                                 onClick={() => handleAnalyzeImage(index)}
                                 disabled={analyzingImageIdx === index}
                                 className="btn btn-xs btn-primary bg-primary text-primary-content rounded-lg gap-1 shadow-sm"
-                                title="Analyze picture with LLM Vision to extract drawing instructions"
+                                title={char.cropBox ? "Analyze isolated character box with LLM Vision" : "Analyze picture with LLM Vision to extract drawing instructions"}
                               >
                                 {analyzingImageIdx === index ? (
                                   <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -496,17 +520,19 @@ export default function Characters({
                                 )}
                                 Analyze Image
                               </button>
+                              {/* 3. Select (Between Analyze and Delete) */}
                               <button
                                 type="button"
-                                onClick={() => triggerUploadForCharacter(index)}
-                                className="btn btn-xs btn-ghost rounded-lg text-base-content/70 hover:bg-base-200 hidden"
-                                title="Upload a new picture file"
+                                onClick={() => setSelectingImageIdx(index)}
+                                className="btn btn-xs btn-outline rounded-lg gap-1"
+                                title="Select another image from storage"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
                                 </svg>
-                                Upload
+                                Select
                               </button>
+                              {/* 4. Delete / Remove picture */}
                               <button
                                 type="button"
                                 onClick={() => handleCharacterChange(index, 'image', '')}
@@ -735,7 +761,15 @@ export default function Characters({
                   <span className="label-text text-xs font-semibold">Character Picture</span>
                 </label>
                 <div className="flex items-center gap-3 bg-base-200/40 p-2.5 rounded-xl border border-base-content/10">
-                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-primary/20 text-primary flex items-center justify-center font-bold text-base shrink-0 border border-base-content/10">
+                  <div
+                    onDoubleClick={() => {
+                      if (characterList[editingModalCharIdx].image) {
+                        setCropModalCharIdx(editingModalCharIdx);
+                      }
+                    }}
+                    title={characterList[editingModalCharIdx].image ? "Double click to enlarge" : undefined}
+                    className={`w-12 h-12 rounded-lg overflow-hidden bg-primary/20 text-primary flex items-center justify-center font-bold text-base shrink-0 border border-base-content/10 ${characterList[editingModalCharIdx].image ? 'cursor-pointer hover:opacity-90' : ''}`}
+                  >
                     {getImageSrc(characterList[editingModalCharIdx].image) ? (
                       <img
                         src={getImageSrc(characterList[editingModalCharIdx].image)!}
@@ -747,23 +781,36 @@ export default function Characters({
                     )}
                   </div>
                   <div className="flex-1 min-w-0 text-xs">
-                    <p className="font-mono text-[11px] text-base-content/70 truncate">
-                      {characterList[editingModalCharIdx].image?.replace(/^images\//, '') || 'No picture selected'}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <button
-                        type="button"
-                        onClick={() => setSelectingImageIdx(editingModalCharIdx)}
-                        className="btn btn-xs btn-primary rounded-lg text-[11px]"
-                      >
-                        Choose Picture
-                      </button>
+                    <div className="flex items-center gap-1.5 truncate">
+                      <p className="font-mono text-[11px] text-base-content/70 truncate">
+                        {characterList[editingModalCharIdx].image?.replace(/^images\//, '') || 'No picture selected'}
+                      </p>
+                      {characterList[editingModalCharIdx].cropBox && (
+                        <span className="badge badge-xs badge-primary font-mono text-[9px] shrink-0">
+                          Isolated Box
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      {characterList[editingModalCharIdx].image && (
+                        <button
+                          type="button"
+                          onClick={() => setCropModalCharIdx(editingModalCharIdx)}
+                          className="btn btn-xs btn-outline btn-primary rounded-lg text-[11px] gap-1"
+                          title="Expand image & draw bounding box around character"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 3.75H6A2.25 2.25 0 0 0 3.75 6v1.5M16.5 3.75H18A2.25 2.25 0 0 1 20.25 6v1.5m0 9V18A2.25 2.25 0 0 1 18 20.25h-1.5m-9 0H6A2.25 2.25 0 0 1 3.75 18v-1.5" />
+                          </svg>
+                          Isolate Box
+                        </button>
+                      )}
                       {characterList[editingModalCharIdx].image && (
                         <button
                           type="button"
                           onClick={() => handleAnalyzeImage(editingModalCharIdx)}
                           disabled={analyzingImageIdx === editingModalCharIdx}
-                          className="btn btn-xs btn-outline btn-primary rounded-lg text-[11px] gap-1"
+                          className="btn btn-xs btn-primary rounded-lg text-[11px] gap-1"
                         >
                           {analyzingImageIdx === editingModalCharIdx ? (
                             <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -775,9 +822,16 @@ export default function Characters({
                               <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                             </svg>
                           )}
-                          Analyze Image
+                          Analyze
                         </button>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => setSelectingImageIdx(editingModalCharIdx)}
+                        className="btn btn-xs btn-outline rounded-lg text-[11px]"
+                      >
+                        Select
+                      </button>
                       <button
                         type="button"
                         onClick={() => triggerUploadForCharacter(editingModalCharIdx)}
@@ -907,6 +961,38 @@ export default function Characters({
             onClick={() => setDeletingCharIdx(null)}
           ></div>
         </div>
+      )}
+
+      {/* Image Crop Box Modal */}
+      {cropModalCharIdx !== null && characterList[cropModalCharIdx] && (
+        <ImageCropModal
+          isOpen={true}
+          imageSrc={getImageSrc(characterList[cropModalCharIdx].image) || ''}
+          characterName={characterList[cropModalCharIdx].name || `Character ${cropModalCharIdx + 1}`}
+          initialCropBox={characterList[cropModalCharIdx].cropBox || null}
+          onSave={(newCropBox) => {
+            setCharacterList((prev) => {
+              const updated = [...prev];
+              if (newCropBox) {
+                updated[cropModalCharIdx] = { ...updated[cropModalCharIdx], cropBox: newCropBox };
+              } else {
+                const copy = { ...updated[cropModalCharIdx] };
+                delete copy.cropBox;
+                updated[cropModalCharIdx] = copy;
+              }
+              return updated;
+            });
+          }}
+          onClose={() => setCropModalCharIdx(null)}
+          onAnalyze={() => {
+            const targetIdx = cropModalCharIdx;
+            setCropModalCharIdx(null);
+            if (targetIdx !== null) {
+              handleAnalyzeImage(targetIdx);
+            }
+          }}
+          isAnalyzing={analyzingImageIdx === cropModalCharIdx}
+        />
       )}
     </div>
   );

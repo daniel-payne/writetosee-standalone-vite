@@ -13,6 +13,7 @@ export interface Character {
   name: string;
   description: string;
   image?: string;
+  cropBox?: { x: number; y: number; width: number; height: number };
   instructions?: string;
   [key: string]: any;
 }
@@ -41,6 +42,7 @@ export function parseCharactersMarkdown(markdown: string): Character[] {
 
   let currentName = '';
   let currentImage = '';
+  let currentCropBox: { x: number; y: number; width: number; height: number } | undefined = undefined;
   let currentDescLines: string[] = [];
   let currentInstLines: string[] = [];
   let inInstructions = false;
@@ -52,11 +54,13 @@ export function parseCharactersMarkdown(markdown: string): Character[] {
         name: trimmedName,
         description: currentDescLines.join('\n').trim(),
         ...(currentImage ? { image: currentImage.trim() } : {}),
+        ...(currentCropBox ? { cropBox: currentCropBox } : {}),
         ...(currentInstLines.length > 0 ? { instructions: currentInstLines.join('\n').trim() } : {})
       });
     }
     currentName = '';
     currentImage = '';
+    currentCropBox = undefined;
     currentDescLines = [];
     currentInstLines = [];
     inInstructions = false;
@@ -78,9 +82,18 @@ export function parseCharactersMarkdown(markdown: string): Character[] {
     } else if (currentName) {
       const mdImageMatch = line.match(/!\[.*?\]\((.*?)\)/);
       const keyValImageMatch = line.match(/^\s*Image:\s*(.+)$/i);
+      const cropMatch = line.match(/^\s*Crop:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*$/i);
       const instructionsMatch = line.match(/^\s*\*{0,2}Instructions:\*{0,2}\s*(.*)$/i);
 
-      if (mdImageMatch) {
+      if (cropMatch) {
+        const x = parseFloat(cropMatch[1]);
+        const y = parseFloat(cropMatch[2]);
+        const width = parseFloat(cropMatch[3]);
+        const height = parseFloat(cropMatch[4]);
+        if (!isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height)) {
+          currentCropBox = { x, y, width, height };
+        }
+      } else if (mdImageMatch) {
         currentImage = mdImageMatch[1].trim();
       } else if (keyValImageMatch) {
         currentImage = keyValImageMatch[1].trim();
@@ -111,6 +124,10 @@ export function serializeCharactersMarkdown(characters: Character[]): string {
       const parts: string[] = [`## ${c.name.trim()}`];
       if (c.image && c.image.trim()) {
         parts.push(`![${c.name.trim()}](${c.image.trim()})`);
+      }
+      if (c.cropBox && typeof c.cropBox.x === 'number') {
+        const { x, y, width, height } = c.cropBox;
+        parts.push(`Crop: ${x},${y},${width},${height}`);
       }
       if (c.description && c.description.trim()) {
         parts.push(c.description.trim());
@@ -152,11 +169,17 @@ export function mergeCharactersAdditively(existing: Character[], extracted: Char
           result[existingIndex].image = newChar.image.trim();
         }
       }
+      if (newChar.cropBox) {
+        if (!result[existingIndex].cropBox) {
+          result[existingIndex].cropBox = newChar.cropBox;
+        }
+      }
     } else {
       result.push({
         name: newChar.name.trim(),
         description: newChar.description.trim(),
         ...(newChar.image ? { image: newChar.image.trim() } : {}),
+        ...(newChar.cropBox ? { cropBox: newChar.cropBox } : {}),
         ...(newChar.instructions ? { instructions: newChar.instructions.trim() } : {})
       });
     }
@@ -327,9 +350,70 @@ Return ONLY the description text. Do not include markdown headers or commentary 
   };
 }
 
+async function cropImageBase64(
+  base64Data: string,
+  mimeType: string,
+  cropBox: { x: number; y: number; width: number; height: number }
+): Promise<{ base64Data: string; mimeType: string }> {
+  const MAX_DIM = 2048;
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const naturalWidth = img.naturalWidth || img.width;
+        const naturalHeight = img.naturalHeight || img.height;
+
+        const sx = Math.max(0, Math.floor(cropBox.x * naturalWidth));
+        const sy = Math.max(0, Math.floor(cropBox.y * naturalHeight));
+        const sw = Math.min(naturalWidth - sx, Math.ceil(cropBox.width * naturalWidth));
+        const sh = Math.min(naturalHeight - sy, Math.ceil(cropBox.height * naturalHeight));
+
+        if (sw <= 0 || sh <= 0) {
+          resolve({ base64Data, mimeType });
+          return;
+        }
+
+        // Scale down if the crop region is larger than MAX_DIM to keep payload small
+        let outW = sw;
+        let outH = sh;
+        if (outW > MAX_DIM || outH > MAX_DIM) {
+          const scale = Math.min(MAX_DIM / outW, MAX_DIM / outH);
+          outW = Math.round(outW * scale);
+          outH = Math.round(outH * scale);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = outW;
+        canvas.height = outH;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve({ base64Data, mimeType });
+          return;
+        }
+
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+        // Use JPEG at 0.85 quality — much smaller payload than PNG
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const croppedBase64 = dataUrl.replace(/^data:image\/jpeg;base64,/, '');
+        resolve({ base64Data: croppedBase64, mimeType: 'image/jpeg' });
+      } catch (err) {
+        console.warn('Failed to crop image on canvas:', err);
+        resolve({ base64Data, mimeType });
+      }
+    };
+    img.onerror = (err) => {
+      console.warn('Failed to load image for cropping:', err);
+      resolve({ base64Data, mimeType });
+    };
+    img.src = `data:${mimeType};base64,${base64Data}`;
+  });
+}
+
 export async function analyzeCharacterImage(
   imagePath: string,
-  characterName: string = 'Character'
+  characterName: string = 'Character',
+  cropBox?: { x: number; y: number; width: number; height: number } | null
 ): Promise<{ instructions: string; cost: number }> {
   if (!imagePath || !imagePath.trim()) {
     throw new Error('No picture selected to analyze.');
@@ -371,6 +455,12 @@ export async function analyzeCharacterImage(
     base64Data = btoa(binary);
   }
 
+  if (cropBox && cropBox.width > 0 && cropBox.height > 0) {
+    const cropped = await cropImageBase64(base64Data, mimeType, cropBox);
+    base64Data = cropped.base64Data;
+    mimeType = cropped.mimeType;
+  }
+
   const systemPrompt = `You are an expert visual artist and character illustrator.
 Analyze the provided image of the character "${characterName}".
 Generate precise, highly detailed step-by-step drawing instructions for illustrating this character.
@@ -393,3 +483,4 @@ Return ONLY the drawing instructions text. Do not include markdown headers or wr
     cost: totalCost || 0
   };
 }
+
