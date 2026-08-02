@@ -50,7 +50,7 @@ export default async function llmGenerateImage(imagePrompt: string) {
         const model = "grok-imagine-image-quality";
         result = await processxAIImage({ imagePrompt, apiKey, model });
     } else if (provider === 'OPENROUTER') {
-        const model = "black-forest-labs/flux.2-pro";
+        const model = "black-forest-labs/flux.2-pro" // "google/gemini-2.5-flash-image" // "black-forest-labs/flux.2-klein-4b"; //"black-forest-labs/flux.2-pro";
         const inputCostPerMillion = 0.00;
         const outputCostPerMillion = 7.94;
         result = await processOpenRouterImage({ imagePrompt, apiKey, model, inputCostPerMillion, outputCostPerMillion });

@@ -229,7 +229,7 @@ export default function PanelImageDisplay({
         className={`h-full w-full bg-white dark:bg-slate-800 rounded-2xl shadow-md border flex flex-col overflow-hidden relative group transition-all duration-300 ${isExpanded ? 'cursor-zoom-out' : 'cursor-pointer'} ${isAwaitingImage ? 'border-primary/30 bg-primary/[0.02]' : 'border-slate-200 dark:border-slate-700'}`}
         title={paragraph.text || paragraph.sceneText || (isExpanded ? "Double click to make small" : "Double click to enlarge")}
       >
-        {src && !imgError ? (
+        {src && !imgError && !paragraph.error && paragraph.imageStatus !== 'failed' ? (
           <div className="w-full h-full relative overflow-hidden bg-slate-100 dark:bg-slate-900">
             <img
               src={src}
@@ -278,32 +278,36 @@ export default function PanelImageDisplay({
           <div className="flex-1 w-full p-4 flex flex-col justify-between items-stretch min-h-0">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-700">
               <span className="text-[10px] font-bold text-base-content/40">Status</span>
-              {(loading || isAwaitingImage || isRegenerating || isCurrentlyGenerating) && (
+              {paragraph.error || paragraph.imageStatus === 'failed' ? (
+                <span className="badge badge-xs badge-error font-bold px-2 py-1">Failed</span>
+              ) : loading || isCurrentlyGenerating || isRegenerating ? (
                 <div className="flex items-center gap-1.5">
-                  {(isAwaitingImage || isRegenerating || isCurrentlyGenerating) && (
-                    <span className="text-[9px] text-primary/70 animate-pulse font-medium">
-                      {isCurrentlyGenerating ? "Generating..." : isRegenerating ? "Regenerating..." : "Awaiting illustration..."}
-                    </span>
-                  )}
+                  <span className="text-[9px] text-primary/70 animate-pulse font-medium">
+                    {isRegenerating ? "Regenerating..." : "Generating..."}
+                  </span>
                   <span className="loading loading-spinner loading-xs text-primary"></span>
                 </div>
+              ) : (
+                <span className="badge badge-xs badge-ghost font-medium text-[10px]">
+                  {paragraph.imageStatus === 'pending' ? 'Pending' : 'Idle'}
+                </span>
               )}
             </div>
 
-            {paragraph.error ? (
-              <div className="flex flex-col gap-1.5 border-t border-error/10 pt-2 text-left mt-2 flex-1 justify-center">
-                <div className="bg-error/5 p-2 rounded-lg max-h-[100px] overflow-y-auto border border-error/10">
-                  <div className="text-[9px] text-error font-bold flex items-center gap-1 mb-0.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-error shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            {paragraph.error || paragraph.imageStatus === 'failed' ? (
+              <div className="flex flex-col gap-2.5 border-t border-error/10 pt-2 text-left mt-2 flex-1 justify-center">
+                <div className="bg-error/10 dark:bg-error/20 p-3 rounded-xl max-h-[120px] overflow-y-auto border border-error/20">
+                  <div className="text-[11px] text-error font-bold flex items-center gap-1.5 mb-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-error shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                     Generation Error
                   </div>
-                  <div className="text-[9px] text-error/80 leading-normal break-words font-medium select-text">
-                    {paragraph.error}
+                  <div className="text-[10px] text-error/90 leading-relaxed break-words font-medium select-text">
+                    {paragraph.error || "Image generation failed. Please click Regenerate Image to try again."}
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   {hasMultipleImages && (
                     <button
                       type="button"
@@ -312,7 +316,7 @@ export default function PanelImageDisplay({
                         setShowModal(true);
                       }}
                       onDoubleClick={(e) => e.stopPropagation()}
-                      className="btn btn-xs btn-outline rounded-lg text-[9px] h-auto min-h-0 py-1 font-bold normal-case flex items-center justify-center gap-1"
+                      className="btn btn-xs btn-outline rounded-lg text-[10px] h-auto min-h-0 py-1.5 font-bold normal-case flex items-center justify-center gap-1"
                       title="Choose from prior images"
                     >
                       Prior Images ({paragraph.images.length})
@@ -323,46 +327,14 @@ export default function PanelImageDisplay({
                     onClick={handleRegenerate}
                     onDoubleClick={(e) => e.stopPropagation()}
                     disabled={isRegenerating}
-                    className="btn btn-xs btn-error btn-outline rounded-lg text-[9px] h-auto min-h-0 py-1 font-bold flex-1 normal-case flex items-center justify-center gap-1"
+                    className="btn btn-sm btn-error text-white rounded-xl text-xs font-bold flex-1 normal-case flex items-center justify-center gap-1.5 shadow-sm"
                   >
                     {isRegenerating && <span className="loading loading-spinner loading-xs"></span>}
                     {isRegenerating ? "Regenerating..." : "Regenerate Image"}
                   </button>
                 </div>
               </div>
-            ) : imagePath && imgError ? (
-              <div className="flex flex-col gap-1.5 border-t border-error/10 pt-1.5 text-left flex-1 justify-center">
-                <div className="text-[9px] text-error font-semibold">
-                  Illustration failed to load
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {hasMultipleImages && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowModal(true);
-                      }}
-                      onDoubleClick={(e) => e.stopPropagation()}
-                      className="btn btn-xs btn-outline rounded-lg text-[9px] h-auto min-h-0 py-1 font-bold normal-case flex items-center justify-center gap-1"
-                      title="Choose from prior images"
-                    >
-                      Prior Images ({paragraph.images.length})
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleRegenerate}
-                    onDoubleClick={(e) => e.stopPropagation()}
-                    disabled={isRegenerating}
-                    className="btn btn-xs btn-error btn-outline rounded-lg text-[9px] h-auto min-h-0 py-1 font-bold flex-1 normal-case flex items-center justify-center gap-1"
-                  >
-                    {isRegenerating && <span className="loading loading-spinner loading-xs"></span>}
-                    {isRegenerating ? "Regenerating..." : "Regenerate Image"}
-                  </button>
-                </div>
-              </div>
-            ) : (loading || isAwaitingImage || isRegenerating) ? (
+            ) : isCurrentlyGenerating || isRegenerating ? (
               <div className="flex-1 flex flex-col justify-center items-center gap-2.5 p-4 text-center">
                 <span className="loading loading-spinner loading-md text-primary"></span>
                 <span className="text-xs text-primary/90 font-semibold animate-pulse">
@@ -370,8 +342,20 @@ export default function PanelImageDisplay({
                 </span>
               </div>
             ) : (
-              <div className="flex-1 flex flex-col justify-center items-center gap-2 p-4 text-center">
-                <span className="text-xs text-slate-400 font-medium">No illustration generated yet</span>
+              <div className="flex-1 flex flex-col justify-center items-center gap-3 p-4 text-center">
+                <span className="text-xs text-slate-500 font-medium">
+                  {paragraph.imageStatus === 'pending' ? "Awaiting illustration generation..." : "No illustration generated yet"}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleRegenerate}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  disabled={isRegenerating}
+                  className="btn btn-sm btn-primary text-white rounded-xl text-xs font-bold px-4 py-2 normal-case flex items-center justify-center gap-1.5 shadow-sm hover:shadow"
+                >
+                  {isRegenerating && <span className="loading loading-spinner loading-xs"></span>}
+                  {isRegenerating ? "Regenerating..." : "Regenerate Image"}
+                </button>
               </div>
             )}
           </div>

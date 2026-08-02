@@ -51,26 +51,61 @@ export default async function generatePrompts(publication: any) {
         const item = panels[index];
         const sceneText = item.sceneText || item.text || "";
 
-        const pages = publication.pages || [];
         const chapters = publication.chapters || [];
+        const pages = publication.pages || [];
 
-        const currentPageIndex = pages.findIndex(
-            (pg: any) => pg.chapterNo === item.chapterNo && pg.pageNo === item.pageNo
-        );
-        const prevPage = currentPageIndex > 0 ? pages[currentPageIndex - 1] : null;
-        const pageText = prevPage ? (prevPage.summary ?? prevPage.text ?? "") : "";
+        const narrativeParts: string[] = [];
 
-        const currentChapterIndex = chapters.findIndex(
-            (ch: any) => ch.chapterNo === item.chapterNo
-        );
-        const prevChapter = currentChapterIndex > 0 ? chapters[currentChapterIndex - 1] : null;
-        const chapterText = prevChapter ? (prevChapter.summary ?? prevChapter.text ?? "") : "";
+        // 1. Collect summaries/text for all prior chapters before current item's chapterNo
+        if (chapters.length > 0 && item.chapterNo != null) {
+            const priorChapters = chapters.filter((ch: any) => ch.chapterNo < item.chapterNo);
+            for (const ch of priorChapters) {
+                const text = ch.chapterSummary || ch.summary || ch.chapterText || ch.text || "";
+                if (text) narrativeParts.push(text);
+            }
+        }
 
-        const predicateText = (publication.predicates?.[index]?.text) ?? "";
+        // 2. Collect summaries/text for all prior pages before current item's pageNo
+        if (pages.length > 0 && item.pageNo != null) {
+            const priorPages = pages.filter((pg: any) =>
+                pg.chapterNo === item.chapterNo ? pg.pageNo < item.pageNo : pg.chapterNo < item.chapterNo
+            );
+            for (const pg of priorPages) {
+                const text = pg.pageSummary || pg.summary || pg.pageText || pg.text || "";
+                if (text) narrativeParts.push(text);
+            }
+        }
 
-        // Combine narrative texts, filtered to exclude empty values
-        const narrativeParts = [chapterText, pageText, predicateText].filter(Boolean);
-        const narrativeText = item.narrativeText || narrativeParts.join("\n");
+        // 3. Collect priorText (text of all prior paragraphs/panels before this panel index)
+        const priorParagraphTexts: string[] = [];
+        for (let pIdx = 0; pIdx < index; pIdx++) {
+            const prevPanel = panels[pIdx];
+            const prevText = prevPanel.sceneText || prevPanel.text || "";
+            if (prevText) {
+                priorParagraphTexts.push(prevText);
+            }
+        }
+
+        if (priorParagraphTexts.length > 0) {
+            if (narrativeParts.length === 0) {
+                narrativeParts.push(priorParagraphTexts.join("\n\n"));
+            } else {
+                const samePagePriorParagraphs: string[] = [];
+                for (let pIdx = 0; pIdx < index; pIdx++) {
+                    const prevPanel = panels[pIdx];
+                    if (prevPanel.chapterNo === item.chapterNo && prevPanel.pageNo === item.pageNo) {
+                        const prevText = prevPanel.sceneText || prevPanel.text || "";
+                        if (prevText) samePagePriorParagraphs.push(prevText);
+                    }
+                }
+                if (samePagePriorParagraphs.length > 0) {
+                    narrativeParts.push(samePagePriorParagraphs.join("\n\n"));
+                }
+            }
+        }
+
+        const calculatedNarrativeText = narrativeParts.filter(Boolean).join("\n\n");
+        const narrativeText = item.narrativeText || calculatedNarrativeText;
 
         const styleText = Array.isArray(publication.style?.drawingInstructions)
             ? publication.style.drawingInstructions.join('\n')

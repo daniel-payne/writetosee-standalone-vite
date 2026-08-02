@@ -29,7 +29,12 @@ export async function loadPublication(): Promise<any> {
 
     activeLoadPromise = (async () => {
         try {
-            const file = await fileStorage.readFile('publication.json');
+            let file: File;
+            try {
+                file = await fileStorage.readFile('data/publication.json');
+            } catch (err) {
+                file = await fileStorage.readFile('publication.json');
+            }
             const text = await file.text();
             const loadedPub = JSON.parse(text);
 
@@ -42,6 +47,9 @@ export async function loadPublication(): Promise<any> {
             }
 
             loadedPub.panels = panels;
+
+            // Normalize panels using prompts and images info
+            loadedPub.panels = buildPanelsFromPublication(loadedPub);
 
             const calculatedHash = generateTextDigest(text);
             inMemoryPublication = loadedPub;
@@ -72,7 +80,8 @@ export async function loadPublication(): Promise<any> {
                 setState('publication-hash', defaultHash, StoragePersistence.local);
 
                 try {
-                    await fileStorage.writeFile('publication.json', defaultText);
+                    await fileStorage.writeFile('data/publication.json', defaultText);
+                    await fileStorage.writeFile('publication.json', defaultText).catch(() => {});
                 } catch (writeErr) {
                     console.warn("Could not write default publication.json:", writeErr);
                 }
@@ -125,6 +134,7 @@ export function buildPanelsFromStory(storyText: string, style?: any) {
 
 export function buildPanelsFromPublication(pub: any) {
     const rawItems = pub?.panels || [];
+    const prompts = pub?.prompts || [];
     const isOnePerPage = pub?.style?.imageDisplayMode === 'one_per_page' || pub?.options?.imageDisplayMode === 'one_per_page';
 
     if (isOnePerPage && rawItems.length > 0) {
@@ -167,13 +177,14 @@ export function buildPanelsFromPublication(pub: any) {
             }
 
             const firstItem = items[0]?.item || {};
+            const error = firstItem.error || items.find(x => x.item.error)?.item.error;
             const rawIndex = firstItem.currentImageIndex ?? Math.max(0, imagesList.indexOf(activeImage));
             const currentImageIndex = rawIndex >= 0 ? rawIndex : 0;
 
             const hasImage = imagesList.length > 0 && Boolean(activeImage);
-            const imageStatus = firstItem.imageStatus && firstItem.imageStatus !== 'completed'
+            const imageStatus = firstItem.imageStatus
                 ? firstItem.imageStatus
-                : (hasImage ? 'completed' : 'pending');
+                : (error ? 'failed' : (hasImage ? 'completed' : 'pending'));
 
             const styleInstructions = Array.isArray(pub?.style?.drawingInstructions)
                 ? pub.style.drawingInstructions.join('\n\n')
@@ -190,7 +201,8 @@ export function buildPanelsFromPublication(pub: any) {
                 images: imagesList,
                 image: activeImage,
                 currentImageIndex,
-                imageStatus
+                imageStatus,
+                ...(error ? { error } : {})
             });
 
             panelIndex++;
@@ -204,21 +216,31 @@ export function buildPanelsFromPublication(pub: any) {
         : (pub?.style?.drawingInstructions || "");
 
     return rawItems.map((p: any, idx: number) => {
+        const matchingPrompt = prompts.find((pr: any) =>
+            (pr.paragraphIndex === idx || pr.paragraphNo === idx || (pr.digest && pr.digest === p.digest))
+        );
+
+        const promptImage = matchingPrompt?.image || matchingPrompt?.imageUrl || "";
+
         const imagesList: string[] = Array.isArray(p.images) && p.images.length > 0
             ? p.images
             : p.image
                 ? [p.image]
                 : p.imageUrl
                     ? [p.imageUrl]
-                    : [];
+                    : promptImage
+                        ? [promptImage]
+                        : [];
 
-        const activeImage = p.image || p.imageUrl || imagesList[0] || "";
+        const activeImage = p.image || p.imageUrl || promptImage || imagesList[imagesList.length - 1] || "";
         const rawIndex = p.currentImageIndex ?? Math.max(0, imagesList.indexOf(activeImage));
-        const currentImageIndex = rawIndex >= 0 ? rawIndex : 0;
+        const currentImageIndex = rawIndex >= 0 ? rawIndex : (imagesList.length > 0 ? imagesList.length - 1 : 0);
         const hasImage = imagesList.length > 0 && Boolean(activeImage);
-        const imageStatus = p.imageStatus && p.imageStatus !== 'completed'
+        const promptStatus = matchingPrompt?.imageStatus;
+
+        const imageStatus = (p.imageStatus && p.imageStatus !== 'pending')
             ? p.imageStatus
-            : (hasImage ? 'completed' : 'pending');
+            : (hasImage ? 'completed' : (promptStatus || (p.error ? 'failed' : 'pending')));
 
         return {
             panelNo: p.panelNo ?? p.paragraphNo ?? idx,
@@ -230,7 +252,8 @@ export function buildPanelsFromPublication(pub: any) {
             images: imagesList,
             image: activeImage,
             currentImageIndex,
-            imageStatus
+            imageStatus,
+            ...(p.error ? { error: p.error } : {})
         };
     });
 }
@@ -268,8 +291,13 @@ export async function savePublication(
         const json = JSON.stringify(cleanPub, null, 2);
         const hash = generateTextDigest(json);
 
-        // Save to disk
+        // Save to disk - write to both data/publication.json and publication.json to maintain consistency
         await fileStorage.writeFile('data/publication.json', json);
+        try {
+            await fileStorage.writeFile('publication.json', json);
+        } catch (err) {
+            console.warn("Could not write root publication.json:", err);
+        }
 
         // Ensure in-memory object contains panels
         if (pub && typeof pub === 'object') {

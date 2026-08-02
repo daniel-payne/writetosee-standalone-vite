@@ -39,6 +39,7 @@ export async function clientLoader() {
 
       // Find matching panel & prompt
       let text = "";
+      let promptText = "";
       let paragraphNo: number | undefined = undefined;
 
       // 1. Try to find panel directly by image name or digest
@@ -54,19 +55,30 @@ export async function clientLoader() {
         paragraphNo = foundPanel.panelNo != null ? foundPanel.panelNo + 1 : (foundPanel.paragraphNo != null ? foundPanel.paragraphNo + 1 : undefined);
       }
 
-      // 2. If not found in panel directly, find prompt by digest
-      if (!text) {
-        const prompt = prompts.find((p: any) => p.digest === digest);
-        if (prompt) {
-          if (paragraphNo == null) {
-            paragraphNo = prompt.paragraphNo != null ? prompt.paragraphNo + 1 : (prompt.paragraphIndex != null ? prompt.paragraphIndex + 1 : undefined);
-          }
-          const linkedPanel = prompt.paragraphIndex != null ? panels[prompt.paragraphIndex] : panels.find((p: any) => p.panelNo === prompt.paragraphNo);
+      // 2. Find prompt by digest
+      const matchingPrompt = prompts.find((p: any) => p.digest === digest);
+      if (matchingPrompt) {
+        promptText = matchingPrompt.text || "";
+        if (paragraphNo == null) {
+          paragraphNo = matchingPrompt.paragraphNo != null ? matchingPrompt.paragraphNo + 1 : (matchingPrompt.paragraphIndex != null ? matchingPrompt.paragraphIndex + 1 : undefined);
+        }
+        if (!text) {
+          const linkedPanel = matchingPrompt.paragraphIndex != null ? panels[matchingPrompt.paragraphIndex] : panels.find((p: any) => p.panelNo === matchingPrompt.paragraphNo);
           if (linkedPanel && linkedPanel.text) {
             text = linkedPanel.text;
-          } else if (prompt.text) {
-            text = extractSceneText(prompt.text);
+          } else if (matchingPrompt.text) {
+            text = extractSceneText(matchingPrompt.text);
           }
+        }
+      }
+
+      // 3. Fallback: Read prompt text file directly from storage if promptText was not in publication.prompts
+      if (!promptText && digest) {
+        try {
+          const promptFile = await readFile(`prompts/${digest}.txt`);
+          promptText = await promptFile.text();
+        } catch {
+          // ignore if file doesn't exist
         }
       }
 
@@ -75,7 +87,9 @@ export async function clientLoader() {
         url: URL.createObjectURL(file),
         lastModified: creationTime,
         text: text || undefined,
+        promptText: promptText || undefined,
         paragraphNo,
+        digest,
       };
     }));
 

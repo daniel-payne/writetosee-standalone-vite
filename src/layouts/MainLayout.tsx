@@ -64,6 +64,7 @@ export default function MainLayout({
   children,
   ...rest
 }: PropsWithChildren<MainLayoutProps>) {
+  const loaderData = useLoaderData() as MainLayoutLoaderData;
   const location = useLocation();
   const revalidator = useRevalidator();
   const navigate = useNavigate();
@@ -104,6 +105,14 @@ export default function MainLayout({
   }, []);
 
   useEffect(() => {
+    if (loaderData?.hasDirectory && loaderData?.permissionGranted) {
+      processPublication().catch(async (err) => {
+        await writeLog('error', 'MainLayout', `App startup publication build failed: ${err instanceof Error ? err.message : String(err)}`);
+      });
+    }
+  }, [loaderData?.hasDirectory, loaderData?.permissionGranted]);
+
+  useEffect(() => {
     if (theme !== DEFAULT_THEME && theme !== DARK_THEME) {
       setTheme(DEFAULT_THEME);
     } else {
@@ -117,7 +126,6 @@ export default function MainLayout({
 
   const isActive = (path: string) => location.pathname === path;
 
-  const loaderData = useLoaderData() as MainLayoutLoaderData;
   const navigation = useNavigation();
   const isSubmitting = navigation.state === 'submitting';
 

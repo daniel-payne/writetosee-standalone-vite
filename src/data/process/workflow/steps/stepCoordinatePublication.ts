@@ -36,21 +36,41 @@ export default async function stepCoordinatePublication({ style, story }: { styl
     const newPanels = buildPanelsFromStory(story, style);
 
     publication.panels = newPanels.map((np: any) => {
-        const existing: any = existingPanelsMap.get(np.digest) || existingPanelsMap.get(np.text);
+        const existingByDigest: any = existingPanelsMap.get(np.digest);
+        const existingByText: any = existingPanelsMap.get(np.text);
+        const existing = existingByDigest || existingByText;
+
         if (existing) {
-            const imagesList = existing.images || (existing.image ? [existing.image] : []);
-            const hasImage = imagesList.length > 0 && Boolean(existing.image || imagesList[0]);
-            return {
-                ...np,
-                images: imagesList,
-                image: existing.image || imagesList[0] || "",
-                currentImageIndex: existing.currentImageIndex ?? 0,
-                imageStatus: existing.imageStatus && existing.imageStatus !== 'completed'
-                    ? existing.imageStatus
-                    : (hasImage ? 'completed' : 'pending')
-            };
+            const digestMatches = existing.digest === np.digest;
+            if (digestMatches) {
+                const imagesList = existing.images || (existing.image ? [existing.image] : []);
+                const hasImage = imagesList.length > 0 && Boolean(existing.image || imagesList[0]);
+                return {
+                    ...np,
+                    images: imagesList,
+                    image: existing.image || imagesList[0] || "",
+                    currentImageIndex: existing.currentImageIndex ?? 0,
+                    imageStatus: existing.imageStatus && existing.imageStatus !== 'completed'
+                        ? existing.imageStatus
+                        : (hasImage ? 'completed' : (existing.error ? 'failed' : 'pending')),
+                    error: existing.error
+                };
+            } else {
+                // Style or text changed (digest mismatch): mark panel to regenerate image under the new style
+                return {
+                    ...np,
+                    images: [],
+                    image: "",
+                    currentImageIndex: 0,
+                    imageStatus: "pending",
+                    needsRegenerate: true
+                };
+            }
         }
-        return np;
+        return {
+            ...np,
+            needsRegenerate: true
+        };
     });
 
     await savePublication(publication);
@@ -71,13 +91,21 @@ export default async function stepCoordinatePublication({ style, story }: { styl
         const digest = prompt.digest;
         if (!digest) continue;
 
+        const panelIndex = prompt.paragraphIndex ?? prompt.panelIndex;
+        const panel = panelIndex != null ? panels[panelIndex] : null;
+
         const matchingImages = Array.from(existingSet).filter(
             (filePath: string) => filePath.startsWith(`images/${digest}.png`) || filePath.startsWith(`images/${digest}_`)
         );
+        matchingImages.sort((a, b) => {
+            const tsA = parseInt(a.split('_').pop()?.replace(/\.\w+$/, '') || '0', 10);
+            const tsB = parseInt(b.split('_').pop()?.replace(/\.\w+$/, '') || '0', 10);
+            return (isNaN(tsA) ? 0 : tsA) - (isNaN(tsB) ? 0 : tsB);
+        });
         const exists = matchingImages.length > 0;
         const selectedImage = exists ? matchingImages[matchingImages.length - 1] : "";
 
-        const expectedStatus = exists ? 'completed' : (prompt.error ? 'failed' : 'pending');
+        const expectedStatus = exists ? 'completed' : (prompt.error || (panel && panel.error) ? 'failed' : 'pending');
         prompt.imageStatus = expectedStatus;
 
         if (exists) {
@@ -87,11 +115,12 @@ export default async function stepCoordinatePublication({ style, story }: { styl
         } else {
             delete prompt.image;
             delete prompt.imageUrl;
+            if (panel && panel.error) {
+                prompt.error = panel.error;
+            }
         }
 
-        const panelIndex = prompt.paragraphIndex ?? prompt.panelIndex;
-        if (panelIndex != null && panels[panelIndex]) {
-            const panel = panels[panelIndex];
+        if (panel) {
             panel.imageStatus = expectedStatus;
             if (exists) {
                 panel.image = selectedImage;
@@ -106,8 +135,6 @@ export default async function stepCoordinatePublication({ style, story }: { styl
                 delete panel.imageUrl;
                 if (prompt.error) {
                     panel.error = prompt.error;
-                } else {
-                    delete panel.error;
                 }
             }
         }

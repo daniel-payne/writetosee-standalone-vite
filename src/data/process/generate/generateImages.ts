@@ -39,6 +39,11 @@ export default async function generateImages(publication: any) {
         const matchingImages = Array.from(existingSet).filter(
             (filePath: string) => filePath.startsWith(`images/${digest}.png`) || filePath.startsWith(`images/${digest}_`)
         );
+        matchingImages.sort((a, b) => {
+            const tsA = parseInt(a.split('_').pop()?.replace(/\.\w+$/, '') || '0', 10);
+            const tsB = parseInt(b.split('_').pop()?.replace(/\.\w+$/, '') || '0', 10);
+            return (isNaN(tsA) ? 0 : tsA) - (isNaN(tsB) ? 0 : tsB);
+        });
         const exists = matchingImages.length > 0;
 
         const expectedStatus = isRegenerateRequested
@@ -49,7 +54,7 @@ export default async function generateImages(publication: any) {
 
         if (exists) {
             if (!isRegenerateRequested) {
-                const selectedImage = panel && panel.image && existingSet.has(panel.image)
+                const selectedImage = panel && panel.image && matchingImages.includes(panel.image)
                     ? panel.image
                     : matchingImages[matchingImages.length - 1];
 
@@ -168,6 +173,8 @@ export default async function generateImages(publication: any) {
 
                 if (!exists) {
                     try {
+                        await writeLog('info', 'generateImages', `Starting image generation for panel ${panelIndex ?? 0} (digest: ${digest})`);
+
                         // Update status to generating in memory and queue the disk save
                         prompt.imageStatus = 'generating';
                         delete prompt.error;
@@ -209,6 +216,7 @@ export default async function generateImages(publication: any) {
                                 }
                                 panel.currentImageIndex = panel.images.indexOf(newImagePath);
                             }
+                            await writeLog('info', 'generateImages', `Successfully generated image for panel ${panelIndex ?? 0} saved to ${newImagePath}`);
                             queueSave();
                         } else {
                             throw new Error("No image data returned from provider");
@@ -219,7 +227,7 @@ export default async function generateImages(publication: any) {
                         }
                     } catch (err: any) {
                         const errorMsg = err instanceof Error ? err.message : String(err);
-                        await writeLog('error', 'generateImages', `Failed to generate image for prompt ${digest}: ${errorMsg}`);
+                        await writeLog('error', 'generateImages', `Failed to generate image for panel ${panelIndex ?? 0} (digest: ${digest}): ${errorMsg}`);
 
                         // Mark as failed in memory and queue disk save
                         prompt.imageStatus = 'failed';
