@@ -75,7 +75,8 @@ function ImageHistoryCard({
         )}
 
         {isCurrent && (
-          <span className="absolute top-2 right-2 badge badge-primary font-bold text-[10px] shadow-sm">
+          <span className="absolute top-2 right-2 badge badge-sm bg-slate-900/80 text-emerald-400 border border-emerald-500/40 font-bold text-[10px] shadow-sm flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
             Active
           </span>
         )}
@@ -92,7 +93,7 @@ function ImageHistoryCard({
             onSelect();
           }}
           disabled={isCurrent}
-          className={`btn btn-xs ${isCurrent ? 'btn-success btn-disabled opacity-80' : 'btn-primary'}`}
+          className={`btn btn-xs ${isCurrent ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 btn-disabled opacity-90 font-bold' : 'btn-primary'}`}
         >
           {isCurrent ? 'Active' : 'Use This'}
         </button>

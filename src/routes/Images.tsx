@@ -43,7 +43,7 @@ export default function Images({
           <p className="text-slate-500 dark:text-slate-400">No images found in storage.</p>
         </div>
       ) : (
-        <div className={`w-full flex-1 min-h-0 ${expandedIdx !== null ? 'flex flex-col' : 'grid grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))] gap-3 content-start'}`}>
+        <div className={`w-full flex-1 min-h-0 ${expandedIdx !== null ? 'flex flex-col' : 'flex flex-row flex-wrap justify-start items-start gap-4 content-start'}`}>
           {images.map((image: any, idx: number) => {
             const isExpanded = expandedIdx === idx;
             if (expandedIdx !== null && !isExpanded) {
@@ -55,11 +55,11 @@ export default function Images({
                 key={image.name}
                 onDoubleClick={() => handleToggleExpand(idx)}
                 className={`bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col transition-all duration-300 ${
-                  isExpanded ? 'w-full h-full cursor-zoom-out' : 'w-full max-w-[500px] aspect-square mx-auto cursor-pointer hover:shadow-lg group'
+                  isExpanded ? 'w-full h-full cursor-zoom-out' : 'w-[calc(20%-0.8rem)] min-w-[300px] flex-none cursor-pointer hover:shadow-lg group'
                 }`}
                 title={isExpanded ? "Double click to make small" : "Double click to enlarge"}
               >
-                <div className={`w-full relative flex items-center justify-center ${isExpanded ? 'w-full h-full bg-slate-950/20' : 'flex-1 min-h-0 bg-slate-100 dark:bg-slate-900 overflow-hidden'}`}>
+                <div className={`w-full relative flex items-center justify-center ${isExpanded ? 'w-full h-full bg-slate-950/20' : 'aspect-square w-full bg-slate-100 dark:bg-slate-900 overflow-hidden'}`}>
                   <img
                     src={image.url}
                     alt={image.name}
@@ -67,10 +67,20 @@ export default function Images({
                       isExpanded ? 'object-contain' : 'object-cover group-hover:scale-105'
                     }`}
                   />
-                  {!isExpanded && image.paragraphNo && (
-                    <span className="absolute top-3 left-3 badge badge-sm bg-slate-900/70 text-white border-none backdrop-blur-md shadow-md">
-                      Picture {image.paragraphNo}
-                    </span>
+                  {!isExpanded && (
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+                      {image.panelNo != null && (
+                        <span className="badge badge-sm bg-slate-900/75 text-white border-none backdrop-blur-md shadow-md font-semibold">
+                          Panel {image.panelNo}
+                        </span>
+                      )}
+                      {image.isActive && (
+                        <span className="badge badge-sm bg-slate-900/80 text-emerald-400 border border-emerald-500/40 backdrop-blur-md shadow-md font-bold flex items-center gap-1 px-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                          Active
+                        </span>
+                      )}
+                    </div>
                   )}
                   {isDEBUG && (
                     <button
@@ -89,44 +99,6 @@ export default function Images({
                     </button>
                   )}
                 </div>
-
-                {!isExpanded && (
-                  <div className="p-3.5 h-28 shrink-0 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 flex flex-col justify-between text-left">
-                    {image.text ? (
-                      <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium line-clamp-2">
-                        {image.text}
-                      </p>
-                    ) : (
-                      <p className="text-xs italic text-slate-400 dark:text-slate-500">
-                        No text prompt associated
-                      </p>
-                    )}
-                    <div className="flex justify-between items-center text-[10px] text-slate-400 dark:text-slate-500 pt-1 border-t border-slate-100/50 dark:border-slate-700/50">
-                      <span className="truncate max-w-[160px]" title={image.name}>
-                        {image.name}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        {isDEBUG && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedPromptImage(image);
-                            }}
-                            className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 rounded border border-purple-500/20 transition-colors"
-                          >
-                            Prompt
-                          </button>
-                        )}
-                        {image.lastModified && (
-                          <span>
-                            {new Date(image.lastModified).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })}

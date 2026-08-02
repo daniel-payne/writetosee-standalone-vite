@@ -82,13 +82,18 @@ export async function clientLoader() {
         }
       }
 
+      const isActive = Boolean(
+        foundPanel && (foundPanel.image === name || foundPanel.imageUrl === name)
+      );
+
       return {
         name,
         url: URL.createObjectURL(file),
         lastModified: creationTime,
         text: text || undefined,
         promptText: promptText || undefined,
-        paragraphNo,
+        panelNo: paragraphNo,
+        isActive,
         digest,
       };
     }));
