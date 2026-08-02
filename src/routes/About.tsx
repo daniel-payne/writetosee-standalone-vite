@@ -78,7 +78,7 @@ export default function About({
             Debugging
           </h2>
           <p className="text-sm text-base-content/60">
-            Display additional menu options for Publication, Costs and Logs.
+            Display additional menu options for Images, Publication, Costs and Logs.
           </p>
 
           <div className="mt-4 flex flex-col gap-4">

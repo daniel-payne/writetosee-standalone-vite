@@ -19,6 +19,9 @@ const unselectedStyle = 'btn btn-sm btn-ghost rounded-xl';
 const selectedStyle = 'btn btn-sm btn-primary bg-button hover:bg-button/80 bg-primary text-primary-content shadow-md shadow-primary/20 rounded-xl';
 const disabledStyle = 'btn btn-sm btn-ghost btn-disabled pointer-events-none';
 
+const debugUnselectedStyle = 'btn btn-sm btn-ghost rounded-xl opacity-65 hover:opacity-100 transition-opacity';
+const debugSelectedStyle = 'btn btn-sm btn-primary bg-button hover:bg-button/80 bg-primary text-primary-content shadow-md shadow-primary/20 rounded-xl opacity-80 hover:opacity-100 transition-opacity';
+
 // NavKeyLink: navigates cleanly (no apiKey) on regular click,
 // but sets href with apiKey so right-click → "Open in new window/tab" passes the key.
 function NavKeyLink({
@@ -159,14 +162,14 @@ export default function MainLayout({
   };
 
 
-  let styleLinkStyle = unselectedStyle
+  let styleLinkStyle = unselectedStyle;
   let storyLinkStyle = unselectedStyle;
   let charactersLinkStyle = unselectedStyle;
   // let _panelsLinkStyle = unselectedStyle;
-  let imagesLinkStyle = unselectedStyle;
-  let publicationLinkStyle = unselectedStyle;
-  let costsLinkStyle = unselectedStyle;
-  let logsLinkStyle = unselectedStyle;
+  let imagesLinkStyle = debugUnselectedStyle;
+  let publicationLinkStyle = debugUnselectedStyle;
+  let costsLinkStyle = debugUnselectedStyle;
+  let logsLinkStyle = debugUnselectedStyle;
   let aboutLinkStyle = unselectedStyle;
 
   if (isActive('/style')) {
@@ -186,19 +189,19 @@ export default function MainLayout({
   }
 
   if (isActive('/images')) {
-    imagesLinkStyle = selectedStyle;
+    imagesLinkStyle = debugSelectedStyle;
   }
 
   if (isActive('/publication')) {
-    publicationLinkStyle = selectedStyle;
+    publicationLinkStyle = debugSelectedStyle;
   }
 
   if (isActive('/costs')) {
-    costsLinkStyle = selectedStyle;
+    costsLinkStyle = debugSelectedStyle;
   }
 
   if (isActive('/logs')) {
-    logsLinkStyle = selectedStyle;
+    logsLinkStyle = debugSelectedStyle;
   }
 
   if (isActive('/about')) {
@@ -267,10 +270,12 @@ export default function MainLayout({
 
           <nav className="flex items-center gap-2">
             {/* <NavKeyLink to="/" apiKey={currentApiKey} navigate={navigate} className={welcomeLinkStyle}>Welcome</NavKeyLink> */}
-            {!isSafeMode && <NavKeyLink to="/style" apiKey={currentApiKey} navigate={navigate} className={styleLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Style</NavKeyLink>}
             <NavKeyLink to="/story" apiKey={currentApiKey} navigate={navigate} className={storyLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Story</NavKeyLink>
+            {!isSafeMode && <NavKeyLink to="/style" apiKey={currentApiKey} navigate={navigate} className={styleLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Style</NavKeyLink>}
             {!isSafeMode && <NavKeyLink to="/characters" apiKey={currentApiKey} navigate={navigate} className={charactersLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Characters</NavKeyLink>}
-            {!isSafeMode && <NavKeyLink to="/images" apiKey={currentApiKey} navigate={navigate} className={imagesLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Images</NavKeyLink>}
+
+            {/* Debugging menu items: Images, Publication, Costs, Logs */}
+            {!isSafeMode && isDEBUG && <NavKeyLink to="/images" apiKey={currentApiKey} navigate={navigate} className={imagesLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Images</NavKeyLink>}
 
             {/* {!isSafeMode && <NavKeyLink to="/panels" apiKey={currentApiKey} navigate={navigate} className={panelsLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Comic</NavKeyLink>} */}
 
