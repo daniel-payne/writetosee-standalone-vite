@@ -20,6 +20,7 @@ export default function Story({
   const [isDragging, setIsDragging] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [mobileTab, setMobileTab] = useState<'text' | 'images'>('text');
+  const [columnsPerRow, setColumnsPerRow] = useState(2);
   const [isDesktop, setIsDesktop] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth >= 768);
 
   const containerRef = useRef<HTMLFormElement>(null);
@@ -140,7 +141,7 @@ export default function Story({
         {/* Image Cards Panel */}
         {(isDesktop || mobileTab === 'images') && (
           <div
-            className="flex-1 h-full overflow-hidden flex flex-col"
+            className="flex-1 h-full overflow-hidden flex flex-col relative"
             style={isDesktop ? { width: `${100 - leftWidth}%` } : undefined}
           >
             {expandedIdx !== null ? (
@@ -155,15 +156,36 @@ export default function Story({
                 )}
               </div>
             ) : (
-                <div className="h-full w-full p-4 overflow-auto grid grid-cols-1 gap-4 max-w-md mx-auto md:max-w-none md:grid-cols-2 md:landscape:flex md:landscape:flex-row md:landscape:flex-wrap md:landscape:justify-start md:landscape:content-start md:landscape:gap-3">
+              <div className="h-full w-full p-4 overflow-auto flex flex-wrap content-start gap-3">
                 {panels.map((paragraph: any, idx: number) => (
                   <PanelImageDisplay
                     key={idx}
                     paragraph={{ ...paragraph, panelNo: idx }}
                     isExpanded={false}
-                    className="w-full aspect-square md:landscape:h-[calc(50%-0.5rem)] md:landscape:min-h-[200px] md:landscape:max-h-[440px] md:landscape:w-auto md:landscape:aspect-square flex-none"
+                    className="flex-none aspect-square"
+                    style={{ width: `calc(${100 / columnsPerRow}% - ${((columnsPerRow - 1) * 12) / columnsPerRow}px)` }}
                     onDoubleClick={() => handleToggleExpand(idx)}
                   />
+                ))}
+              </div>
+            )}
+
+            {/* Column size selector — bottom right */}
+            {expandedIdx === null && (
+              <div className="absolute bottom-3 right-3 z-30 flex items-center gap-0.5 bg-slate-900/60 backdrop-blur-md rounded-lg px-1 py-0.5 shadow-lg">
+                {[1, 2, 3, 4, 5, 6, 10, 12].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setColumnsPerRow(n)}
+                    className={`w-6 h-6 text-[10px] font-bold rounded transition-all duration-150 ${
+                      columnsPerRow === n
+                        ? 'bg-white/20 text-white'
+                        : 'text-white/50 hover:text-white/80 hover:bg-white/10'
+                    }`}
+                  >
+                    {n}
+                  </button>
                 ))}
               </div>
             )}

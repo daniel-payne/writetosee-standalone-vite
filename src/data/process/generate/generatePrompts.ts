@@ -10,7 +10,7 @@ The narrative-text lays out the story before the current scene, and the scene-te
 
 
 ## Drawing Instructions
-Here are the drawing instructions, and any additional cinematographic instructions for setting the scene.
+Here are the drawing instructions, and any additional cinematographic directions for setting the scene.
 
 <style-text>
 {{STYLE-TEXT}}

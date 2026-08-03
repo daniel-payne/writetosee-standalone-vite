@@ -159,7 +159,7 @@ export default function PanelInstructionsModal({
           {/* Cinematographic Text */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block">
-              Cinematographic Instructions
+              Cinematographic Directions
             </label>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
               Add free-form instructions to guide drawing (e.g. lighting, camera position, &ldquo;remove figure&rdquo;, &ldquo;redraw window&rdquo;).
