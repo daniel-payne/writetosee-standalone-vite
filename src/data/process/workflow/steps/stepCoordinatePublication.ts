@@ -3,6 +3,7 @@ import generatePrompts from "../../generate/generatePrompts";
 import generateImages from "../../generate/generateImages";
 import { writeLog } from "../../../storage/logStorage";
 import { listFiles, readFile } from "../../../storage/fileStorage";
+import { parseInstructionsMarkdown } from "../../manageInstructions";
 
 import { loadStory } from "../../manageStory";
 import { loadStyle } from "../../manageStyle";
@@ -28,6 +29,7 @@ export default async function stepCoordinatePublication({ style, story }: { styl
 
     publication.characters = await readFile('characters.md').then(f => f.text()).catch(() => "");
     publication.instructionsText = await readFile('instructions.md').then(f => f.text()).catch(() => "");
+    const instructionsMap = parseInstructionsMarkdown(publication.instructionsText);
 
     await writeLog('info', 'processPublicationImpl', 'Started processing publication panels');
 
@@ -35,38 +37,37 @@ export default async function stepCoordinatePublication({ style, story }: { styl
     const existingPanelsMap = new Map((publication.panels || []).map((p: any) => [p.digest || p.text, p]));
     const newPanels = buildPanelsFromStory(story, style);
 
-    publication.panels = newPanels.map((np: any) => {
+    publication.panels = newPanels.map((np: any, idx: number) => {
         const existingByDigest: any = existingPanelsMap.get(np.digest);
         const existingByText: any = existingPanelsMap.get(np.text);
         const existing = existingByDigest || existingByText;
 
+        const panelInst = instructionsMap[idx] ?? instructionsMap[np.panelNo];
+        const characters = panelInst ? (panelInst.characters || []) : (existing?.characters || []);
+        const cinematographicText = panelInst ? (panelInst.cinematographicText || "") : (existing?.cinematographicText || "");
+        const isLocked = panelInst ? Boolean(panelInst.isLocked) : Boolean(existing?.isLocked);
+
+        np.characters = characters;
+        np.cinematographicText = cinematographicText;
+        np.isLocked = isLocked;
+
         if (existing) {
-            const digestMatches = existing.digest === np.digest;
-            if (digestMatches) {
-                const imagesList = existing.images || (existing.image ? [existing.image] : []);
-                const hasImage = imagesList.length > 0 && Boolean(existing.image || imagesList[0]);
-                return {
-                    ...np,
-                    images: imagesList,
-                    image: existing.image || imagesList[0] || "",
-                    currentImageIndex: existing.currentImageIndex ?? 0,
-                    imageStatus: existing.imageStatus && existing.imageStatus !== 'completed'
-                        ? existing.imageStatus
-                        : (hasImage ? 'completed' : (existing.error ? 'failed' : 'pending')),
-                    error: existing.error
-                };
-            } else {
-                // Style or text changed (digest mismatch): mark panel to regenerate image under the new style
-                return {
-                    ...np,
-                    images: [],
-                    image: "",
-                    currentImageIndex: 0,
-                    imageStatus: "pending",
-                    needsRegenerate: true
-                };
-            }
+            const imagesList = existing.images || (existing.image ? [existing.image] : []);
+            const hasImage = imagesList.length > 0 && Boolean(existing.image || imagesList[0]);
+
+            return {
+                ...np,
+                digest: existing.digest || np.digest,
+                images: imagesList,
+                image: existing.image || imagesList[0] || "",
+                currentImageIndex: existing.currentImageIndex ?? 0,
+                imageStatus: existing.imageStatus && existing.imageStatus !== 'completed'
+                    ? existing.imageStatus
+                    : (hasImage ? 'completed' : (existing.error ? 'failed' : 'pending')),
+                error: existing.error
+            };
         }
+
         return {
             ...np,
             needsRegenerate: true
@@ -104,27 +105,36 @@ export default async function stepCoordinatePublication({ style, story }: { styl
         });
         const exists = matchingImages.length > 0;
         const selectedImage = exists ? matchingImages[matchingImages.length - 1] : "";
+        const isManualRegenerate = Boolean(prompt.isManualRegenerate || (panel && panel.isManualRegenerate));
+        const expectedStatus = (exists && !isManualRegenerate)
+            ? 'completed'
+            : (prompt.error || (panel && panel.error) ? 'failed' : 'pending');
 
-        const expectedStatus = exists ? 'completed' : (prompt.error || (panel && panel.error) ? 'failed' : 'pending');
         prompt.imageStatus = expectedStatus;
 
-        if (exists) {
+        if (exists && !isManualRegenerate) {
             prompt.image = selectedImage;
             prompt.imageUrl = selectedImage;
             delete prompt.error;
+            delete prompt.needsRegenerate;
+            delete prompt.isManualRegenerate;
         } else {
             delete prompt.image;
             delete prompt.imageUrl;
             if (panel && panel.error) {
                 prompt.error = panel.error;
+            } else if (prompt.error && panel) {
+                panel.error = prompt.error;
             }
         }
 
         if (panel) {
             panel.imageStatus = expectedStatus;
-            if (exists) {
+            if (exists && !isManualRegenerate) {
                 panel.image = selectedImage;
                 panel.imageUrl = selectedImage;
+                delete panel.needsRegenerate;
+                delete panel.isManualRegenerate;
                 if (!panel.images) panel.images = [];
                 matchingImages.forEach(img => {
                     if (!panel.images.includes(img)) panel.images.push(img);
@@ -133,8 +143,12 @@ export default async function stepCoordinatePublication({ style, story }: { styl
             } else {
                 delete panel.image;
                 delete panel.imageUrl;
-                if (prompt.error) {
-                    panel.error = prompt.error;
+                if (prompt.error || panel.error) {
+                    const errVal = prompt.error || panel.error;
+                    panel.error = errVal;
+                    prompt.error = errVal;
+                    panel.imageStatus = 'failed';
+                    prompt.imageStatus = 'failed';
                 }
             }
         }

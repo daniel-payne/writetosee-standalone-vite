@@ -1,5 +1,6 @@
 import { writeFile } from "@/data/storage/fileStorage";
 import generateTextDigest from "@/data/process/generate/generateTextDigest";
+import { parseCharactersMarkdown } from "@/data/process/manageCharacters";
 
 const PROMPT = `
 # Role
@@ -9,10 +10,23 @@ The narrative-text lays out the story before the current scene, and the scene-te
 
 
 ## Drawing Instructions
+Here are the drawing instructions, and any additional cinematographic instructions for setting the scene.
 
 <style-text>
 {{STYLE-TEXT}}
 </style-text>
+
+<cinematographic-text>
+{{CINEMATOGRAPHIC-TEXT}}
+</cinematographic-text>
+
+## Character Instructions
+
+The scene contains the following characters, please use these instructions when drawing the scene:
+
+<character-text>
+{{CHARACTER-TEXT}}
+</character-text>
 
 ### Strict Rules
 1. A wide-angle, edge-to-edge scene that completely fills 100% of the image space from corner to corner.
@@ -46,6 +60,9 @@ The narrative-text lays out the story before the current scene, and the scene-te
 export default async function generatePrompts(publication: any) {
     const panels = publication.panels || publication.paragraphs || [];
     const result: any[] = [];
+
+    const rawCharacters = publication.characters || "";
+    const allCharacters = parseCharactersMarkdown(rawCharacters);
 
     for (let index = 0; index < panels.length; index++) {
         const item = panels[index];
@@ -111,13 +128,51 @@ export default async function generatePrompts(publication: any) {
             ? publication.style.drawingInstructions.join('\n')
             : (publication.style?.drawingInstructions ?? "");
 
+        const cinematographicText = item.cinematographicText || "";
+
+        // Build character text for selected characters in this panel
+        const assignedCharNames: string[] = item.characters || [];
+        const charTextParts: string[] = [];
+
+        for (const charName of assignedCharNames) {
+            const matchedChar = allCharacters.find(
+                c => c.name.trim().toLowerCase() === charName.trim().toLowerCase()
+            );
+            if (matchedChar) {
+                const details = matchedChar.instructions || matchedChar.description || "";
+                if (details) {
+                    charTextParts.push(`Character: ${matchedChar.name}\n${details}`);
+                } else {
+                    charTextParts.push(`Character: ${matchedChar.name}`);
+                }
+            } else {
+                charTextParts.push(`Character: ${charName}`);
+            }
+        }
+
+        const characterText = charTextParts.join("\n\n");
+
         const promptText = PROMPT
             .replace("{{STYLE-TEXT}}", styleText)
+            .replace("{{CINEMATOGRAPHIC-TEXT}}", cinematographicText)
+            .replace("{{CHARACTER-TEXT}}", characterText)
             .replace("{{SCENE-TEXT}}", sceneText)
             .replace("{{NARRATIVE-TEXT}}", narrativeText);
 
-        const digestSource = [sceneText, narrativeText, styleText].filter(Boolean).join("\n\n");
+        const digestSource = [sceneText, narrativeText, styleText, cinematographicText, characterText].filter(Boolean).join("\n\n");
         const digest = generateTextDigest(digestSource);
+
+        const previousDigest = item.digest;
+        const promptDigestChanged = previousDigest && previousDigest !== digest;
+
+        // If the prompt digest changed (due to instructions, scene text, or style changes) and panel is not locked, mark for image recreation
+        if (promptDigestChanged && !item.isLocked) {
+            item.needsRegenerate = true;
+            delete item.image;
+            delete item.imageUrl;
+            item.images = [];
+            item.imageStatus = 'pending';
+        }
 
         // Save prompt text to file
         const fileName = `prompts/${digest}.txt`;
@@ -126,6 +181,8 @@ export default async function generatePrompts(publication: any) {
         item.sceneText = sceneText;
         item.narrativeText = narrativeText;
         item.instructionsText = styleText;
+        item.cinematographicText = cinematographicText;
+        item.characterText = characterText;
         item.digest = digest;
 
         const promptObj: any = {
@@ -136,6 +193,8 @@ export default async function generatePrompts(publication: any) {
             sceneText,
             narrativeText,
             instructionsText: styleText,
+            cinematographicText,
+            characterText,
             text: promptText,
             digest: digest
         };

@@ -32,8 +32,16 @@ export async function loadPublication(): Promise<any> {
             let file: File;
             try {
                 file = await fileStorage.readFile('data/publication.json');
+                fileStorage.deleteFile('publication.json').catch(() => {});
             } catch (err) {
                 file = await fileStorage.readFile('publication.json');
+                try {
+                    const legacyText = await file.text();
+                    await fileStorage.writeFile('data/publication.json', legacyText);
+                    await fileStorage.deleteFile('publication.json').catch(() => {});
+                } catch (migrateErr) {
+                    console.warn("Could not migrate legacy publication.json to data/publication.json:", migrateErr);
+                }
             }
             const text = await file.text();
             const loadedPub = JSON.parse(text);
@@ -81,7 +89,7 @@ export async function loadPublication(): Promise<any> {
 
                 try {
                     await fileStorage.writeFile('data/publication.json', defaultText);
-                    await fileStorage.writeFile('publication.json', defaultText).catch(() => {});
+                    await fileStorage.deleteFile('publication.json').catch(() => {});
                 } catch (writeErr) {
                     console.warn("Could not write default publication.json:", writeErr);
                 }
@@ -197,6 +205,10 @@ export function buildPanelsFromPublication(pub: any) {
                 sceneText: combinedText,
                 narrativeText: firstItem.narrativeText || "",
                 instructionsText: firstItem.instructionsText || styleInstructions,
+                cinematographicText: firstItem.cinematographicText || "",
+                characterText: firstItem.characterText || "",
+                characters: firstItem.characters || [],
+                isLocked: firstItem.isLocked || false,
                 digest: firstItem.digest || "",
                 images: imagesList,
                 image: activeImage,
@@ -237,10 +249,17 @@ export function buildPanelsFromPublication(pub: any) {
         const currentImageIndex = rawIndex >= 0 ? rawIndex : (imagesList.length > 0 ? imagesList.length - 1 : 0);
         const hasImage = imagesList.length > 0 && Boolean(activeImage);
         const promptStatus = matchingPrompt?.imageStatus;
+        const needsRegenerate = Boolean(p.needsRegenerate || matchingPrompt?.needsRegenerate);
+        const errorMsg = p.error || matchingPrompt?.error || "";
+        const isFailed = p.imageStatus === 'failed' || promptStatus === 'failed' || Boolean(errorMsg);
 
-        const imageStatus = (p.imageStatus && p.imageStatus !== 'pending')
-            ? p.imageStatus
-            : (hasImage ? 'completed' : (promptStatus || (p.error ? 'failed' : 'pending')));
+        const isPendingOrGenerating = !isFailed && (needsRegenerate || p.imageStatus === 'pending' || p.imageStatus === 'generating' || promptStatus === 'pending' || promptStatus === 'generating');
+
+        const imageStatus = isFailed
+            ? 'failed'
+            : (isPendingOrGenerating
+                ? (p.imageStatus && p.imageStatus !== 'completed' ? p.imageStatus : (promptStatus || 'pending'))
+                : (p.imageStatus ? p.imageStatus : (hasImage ? 'completed' : (promptStatus || 'pending'))));
 
         return {
             panelNo: p.panelNo ?? p.paragraphNo ?? idx,
@@ -248,12 +267,17 @@ export function buildPanelsFromPublication(pub: any) {
             sceneText: p.sceneText || p.text || "",
             narrativeText: p.narrativeText || "",
             instructionsText: p.instructionsText || styleInstructions,
+            cinematographicText: p.cinematographicText || matchingPrompt?.cinematographicText || "",
+            characterText: p.characterText || matchingPrompt?.characterText || "",
+            characters: p.characters || matchingPrompt?.characters || [],
+            isLocked: Boolean(p.isLocked || matchingPrompt?.isLocked),
             digest: p.digest || "",
             images: imagesList,
-            image: activeImage,
+            image: needsRegenerate ? "" : activeImage,
             currentImageIndex,
             imageStatus,
-            ...(p.error ? { error: p.error } : {})
+            needsRegenerate,
+            ...(errorMsg ? { error: errorMsg } : {})
         };
     });
 }
@@ -291,13 +315,9 @@ export async function savePublication(
         const json = JSON.stringify(cleanPub, null, 2);
         const hash = generateTextDigest(json);
 
-        // Save to disk - write to both data/publication.json and publication.json to maintain consistency
+        // Save to disk - write to data/publication.json only and clean up top-level file
         await fileStorage.writeFile('data/publication.json', json);
-        try {
-            await fileStorage.writeFile('publication.json', json);
-        } catch (err) {
-            console.warn("Could not write root publication.json:", err);
-        }
+        await fileStorage.deleteFile('publication.json').catch(() => {});
 
         // Ensure in-memory object contains panels
         if (pub && typeof pub === 'object') {

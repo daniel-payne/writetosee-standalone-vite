@@ -180,7 +180,34 @@ TO BE DEFINED
 
 ## instructions.md
 
-TO BE DEFINED
+These are per panel instructions, they can do the following
+
+select which characters are in the picture. If a character is in the picture, include its character instructions.
+
+## Character Instructions
+
+The scene contains the following characters, please use these instructions when drawing the scene:
+
+They should be added to the prompt here.
+
+```text
+<character-text>
+{{CHARACTER-TEXT}}
+</character-text>
+```
+
+On save page the instructions.md should be written.
+
+The instructions also contains any free form cinotogramic text used to guide the drawing, such as remove this figure, redraw the window as it does not look right. Lighting or camera position instructions.
+
+It should be inserted in to the prompt after the drawing instructions.
+
+```text
+<cinematographic-text>
+{{CINEMATOGRAPHIC-TEXT}}
+</cinematographic-text>
+```
+
 
 
 ## publication.json

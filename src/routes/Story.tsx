@@ -24,6 +24,7 @@ export default function Story({
 
   const containerRef = useRef<HTMLFormElement>(null);
   const panels = publication?.panels || [];
+  const failedPanels = panels.filter((p: any) => p.error || p.imageStatus === 'failed');
 
   useEffect(() => {
     const handleResize = () => {
@@ -140,9 +141,22 @@ export default function Story({
         {/* Image Cards Panel */}
         {(isDesktop || mobileTab === 'images') && (
           <div
-            className="flex-1 h-full overflow-hidden"
+            className="flex-1 h-full overflow-hidden flex flex-col"
             style={isDesktop ? { width: `${100 - leftWidth}%` } : undefined}
           >
+            {failedPanels.length > 0 && (
+              <div className="mx-4 mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center justify-between gap-3 text-xs text-red-600 dark:text-red-400 font-semibold shadow-sm shrink-0">
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span className="truncate">
+                    <strong>Image Generation Error</strong> (Panel {(failedPanels[0].panelNo ?? failedPanels[0].paragraphNo ?? 0) + 1}): {failedPanels[0].error || "LLM image generation failed."}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {expandedIdx !== null ? (
               <div className="h-full w-full p-4 overflow-auto flex flex-col">
                 {panels[expandedIdx] && (

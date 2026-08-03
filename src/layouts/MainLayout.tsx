@@ -6,6 +6,7 @@ import type { MainLayoutLoaderData } from './MainLayout.loader';
 import { useLocalState, getState, setState, StoragePersistence } from '@keldan-systems/state-mutex';
 import { getDirectoryHandle, disconnectDirectory } from '@/data/storage/fileStorage';
 import processPublication from '@/data/process/workflow/workflowPublication';
+import manageStartup from '@/data/process/manageStartup';
 import { writeLog } from '@/data/storage/logStorage';
 import { clearAllCaches } from '@/data/clearCaches';
 
@@ -109,7 +110,7 @@ export default function MainLayout({
 
   useEffect(() => {
     if (loaderData?.hasDirectory && loaderData?.permissionGranted) {
-      processPublication().catch(async (err) => {
+      manageStartup().catch(async (err) => {
         await writeLog('error', 'MainLayout', `App startup publication build failed: ${err instanceof Error ? err.message : String(err)}`);
       });
     }

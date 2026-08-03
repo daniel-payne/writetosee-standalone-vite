@@ -32,9 +32,12 @@ export default async function generateImages(publication: any) {
         const digest = prompt.digest;
         if (!digest) continue;
 
-        const panelIndex = prompt.paragraphIndex ?? prompt.panelIndex;
-        const panel = panelIndex != null ? panels[panelIndex] : null;
-        const isRegenerateRequested = prompt.needsRegenerate || panel?.needsRegenerate;
+        const panelIndex = prompt.paragraphIndex ?? prompt.panelIndex ?? prompt.panelNo ?? prompt.paragraphNo;
+        let panel = panelIndex != null ? panels[panelIndex] : null;
+        if (!panel && digest) {
+            panel = panels.find((p: any) => p.digest === digest || p.text === prompt.sceneText || p.text === prompt.text);
+        }
+        const isManualRegenerate = Boolean(prompt.isManualRegenerate || panel?.isManualRegenerate);
 
         const matchingImages = Array.from(existingSet).filter(
             (filePath: string) => filePath.startsWith(`images/${digest}.png`) || filePath.startsWith(`images/${digest}_`)
@@ -46,14 +49,14 @@ export default async function generateImages(publication: any) {
         });
         const exists = matchingImages.length > 0;
 
-        const expectedStatus = isRegenerateRequested
-            ? 'pending'
-            : (exists ? 'completed' : (prompt.error ? 'failed' : 'pending'));
+        const expectedStatus = (exists && !isManualRegenerate)
+            ? 'completed'
+            : (prompt.error ? 'failed' : 'pending');
 
         prompt.imageStatus = expectedStatus;
 
         if (exists) {
-            if (!isRegenerateRequested) {
+            if (!isManualRegenerate) {
                 const selectedImage = panel && panel.image && matchingImages.includes(panel.image)
                     ? panel.image
                     : matchingImages[matchingImages.length - 1];
@@ -119,9 +122,19 @@ export default async function generateImages(publication: any) {
     // Check if any prompts actually require generation (i.e. prompt has no image set or regenerate is requested)
     const needsGenerationPrompts = prompts.filter((prompt: any) => {
         const digest = prompt.digest;
-        const panelIndex = prompt.paragraphIndex ?? prompt.panelIndex;
-        const panel = panelIndex != null ? panels[panelIndex] : null;
-        const isRegenerateRequested = prompt.needsRegenerate || panel?.needsRegenerate;
+        const panelIndex = prompt.paragraphIndex ?? prompt.panelIndex ?? prompt.panelNo ?? prompt.paragraphNo;
+        let panel = panelIndex != null ? panels[panelIndex] : null;
+        if (!panel && digest) {
+            panel = panels.find((p: any) => p.digest === digest || p.text === prompt.sceneText || p.text === prompt.text);
+        }
+
+        const isRegenerateRequested = Boolean(prompt.needsRegenerate || panel?.needsRegenerate || prompt.isManualRegenerate || panel?.isManualRegenerate);
+        const isAlreadyFailed = (prompt.imageStatus === 'failed' || panel?.imageStatus === 'failed') && Boolean(prompt.error || panel?.error);
+
+        if (isAlreadyFailed && !isRegenerateRequested) {
+            return false;
+        }
+
         return digest && (isRegenerateRequested || !prompt.image || !existingSet.has(prompt.image));
     });
 
@@ -165,8 +178,11 @@ export default async function generateImages(publication: any) {
             // Run batch in parallel
             await Promise.all(batch.map(async (prompt: any) => {
                 const digest = prompt.digest;
-                const panelIndex = prompt.paragraphIndex ?? prompt.panelIndex;
-                const panel = panelIndex != null ? panels[panelIndex] : null;
+                const panelIndex = prompt.paragraphIndex ?? prompt.panelIndex ?? prompt.panelNo ?? prompt.paragraphNo;
+                let panel = panelIndex != null ? panels[panelIndex] : null;
+                if (!panel && digest) {
+                    panel = panels.find((p: any) => p.digest === digest || p.text === prompt.sceneText || p.text === prompt.text);
+                }
                 const isRegenerateRequested = prompt.needsRegenerate || panel?.needsRegenerate;
                 let currentImage = isRegenerateRequested ? null : (prompt.image || panel?.image);
                 let exists = currentImage ? existingSet.has(currentImage) : false;
@@ -243,7 +259,10 @@ export default async function generateImages(publication: any) {
                             delete panel.imageUrl;
                             delete panel.needsRegenerate;
                         }
-                        queueSave();
+                        await savePublication(publication);
+                        if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
+                            self.postMessage({ type: 'PROGRESS' });
+                        }
                     }
                 }
             }));

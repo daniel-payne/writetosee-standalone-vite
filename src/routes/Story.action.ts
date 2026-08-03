@@ -2,6 +2,7 @@ import { type ActionFunctionArgs } from 'react-router-dom';
 import { saveStory, loadStory } from '@/data/process/manageStory';
 import processPublication, { workflowImageGeneration } from '@/data/process/workflow/workflowPublication';
 import { loadPublication, savePublication } from '@/data/process/managePublication';
+import { loadInstructions, saveInstructions } from '@/data/process/manageInstructions';
 
 export async function clientAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -12,18 +13,21 @@ export async function clientAction({ request }: ActionFunctionArgs) {
 
     try {
       if (story !== null) {
-        // Save Story and Process publication
         await saveStory(story);
-        await processPublication({ story });
       }
 
-      return { success: true, message: 'Story updated successfully' };
+      await processPublication({ story });
+      await workflowImageGeneration();
+
+      return { success: true, message: 'Changes saved successfully' };
     } catch (err: any) {
-      return { error: err.message || 'Failed to save story' };
+      return { error: err.message || 'Failed to save changes' };
     }
   } else if (intent === 'CANCEL-UPDATES') {
     try {
       const originalStory = await loadStory();
+      const originalInstructions = await loadInstructions();
+      await saveInstructions(originalInstructions);
       await processPublication({ story: originalStory });
       return { success: true, message: 'Changes cancelled', timestamp: Date.now() };
     } catch (err: unknown) {
@@ -42,6 +46,31 @@ export async function clientAction({ request }: ActionFunctionArgs) {
       return { success: true, message: 'Story updated successfully' };
     } catch (err: any) {
       return { error: err.message || 'Failed to save story' };
+    }
+  } else if (intent === 'SAVE-PANEL-INSTRUCTIONS') {
+    const panelNoStr = formData.get('panelNo') as string;
+    const charactersJson = formData.get('characters') as string;
+    const cinematographicText = (formData.get('cinematographicText') as string) || '';
+    const isLockedStr = formData.get('isLocked') as string;
+
+    const panelNo = parseInt(panelNoStr, 10);
+    const characters = charactersJson ? JSON.parse(charactersJson) : [];
+    const isLocked = isLockedStr === 'true';
+
+    try {
+      const instructions = await loadInstructions();
+      instructions[panelNo] = {
+        panelNo,
+        characters,
+        cinematographicText,
+        isLocked
+      };
+
+      await saveInstructions(instructions);
+      return { success: true, message: 'Panel instructions saved', timestamp: Date.now() };
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to save panel instructions';
+      return { error: errorMsg };
     }
   } else if (intent === 'REGENERATE-IMAGE') {
     const imagePath = formData.get('imagePath') as string;
@@ -66,6 +95,7 @@ export async function clientAction({ request }: ActionFunctionArgs) {
             delete p.imageUrl;
             delete p.error;
             p.needsRegenerate = true;
+            p.isManualRegenerate = true;
             p.imageStatus = 'pending';
             changed = true;
           }
@@ -83,6 +113,7 @@ export async function clientAction({ request }: ActionFunctionArgs) {
             delete prompt.imageUrl;
             delete prompt.error;
             prompt.needsRegenerate = true;
+            prompt.isManualRegenerate = true;
             prompt.imageStatus = 'pending';
             changed = true;
           }
@@ -146,3 +177,4 @@ export async function clientAction({ request }: ActionFunctionArgs) {
 
   return null;
 }
+
