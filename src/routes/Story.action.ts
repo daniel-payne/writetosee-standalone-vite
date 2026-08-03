@@ -154,6 +154,10 @@ export async function clientAction({ request }: ActionFunctionArgs) {
         const item = items[paragraphIndex];
         item.image = imagePath;
         item.imageUrl = imagePath;
+        item.imageStatus = 'completed';
+        delete item.error;
+        delete item.needsRegenerate;
+        delete item.isManualRegenerate;
         if (Array.isArray(item.images)) {
           const idx = item.images.indexOf(imagePath);
           if (idx >= 0) {
@@ -164,6 +168,10 @@ export async function clientAction({ request }: ActionFunctionArgs) {
         if (pub.prompts && pub.prompts[paragraphIndex]) {
           pub.prompts[paragraphIndex].image = imagePath;
           pub.prompts[paragraphIndex].imageUrl = imagePath;
+          pub.prompts[paragraphIndex].imageStatus = 'completed';
+          delete pub.prompts[paragraphIndex].error;
+          delete pub.prompts[paragraphIndex].needsRegenerate;
+          delete pub.prompts[paragraphIndex].isManualRegenerate;
         }
 
         await savePublication(pub);

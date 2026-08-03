@@ -301,7 +301,7 @@ export default function PanelImageDisplay({
     };
   }, []);
 
-  const hasMultipleImages = paragraph?.images && Array.isArray(paragraph.images) && paragraph.images.length > 1;
+  const hasPriorImages = paragraph?.images && Array.isArray(paragraph.images) && paragraph.images.length > 0;
 
   return (
     <div {...rest} data-name={name}>
@@ -380,7 +380,7 @@ export default function PanelImageDisplay({
 
             {!isExpanded && (
               <div className="absolute bottom-3 right-3 z-20 flex items-center gap-2">
-                {hasMultipleImages && (
+                {hasPriorImages && (
                   <button
                     type="button"
                     onClick={(e) => {
@@ -436,13 +436,84 @@ export default function PanelImageDisplay({
               </div>
             )}
           </div>
+        ) : (paragraph.error || paragraph.imageStatus === 'failed') ? (
+          /* Error state: full-bleed panel with centered error message + same hover buttons as image panel */
+          <div className="w-full h-full relative overflow-hidden bg-slate-50 dark:bg-slate-900 flex flex-col justify-center items-center p-6">
+            {/* Centered error message */}
+            <div className="bg-error/10 dark:bg-error/20 p-3 rounded-xl max-h-[140px] overflow-y-auto border border-error/20 max-w-[280px] w-full">
+              <div className="text-[11px] text-error font-bold flex items-center gap-1.5 mb-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-error shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Generation Error
+              </div>
+              <div className="text-[10px] text-error/90 leading-relaxed break-words font-medium select-text">
+                {paragraph.error || "Image generation failed."}
+              </div>
+            </div>
+
+            {/* Hover buttons — same as image panel: bottom-right */}
+            {!isExpanded && (
+              <div className="absolute bottom-3 right-3 z-20 flex items-center gap-2">
+                {hasPriorImages && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowModal(true);
+                    }}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    className="btn btn-circle btn-sm bg-slate-900/60 hover:bg-slate-900/80 border-none text-white backdrop-blur-md shadow-lg transition-all duration-200 opacity-0 group-hover:opacity-100 relative"
+                    title={`Choose from ${paragraph.images.length} generated images`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                    </svg>
+                    <span className="absolute -top-1 -right-1 badge badge-xs badge-primary font-bold text-[9px] px-1">
+                      {paragraph.images.length}
+                    </span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleRegenerate}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  disabled={isRegenerating}
+                  className={`btn btn-circle btn-sm bg-slate-900/60 hover:bg-slate-900/80 border-none text-white backdrop-blur-md shadow-lg transition-all duration-200 ${isRegenerating ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                  title="Regenerate Image"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Debug Mode: View Generated Prompt Button (Bottom Left, Revealed on hover) */}
+            {isDEBUG && !isExpanded && (
+              <div className="absolute bottom-3 left-3 z-20">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenPromptModal();
+                  }}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  className="btn btn-circle btn-sm bg-slate-900/70 hover:bg-slate-900/90 border-none text-emerald-400 backdrop-blur-md shadow-lg transition-all duration-200 opacity-0 group-hover:opacity-100"
+                  title="View Generated Prompt (Debug Mode)"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="flex-1 w-full p-4 flex flex-col justify-between items-stretch min-h-0 pt-7">
             <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-700">
               <span className="text-[10px] font-bold text-base-content/40">Status</span>
-              {paragraph.error || paragraph.imageStatus === 'failed' ? (
-                <span className="badge badge-xs badge-error font-bold px-2 py-1">Failed</span>
-              ) : loading || isThisPanelGenerating || isRegenerating ? (
+              {loading || isThisPanelGenerating || isRegenerating ? (
                 <div className="flex items-center gap-1.5">
                   <span className="text-[9px] text-primary/70 animate-pulse font-medium">
                     {isRegenerating ? "Regenerating..." : "Generating..."}
@@ -456,47 +527,7 @@ export default function PanelImageDisplay({
               )}
             </div>
 
-            {paragraph.error || paragraph.imageStatus === 'failed' ? (
-              <div className="flex flex-col gap-2.5 border-t border-error/10 pt-2 text-left mt-2 flex-1 justify-center">
-                <div className="bg-error/10 dark:bg-error/20 p-3 rounded-xl max-h-[120px] overflow-y-auto border border-error/20">
-                  <div className="text-[11px] text-error font-bold flex items-center gap-1.5 mb-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-error shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    Generation Error
-                  </div>
-                  <div className="text-[10px] text-error/90 leading-relaxed break-words font-medium select-text">
-                    {paragraph.error || "Image generation failed. Please click Regenerate Image to try again."}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {hasMultipleImages && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowModal(true);
-                      }}
-                      onDoubleClick={(e) => e.stopPropagation()}
-                      className="btn btn-xs btn-outline rounded-lg text-[10px] h-auto min-h-0 py-1.5 font-bold normal-case flex items-center justify-center gap-1"
-                      title="Choose from prior images"
-                    >
-                      Prior Images ({paragraph.images.length})
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleRegenerate}
-                    onDoubleClick={(e) => e.stopPropagation()}
-                    disabled={isRegenerating}
-                    className="btn btn-sm btn-error text-white rounded-xl text-xs font-bold flex-1 normal-case flex items-center justify-center gap-1.5 shadow-sm"
-                  >
-                    {isRegenerating && <span className="loading loading-spinner loading-xs"></span>}
-                    {isRegenerating ? "Regenerating..." : "Regenerate Image"}
-                  </button>
-                </div>
-              </div>
-            ) : isCurrentlyGenerating || isRegenerating ? (
+            {isCurrentlyGenerating || isRegenerating ? (
               <div className="flex-1 flex flex-col justify-center items-center gap-2.5 p-4 text-center">
                 <span className="loading loading-spinner loading-md text-primary"></span>
                 <span className="text-xs text-primary/90 font-semibold animate-pulse">
@@ -514,7 +545,7 @@ export default function PanelImageDisplay({
                     onClick={handleRegenerate}
                     onDoubleClick={(e) => e.stopPropagation()}
                     disabled={isRegenerating}
-                    className="btn btn-sm btn-primary text-white rounded-xl text-xs font-bold px-4 py-2 normal-case flex items-center justify-center gap-1.5 shadow-sm hover:shadow"
+                    className="btn btn-sm btn-outline rounded-xl text-xs font-bold px-4 py-2 normal-case flex items-center justify-center gap-1.5 shadow-sm hover:shadow"
                   >
                     {isRegenerating && <span className="loading loading-spinner loading-xs"></span>}
                     {isRegenerating ? "Regenerating..." : "Regenerate Image"}
