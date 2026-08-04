@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLocalState, useSharedState, setState, StoragePersistence } from '@keldan-systems/state-mutex';
 import * as fileStorage from '@/data/storage/fileStorage';
-import generateTextDigest from '@/data/process/generate/generateTextDigest';
+import generateTextDigest from '@/data/processOLD/generate/generateTextDigest';
 import processPublication from './workflow/workflowPublication';
 import { writeLog } from '../storage/logStorage';
 import markdownToJSON from '../utilities/markdownToJSON';

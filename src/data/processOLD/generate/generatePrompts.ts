@@ -1,6 +1,6 @@
 import { writeFile } from "@/data/storage/fileStorage";
-import generateTextDigest from "@/data/process/generate/generateTextDigest";
-import { parseCharactersMarkdown } from "@/data/process/manageCharacters";
+import generateTextDigest from "@/data/processOLD/generate/generateTextDigest";
+import { parseCharactersMarkdown } from "@/data/processOLD/manageCharacters";
 
 const PROMPT = `
 # Role

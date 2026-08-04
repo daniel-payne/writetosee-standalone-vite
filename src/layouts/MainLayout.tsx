@@ -5,8 +5,9 @@ import { useLocation, useLoaderData, useNavigation, useRevalidator, useNavigate 
 import type { MainLayoutLoaderData } from './MainLayout.loader';
 import { useLocalState, getState, setState, StoragePersistence } from '@keldan-systems/state-mutex';
 import { getDirectoryHandle, disconnectDirectory } from '@/data/storage/fileStorage';
-import processPublication from '@/data/process/workflow/workflowPublication';
-import manageStartup from '@/data/process/manageStartup';
+import { wipeDatabase } from '@/data/storage/db';
+import processPublication from '@/data/processOLD/workflow/workflowPublication';
+import manageStartup from '@/data/processOLD/manageStartup';
 import { writeLog } from '@/data/storage/logStorage';
 import { clearAllCaches } from '@/data/clearCaches';
 
@@ -73,6 +74,7 @@ export default function MainLayout({
   const revalidator = useRevalidator();
   const navigate = useNavigate();
   const [theme, setTheme] = useLocalState<string>('writetosee-theme', DEFAULT_THEME);
+  const [columnsPerRow, setColumnsPerRow] = useLocalState<number>('writetosee-columns-per-row', 2);
   const [processingStatus] = useLocalState<'idle' | 'processing'>('publication-processing-status', 'idle');
   const [imageProcessingStatus] = useLocalState<'idle' | 'processing'>('publication-image-processing-status', 'idle');
   const [isDEBUG] = useLocalState<boolean>('isDEBUG', false);
@@ -155,6 +157,7 @@ export default function MainLayout({
   const handleDisconnect = async () => {
     try {
       await disconnectDirectory();
+      await wipeDatabase();
       clearAllCaches();
       navigate('/');
     } catch (err) {
@@ -372,7 +375,25 @@ export default function MainLayout({
 
         </div>
 
-        <div className="flex-1 flex justify-end items-center">
+        <div className="flex-1 flex justify-end items-center gap-2">
+          {/* Card Width Selector Pill */}
+          <div className="flex items-center gap-0.5 bg-base-content/10 backdrop-blur-md rounded-xl p-1 border border-base-content/10">
+            {[1, 2, 3, 4, 5, 6, 10, 12].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setColumnsPerRow(n)}
+                className={`px-2 py-0.5 text-xs font-bold rounded-lg transition-all duration-150 ${
+                  columnsPerRow === n
+                    ? 'bg-base-content/25 text-base-content shadow-sm font-extrabold'
+                    : 'text-base-content/50 hover:text-base-content hover:bg-base-content/10'
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+
           <button
             onClick={toggleTheme}
             className="btn btn-sm btn-ghost gap-2 rounded-xl text-xs font-bold transition-all duration-300 hover:bg-base-content/10"

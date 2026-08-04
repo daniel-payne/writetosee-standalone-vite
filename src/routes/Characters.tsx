@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, type HTMLAttributes, type PropsWithChildren } from "react";
 import { Form, useLoaderData, useActionData, useNavigation, useBlocker, useFetcher } from "react-router-dom";
-import { useCharacters, useCharactersHash, analyzeCharacterStory, analyzeCharacterImage, type Character } from "@/data/process/manageCharacters";
+import { useCharacters, useCharactersHash, analyzeCharacterStory, analyzeCharacterImage, type Character } from "@/data/processOLD/manageCharacters";
 import { writeFile } from "@/data/storage/fileStorage";
 import ImageCropModal from "@/components/ImageCropModal";
 
@@ -695,11 +695,10 @@ export default function Characters({
                           setSelectingImageIdx(null);
                           setImageSearchQuery('');
                         }}
-                        className={`group relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 transition-all duration-150 ${
-                          isSelected
+                        className={`group relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 transition-all duration-150 ${isSelected
                             ? 'border-primary ring-2 ring-primary/40 shadow-lg scale-[1.02]'
                             : 'border-base-content/10 hover:border-primary/50 hover:shadow-md'
-                        }`}
+                          }`}
                       >
                         <img
                           src={img.url}

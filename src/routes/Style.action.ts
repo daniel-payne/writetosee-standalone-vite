@@ -1,7 +1,7 @@
-import { saveStyle, loadStyle } from "@/data/process/manageStyle";
+import { saveStyle, loadStyle } from "@/data/processOLD/manageStyle";
 import { writeLog } from "@/data/storage/logStorage";
 import { STYLE_PRESETS } from "@/data/stylePresets";
-import generateStyleReference from "@/data/process/generate/generateStyleReference";
+import generateStyleReference from "@/data/processOLD/generate/generateStyleReference";
 
 export async function clientAction({ request }: any) {
   const formData = await request.formData();

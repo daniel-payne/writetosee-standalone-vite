@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, type HTMLAttributes, type PropsWithChildren } from "react";
 import StoryEditor from "@/components/StoryEditor";
 import { useLoaderData, useActionData, Form } from "react-router-dom";
-import { usePublication } from "@/data/process/managePublication";
-import { useStory } from "@/data/process/manageStory";
+import { useLocalState } from '@keldan-systems/state-mutex';
+import { usePublication } from "@/data/processOLD/managePublication";
+import { useStory } from "@/data/processOLD/manageStory";
+import { useAppStartupLoading } from "@/data/processOLD/manageStartup";
 import PanelImageDisplay from "@/components/PanelImageDisplay";
 
 type StoryProps = {} & HTMLAttributes<HTMLDivElement>;
@@ -15,16 +17,18 @@ export default function Story({
 
   const [publication] = usePublication();
   const [story] = useStory();
+  const [isAppStartingUp] = useAppStartupLoading();
 
   const [leftWidth, setLeftWidth] = useState(25);
   const [isDragging, setIsDragging] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [mobileTab, setMobileTab] = useState<'text' | 'images'>('text');
-  const [columnsPerRow, setColumnsPerRow] = useState(2);
+  const [columnsPerRow] = useLocalState<number>('writetosee-columns-per-row', 2);
   const [isDesktop, setIsDesktop] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth >= 768);
 
   const containerRef = useRef<HTMLFormElement>(null);
   const panels = publication?.panels || [];
+  const isStartingUp = isAppStartingUp && panels.length === 0;
 
   console.log('[STORY-DEBUG] Story component render. Panels count:', panels.length, 'Panels summary:', panels.map((p: any) => ({ panelNo: p.panelNo, image: p.image, imageStatus: p.imageStatus })));
 
@@ -81,6 +85,20 @@ export default function Story({
     };
   }, [isDragging]);
 
+  if (isStartingUp) {
+    return (
+      <div {...rest} className={`h-full w-full min-h-0 flex flex-col items-center justify-center space-y-4 ${rest.className || ''}`}>
+        <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20 animate-pulse flex flex-col items-center space-y-3">
+          <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span className="text-sm font-extrabold text-primary tracking-wide">Loading story & illustrations...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div {...rest} className={`h-full w-full min-h-0 flex flex-col ${rest.className || ''}`}>
       {/* Mobile Tab Navigation (< 768px) */}
@@ -89,11 +107,10 @@ export default function Story({
           <button
             type="button"
             onClick={() => setMobileTab('text')}
-            className={`flex-1 py-2.5 px-4 text-xs font-bold text-center border-b-2 transition-colors flex items-center justify-center gap-2 ${
-              mobileTab === 'text'
+            className={`flex-1 py-2.5 px-4 text-xs font-bold text-center border-b-2 transition-colors flex items-center justify-center gap-2 ${mobileTab === 'text'
                 ? 'border-primary text-primary bg-primary/5'
                 : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-            }`}
+              }`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -103,11 +120,10 @@ export default function Story({
           <button
             type="button"
             onClick={() => setMobileTab('images')}
-            className={`flex-1 py-2.5 px-4 text-xs font-bold text-center border-b-2 transition-colors flex items-center justify-center gap-2 ${
-              mobileTab === 'images'
+            className={`flex-1 py-2.5 px-4 text-xs font-bold text-center border-b-2 transition-colors flex items-center justify-center gap-2 ${mobileTab === 'images'
                 ? 'border-primary text-primary bg-primary/5'
                 : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-            }`}
+              }`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -131,67 +147,36 @@ export default function Story({
           </div>
         )}
 
-        {/* Draggable Divider (Desktop only) */}
+        {/* Resizer Divider */}
         {isDesktop && (
           <div
-            className={`divider divider-horizontal m-0 p-1 cursor-col-resize hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors relative z-10 hidden md:flex ${
-              isDragging ? 'bg-slate-200/50 dark:bg-slate-700/50' : ''
-            }`}
             onMouseDown={() => setIsDragging(true)}
-          />
+            className={`w-1.5 hover:w-2 bg-slate-200 dark:bg-slate-700 hover:bg-primary transition-all cursor-col-resize z-20 flex items-center justify-center shrink-0 ${isDragging ? 'bg-primary w-2' : ''
+              }`}
+          >
+            <div className="w-0.5 h-8 bg-slate-400 dark:bg-slate-500 rounded-full" />
+          </div>
         )}
 
-        {/* Image Cards Panel */}
+        {/* Image Grid Display Panel */}
         {(isDesktop || mobileTab === 'images') && (
-          <div
-            className="flex-1 h-full overflow-hidden flex flex-col relative"
-            style={isDesktop ? { width: `${100 - leftWidth}%` } : undefined}
-          >
-            {expandedIdx !== null ? (
-              <div className="h-full w-full p-4 overflow-auto flex flex-col">
-                {panels[expandedIdx] && (
-                  <PanelImageDisplay
-                    paragraph={{ ...panels[expandedIdx], panelNo: expandedIdx }}
-                    isExpanded={true}
-                    className="w-full h-full"
-                    onDoubleClick={() => handleToggleExpand(expandedIdx)}
-                  />
-                )}
-              </div>
-            ) : (
-              <div className="h-full w-full p-4 overflow-auto flex flex-wrap content-start gap-3">
-                {panels.map((paragraph: any, idx: number) => (
-                  <PanelImageDisplay
-                    key={idx}
-                    paragraph={{ ...paragraph, panelNo: idx }}
-                    isExpanded={false}
-                    className="flex-none aspect-square"
-                    style={{ width: `calc(${100 / columnsPerRow}% - ${((columnsPerRow - 1) * 12) / columnsPerRow}px)` }}
-                    onDoubleClick={() => handleToggleExpand(idx)}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Column size selector — bottom right */}
-            {expandedIdx === null && (
-              <div className="absolute bottom-3 right-3 z-30 flex items-center gap-0.5 bg-slate-900/60 backdrop-blur-md rounded-lg px-1 py-0.5 shadow-lg">
-                {[1, 2, 3, 4, 5, 6, 10, 12].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => setColumnsPerRow(n)}
-                    className={`w-6 h-6 text-[10px] font-bold rounded transition-all duration-150 ${
-                      columnsPerRow === n
-                        ? 'bg-white/20 text-white'
-                        : 'text-white/50 hover:text-white/80 hover:bg-white/10'
-                    }`}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="h-full overflow-y-auto flex-1 p-4 bg-slate-50 dark:bg-slate-900/50 min-h-0 relative">
+            <div
+              className="grid gap-6 auto-rows-max"
+              style={{
+                gridTemplateColumns: `repeat(${columnsPerRow}, minmax(0, 1fr))`
+              }}
+            >
+              {panels.map((paragraph: any, idx: number) => (
+                <PanelImageDisplay
+                  key={paragraph?.digest ? `panel-${paragraph.digest}-${idx}` : `panel-idx-${idx}`}
+                  paragraph={paragraph}
+                  name={paragraph?.sceneText || paragraph?.text}
+                  isExpanded={expandedIdx === idx}
+                  onClick={() => handleToggleExpand(idx)}
+                />
+              ))}
+            </div>
           </div>
         )}
       </Form>

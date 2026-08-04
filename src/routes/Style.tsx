@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback, type HTMLAttributes, type Pro
 import FormDrawingInstructions from "@/components/FormDrawingInstructions";
 import FormReferenceLink from "@/components/FormReferenceLink";
 import FormStoryTitle from "@/components/FormStoryTitle";
-import { useStyle, useStyleHash } from "@/data/process/manageStyle";
+import { useStyle, useStyleHash } from "@/data/processOLD/manageStyle";
 import { STYLE_PRESETS } from "@/data/stylePresets";
 
 type StyleProps = {} & HTMLAttributes<HTMLDivElement>;

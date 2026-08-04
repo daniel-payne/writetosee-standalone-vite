@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useCharacters } from '@/data/process/manageCharacters';
+import { useCharacters } from '@/data/processOLD/manageCharacters';
 
 interface PanelInstructionsModalProps {
   isOpen: boolean;
@@ -136,16 +136,15 @@ export default function PanelInstructionsModal({
                       key={char.name}
                       type="button"
                       onClick={() => toggleCharacter(char.name)}
-                      className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all text-xs font-semibold ${
-                        isSelected
+                      className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all text-xs font-semibold ${isSelected
                           ? 'border-primary bg-primary/10 text-primary shadow-sm'
                           : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-primary/50'
-                      }`}
+                        }`}
                     >
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        onChange={() => {}}
+                        onChange={() => { }}
                         className="checkbox checkbox-primary checkbox-xs pointer-events-none"
                       />
                       <span className="truncate">{char.name}</span>

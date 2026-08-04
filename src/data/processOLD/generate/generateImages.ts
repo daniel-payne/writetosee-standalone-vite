@@ -1,7 +1,7 @@
 import { listFiles, writeFile } from "@/data/storage/fileStorage";
 import { storeCost } from "@/data/storage/costStorage";
 import llmGenerateImage from "@/data/llm/llmGenerateImage";
-import { savePublication } from "@/data/process/managePublication";
+import { savePublication } from "@/data/processOLD/managePublication";
 import { writeLog } from "@/data/storage/logStorage";
 
 // Helper to convert base64 Data URL to Blob
@@ -179,8 +179,8 @@ export default async function generateImages(publication: any) {
             await Promise.all(batch.map(async (prompt: any) => {
                 const digest = prompt.digest;
                 const panelIndex = prompt.paragraphIndex ?? prompt.panelIndex ?? prompt.panelNo ?? prompt.paragraphNo;
-                let panel = panelIndex != null ? panels[panelIndex] : null;
-                if (!panel && digest) {
+                let panel = panelIndex != null ? (panels[panelIndex] || panels.find((p: any) => p.panelNo === panelIndex)) : null;
+                if (!panel) {
                     panel = panels.find((p: any) => p.digest === digest || p.text === prompt.sceneText || p.text === prompt.text);
                 }
                 const isRegenerateRequested = prompt.needsRegenerate || panel?.needsRegenerate;
@@ -196,11 +196,13 @@ export default async function generateImages(publication: any) {
                         delete prompt.error;
                         delete prompt.needsRegenerate;
                         delete prompt.isManualRegenerate;
-                        if (panel) {
-                            panel.imageStatus = 'generating';
-                            delete panel.error;
-                            delete panel.needsRegenerate;
-                            delete panel.isManualRegenerate;
+
+                        const targetPanel = panel || (panelIndex != null ? (panels[panelIndex] || panels.find((p: any) => p.panelNo === panelIndex)) : null);
+                        if (targetPanel) {
+                            targetPanel.imageStatus = 'generating';
+                            delete targetPanel.error;
+                            delete targetPanel.needsRegenerate;
+                            delete targetPanel.isManualRegenerate;
                         }
                         await queueSave();
 
@@ -228,21 +230,22 @@ export default async function generateImages(publication: any) {
                             delete prompt.isManualRegenerate;
                             delete prompt.error;
 
-                            if (panel) {
-                                panel.imageStatus = 'completed';
-                                panel.image = newImagePath;
-                                panel.imageUrl = newImagePath;
-                                delete panel.needsRegenerate;
-                                delete panel.isManualRegenerate;
-                                delete panel.error;
+                            const finalPanel = targetPanel || (panelIndex != null ? (panels[panelIndex] || panels.find((p: any) => p.panelNo === panelIndex)) : null);
+                            if (finalPanel) {
+                                finalPanel.imageStatus = 'completed';
+                                finalPanel.image = newImagePath;
+                                finalPanel.imageUrl = newImagePath;
+                                delete finalPanel.needsRegenerate;
+                                delete finalPanel.isManualRegenerate;
+                                delete finalPanel.error;
 
-                                if (!panel.images) {
-                                    panel.images = [];
+                                if (!finalPanel.images) {
+                                    finalPanel.images = [];
                                 }
-                                if (!panel.images.includes(newImagePath)) {
-                                    panel.images.push(newImagePath);
+                                if (!finalPanel.images.includes(newImagePath)) {
+                                    finalPanel.images.push(newImagePath);
                                 }
-                                panel.currentImageIndex = panel.images.indexOf(newImagePath);
+                                finalPanel.currentImageIndex = finalPanel.images.indexOf(newImagePath);
                             }
                             console.log('[STORY-DEBUG] generateImages: Image generated & saved to', newImagePath, 'for panel', panelIndex, 'Queueing save...');
                             await writeLog('info', 'generateImages', `Successfully generated image for panel ${panelIndex ?? 0} saved to ${newImagePath}`);

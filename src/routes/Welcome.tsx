@@ -1,13 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SimpleConnector from '@/components/SimpleConnector';
 import DisclaimerModal from '@/components/DisclaimerModal';
 import NotificationDisplay from '@/components/NotificationDisplay';
 import type { HTMLAttributes, PropsWithChildren } from "react";
 import { useLoaderData, useActionData, Link, useNavigate } from 'react-router-dom';
 import { identifyApiKeyProvider } from '@/data/utilities/identifyApiKeyProvider';
-
-
-
+import { wipeDatabase } from '@/data/storage/db';
+import { clearProcessDb } from '@/data/process/db';
 
 type WelcomeProps = {
 } & HTMLAttributes<HTMLDivElement>;
@@ -19,6 +18,16 @@ export default function Welcome({
   const loaderData = useLoaderData() as any;
   const actionData = useActionData() as any;
   const navigate = useNavigate();
+
+  useEffect(() => {
+    Promise.all([
+      wipeDatabase(),
+      clearProcessDb()
+    ]).catch(err => {
+      console.warn('Error clearing IndexedDB on Welcome mount:', err);
+    });
+  }, []);
+
 
 
 

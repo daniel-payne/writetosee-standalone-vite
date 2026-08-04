@@ -1,4 +1,4 @@
-import { loadCharacters } from '@/data/process/manageCharacters';
+import { loadCharacters } from '@/data/processOLD/manageCharacters';
 import { listFiles, readFile } from '@/data/storage/fileStorage';
 
 export async function clientLoader() {

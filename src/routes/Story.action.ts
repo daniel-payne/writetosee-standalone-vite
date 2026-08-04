@@ -1,8 +1,9 @@
 import { type ActionFunctionArgs } from 'react-router-dom';
-import { saveStory, loadStory } from '@/data/process/manageStory';
-import processPublication, { workflowImageGeneration } from '@/data/process/workflow/workflowPublication';
-import { loadPublication, savePublication } from '@/data/process/managePublication';
-import { loadInstructions, saveInstructions } from '@/data/process/manageInstructions';
+import { saveStory, loadStory } from '@/data/processOLD/manageStory';
+import processPublication, { workflowImageGeneration } from '@/data/processOLD/workflow/workflowPublication';
+import { loadPublication, savePublication } from '@/data/processOLD/managePublication';
+import { loadInstructions, saveInstructions } from '@/data/processOLD/manageInstructions';
+import { exportToFiles } from '@/data/storage/db';
 
 export async function clientAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -25,6 +26,9 @@ export async function clientAction({ request }: ActionFunctionArgs) {
       console.log('[STORY-DEBUG] Starting workflowImageGeneration...');
       await workflowImageGeneration();
       console.log('[STORY-DEBUG] Finished workflowImageGeneration');
+
+      // Export state from Dexie IndexedDB back to local directory files
+      await exportToFiles();
 
       return { success: true, message: 'Changes saved successfully' };
     } catch (err: any) {

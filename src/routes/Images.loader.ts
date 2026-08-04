@@ -1,5 +1,5 @@
 import { listFiles, readFile } from "@/data/storage/fileStorage";
-import { loadPublication } from "@/data/process/managePublication";
+import { loadPublication } from "@/data/processOLD/managePublication";
 import { writeLog } from "@/data/storage/logStorage";
 
 function extractSceneText(text?: string): string {

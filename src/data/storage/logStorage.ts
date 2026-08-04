@@ -14,6 +14,7 @@ export async function writeLog(
     source: string,
     message: string
 ): Promise<void> {
+    console.log(`[APP-LOG] [${type}] [${source}]: ${message}`);
     if (isWritingLog) {
         console.warn(`[Recursive Log Fallback] [${type}] [${source}]: ${message}`);
         return;

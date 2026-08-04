@@ -1,6 +1,6 @@
 
 
-import generateTextDigest from "@/data/process/generate/generateTextDigest";
+import generateTextDigest from "@/data/processOLD/generate/generateTextDigest";
 
 export default function generateParagraphs(publication: Record<string, any>, characterThreshold = 20, paragraphSeparator = '\n\n') {
     const text = publication.story as string;

@@ -1,6 +1,6 @@
-import { isStoryLoaded, loadStory } from '@/data/process/manageStory';
-import { isStyleLoaded, loadStyle } from "@/data/process/manageStyle";
-import processPublication from '@/data/process/workflow/workflowPublication';
+import { isStoryLoaded, loadStory } from '@/data/processOLD/manageStory';
+import { isStyleLoaded, loadStyle } from "@/data/processOLD/manageStyle";
+import processPublication from '@/data/processOLD/workflow/workflowPublication';
 import { isPermissionGranted } from '@/data/storage/fileStorage';
 
 export async function clientLoader() {

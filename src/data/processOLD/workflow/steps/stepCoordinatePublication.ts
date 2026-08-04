@@ -1,4 +1,4 @@
-import { loadPublication, savePublication, buildPanelsFromStory } from "@/data/process/managePublication";
+import { loadPublication, savePublication, buildPanelsFromStory } from "@/data/processOLD/managePublication";
 import generatePrompts from "../../generate/generatePrompts";
 import generateImages from "../../generate/generateImages";
 import { writeLog } from "../../../storage/logStorage";
@@ -59,11 +59,14 @@ export default async function stepCoordinatePublication({ style, story }: { styl
         np.isLocked = isLocked;
 
         if (existing) {
-            const isTextUnchanged = (existing.text === np.text || existing.sceneText === np.text);
+            const normalizedExisting = (existing.text || existing.sceneText || "").trim().replace(/\s+/g, ' ');
+            const normalizedNew = (np.text || "").trim().replace(/\s+/g, ' ');
+            const isTextUnchanged = (normalizedExisting === normalizedNew);
             const imagesList = existing.images || (existing.image ? [existing.image] : []);
             const hasImage = imagesList.length > 0 && Boolean(existing.image || imagesList[0]);
 
-            if (isTextUnchanged) {
+            // Keep existing image if text is unchanged OR if an image already exists and regeneration was NOT explicitly requested
+            if (isTextUnchanged || (hasImage && !existing.needsRegenerate)) {
                 return {
                     ...np,
                     digest: existing.digest || np.digest,

@@ -1,5 +1,7 @@
 import * as fileStorage from '@/data/storage/fileStorage';
 import { clearLogs } from '@/data/storage/logStorage';
+import { wipeDatabase } from '@/data/storage/db';
+import { clearProcessDb } from '@/data/process/db';
 
 export interface WelcomeLoaderData {
   hasDirectory: boolean;
@@ -11,6 +13,17 @@ export interface WelcomeLoaderData {
 }
 
 export async function clientLoader(): Promise<WelcomeLoaderData> {
+  // Always clear IndexedDB databases on Welcome page load
+  try {
+    await Promise.all([
+      wipeDatabase(),
+      clearProcessDb()
+    ]);
+    console.log('[Welcome] IndexedDB cleared on page load.');
+  } catch (dbErr) {
+    console.warn('[Welcome] Error clearing IndexedDB on Welcome page load:', dbErr);
+  }
+
   let hasDirectory = false;
   let filesList: string[] = [];
   let directoryName: string | null = null;

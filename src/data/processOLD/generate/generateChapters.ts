@@ -1,4 +1,4 @@
-import generateTextDigest from "@/data/process/generate/generateTextDigest";
+import generateTextDigest from "@/data/processOLD/generate/generateTextDigest";
 
 export default function generateChapters(publication: Record<string, any>) {
   const pages = publication.pages;

@@ -3,7 +3,7 @@ import { readFile } from "@/data/storage/fileStorage";
 import { useFetcher } from "react-router-dom";
 import { writeLog } from "@/data/storage/logStorage";
 import PanelInstructionsModal from "./PanelInstructionsModal";
-import { useInstructions } from "@/data/process/manageInstructions";
+import { useInstructions } from "@/data/processOLD/manageInstructions";
 import { useLocalState } from "@keldan-systems/state-mutex";
 
 type ComponentProps = {
@@ -60,8 +60,8 @@ function ImageHistoryCard({
     <div
       onClick={onSelect}
       className={`relative group rounded-xl border-2 overflow-hidden flex flex-col cursor-pointer transition-all duration-200 ${isCurrent
-          ? 'border-primary ring-2 ring-primary/30 bg-primary/5 shadow-md'
-          : 'border-slate-200 dark:border-slate-700 hover:border-primary/50 hover:shadow-lg bg-slate-50 dark:bg-slate-900'
+        ? 'border-primary ring-2 ring-primary/30 bg-primary/5 shadow-md'
+        : 'border-slate-200 dark:border-slate-700 hover:border-primary/50 hover:shadow-lg bg-slate-50 dark:bg-slate-900'
         }`}
     >
       <div className="w-full aspect-[4/3] relative bg-slate-100 dark:bg-slate-900 flex items-center justify-center overflow-hidden rounded-t-xl">

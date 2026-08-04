@@ -336,3 +336,121 @@ The narrative-text lays out the story before the current scene, and the scene-te
 <narrative-text>
 </narrative-text>
  ```
+
+
+
+
+STEP 1 : Read story.md and generate 
+
+
+we will have the following stores in indexDB
+
+story (only one entry)
+style (only one entry)
+characters (many entries)
+instructions (many entries)
+prompts (many entries)
+summaries (many entries)
+
+on disk a story will be stored in /story.md
+on disk a style will be stored in /style.md
+on disk a characters list will be stored in /characters.md
+on disk a instructions list will be stored in /instructions.md
+
+on disk a prompt is stored in prompts/digest.md
+on disk a image from a prompt will be stored in images/digest.png
+on disk a summary is stored in summaries/digest.md
+
+
+
+story = {
+  title: 'STRING',
+  chapters: [
+    {
+      chapterNo: 0,
+      chapterTitle: 'STRING',
+      chapterText: 'STRING',
+      chapterSummary: 'STRING',
+      chapterDigest: 'STRING',
+      pages: [
+        {
+          pageNo: 0,
+          pageTitle: 'STRING',
+          pageText: 'STRING',
+          pageSummary: 'STRING',
+          pageDigest: 'STRING',
+          paragraphs: [
+            {
+              paragraphNo: 0,
+              paragraphText: 'STRING',
+              priorText: 'STRING',
+              narrativeText: 'STRING',
+              narrativeDigest: 'STRING',
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+
+style = {
+  "drawingInstructions": "string",
+  "panelPerParagraph": true,
+  "referenceUrl": "string",
+  "referenceInstructions": "string",
+  "useReferenceInstructions": true
+}
+
+characters = [{
+    "characterNo": 0
+    "characterName": "STRING",
+    "referenceUrl": "string",
+    "descriptionText": "STRING",
+    "instructionsText": "STRING",
+}]
+
+summaries = [{
+      summaryId: 0,
+      digest: "STRING"
+      summaryText:"STRING"
+}]
+
+instructions = [{
+  instructionNo: 0,
+      paragraphId: 0
+      pageId: 0
+      chapterId: 0
+      imageIndex: 0,
+      cinematographicDirections: "STRING",
+      characters: ["NAME", "NAME"],
+      images: [{
+        status: "PROCESSING | COMPLETE | FAILED"
+
+        styleText: "STRING"
+        cinematographicText: "STRING"
+        characterText: "STRING"
+        sceneText: "STRING",
+        narrativeText: "STRING", 
+        
+        promptDigest:"STRING"
+      }]
+}]
+
+
+
+
+
+loadStartup : loads story, style, instructions, characters from disk into main thread stores and into indexDB
+
+saveStory : saves story text to story.md and replaces the story in indexDB can replace whole story or just a chapter or a page. runs generateSummaries before saving
+saveStyle : saves style text to style.md and replaces the style in indexDB
+saveCharacters : saves characters text to characters.md and replaces the characters in indexDB
+saveInstructions : saves instructions text to instructions.md and replaces the instructions in indexDB
+
+all saves trigger processImages
+ 
+/workflows/generateSummaries : takes story summaries for each paragraph, page and chapter
+/workflows/processImages : takes story, style, characters, instructions and generates prompts and images for each panel  
+

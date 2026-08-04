@@ -202,7 +202,7 @@ async function processViaImagesEndpoint({
 // Chat completions endpoint (/api/v1/chat/completions)
 // ────────────────────────────────────────────────────────────
 async function processViaChatEndpoint({
-    imagePrompt,
+    imagePrompt: _imagePrompt,
     cleanPrompt,
     markdownImages,
     apiKey,
@@ -210,7 +210,7 @@ async function processViaChatEndpoint({
     inputCostPerMillion,
     outputCostPerMillion,
 }: {
-    imagePrompt: string;
+    imagePrompt?: string;
     cleanPrompt: string;
     markdownImages: ReturnType<typeof extractMarkdownImages>;
     apiKey: string;

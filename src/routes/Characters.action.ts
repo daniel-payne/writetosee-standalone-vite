@@ -1,7 +1,7 @@
 import { type ActionFunctionArgs } from 'react-router-dom';
-import { saveCharacters, loadCharacters, mergeCharactersAdditively } from '@/data/process/manageCharacters';
-import generateCharacters from '@/data/process/generate/generateCharacters';
-import { loadStory } from '@/data/process/manageStory';
+import { saveCharacters, loadCharacters, mergeCharactersAdditively } from '@/data/processOLD/manageCharacters';
+import generateCharacters from '@/data/processOLD/generate/generateCharacters';
+import { loadStory } from '@/data/processOLD/manageStory';
 import { writeLog } from '@/data/storage/logStorage';
 
 export async function clientAction({ request }: ActionFunctionArgs) {
