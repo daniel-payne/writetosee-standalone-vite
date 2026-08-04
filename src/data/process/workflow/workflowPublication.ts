@@ -33,7 +33,7 @@ export default async function workflowPublication(options: { style?: Record<stri
                 });
 
                 // Reload the publication from disk to update main thread's local states and caches
-                await loadPublication().catch(async (err) =>
+                await loadPublication(true).catch(async (err) =>
                     await writeLog('error', 'processPublication', `Failed to load publication after finished: ${err instanceof Error ? err.message : String(err)}`)
                 );
             }

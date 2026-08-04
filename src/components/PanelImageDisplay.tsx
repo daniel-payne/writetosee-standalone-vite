@@ -111,7 +111,6 @@ export default function PanelImageDisplay({
   isExpanded = false,
   ...rest
 }: PropsWithChildren<ComponentProps>) {
-  const [prevImagePath, setPrevImagePath] = useState(paragraph?.imageUrl || paragraph?.image);
   const [src, setSrc] = useState<string>('');
   const [imgError, setImgError] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -178,25 +177,6 @@ export default function PanelImageDisplay({
 
   const isPanelFailed = Boolean(paragraph?.error || paragraph?.imageStatus === 'failed');
 
-  const imagePath = paragraph?.imageUrl || paragraph?.image;
-  const imageStatus = paragraph?.imageStatus || 'idle';
-  const needsRegenerate = !isPanelFailed && Boolean(paragraph?.needsRegenerate);
-
-  const isAwaitingImage = !isPanelFailed && (imageStatus === 'pending' || imageStatus === 'generating' || needsRegenerate);
-  const isCurrentlyGenerating = !isPanelFailed && (imageStatus === 'generating' || imageStatus === 'pending' || needsRegenerate);
-  const isGlobalProcessing = imageProcessingStatus === 'processing' || pubProcessingStatus === 'processing';
-
-  const isThisPanelGenerating = !isPanelFailed && (isCurrentlyGenerating || isAwaitingImage || (isGlobalProcessing && (needsRegenerate || imageStatus === 'pending' || imageStatus === 'generating')));
-
-  if (imagePath !== prevImagePath) {
-    setPrevImagePath(imagePath);
-    setImgError(false);
-    setLoading(imagePath ? true : false);
-    if (!imagePath) {
-      setSrc('');
-    }
-  }
-
   const fetcher = useFetcher();
   const isRegenerating = fetcher.state !== "idle";
   const [prevIsRegenerating, setPrevIsRegenerating] = useState(false);
@@ -208,6 +188,28 @@ export default function PanelImageDisplay({
       setReloadTrigger(prev => prev + 1);
     }
   }
+
+  const imagePath = paragraph?.imageUrl || paragraph?.image;
+  const imageStatus = paragraph?.imageStatus || 'idle';
+  const needsRegenerate = !isPanelFailed && Boolean(paragraph?.needsRegenerate);
+
+  const isAwaitingImage = !isPanelFailed && (imageStatus === 'pending' || imageStatus === 'generating' || needsRegenerate);
+  const isCurrentlyGenerating = !isPanelFailed && (imageStatus === 'generating' || imageStatus === 'pending' || needsRegenerate);
+  const isGlobalProcessing = imageProcessingStatus === 'processing' || pubProcessingStatus === 'processing';
+
+  const isThisPanelGenerating = !isPanelFailed && (isCurrentlyGenerating || isAwaitingImage || (isGlobalProcessing && (needsRegenerate || imageStatus === 'pending' || imageStatus === 'generating')));
+
+  console.log(`[STORY-DEBUG] PanelImageDisplay panel ${panelIdx} render:`, {
+    imagePath,
+    imageStatus,
+    needsRegenerate,
+    src: src ? (src.substring(0, 25) + '...') : 'EMPTY',
+    loading,
+    imgError,
+    isThisPanelGenerating,
+    isRegenerating,
+    isPanelFailed
+  });
 
   const handleRegenerate = (e?: React.MouseEvent) => {
     if (e) {
@@ -252,15 +254,21 @@ export default function PanelImageDisplay({
   // Keep track of the active load request to ignore outdated promises
   useEffect(() => {
     if (!imagePath) {
+      setSrc('');
+      setLoading(false);
       return;
     }
 
     let active = true;
+    setLoading(true);
+    setImgError(false);
+    console.log(`[STORY-DEBUG] PanelImageDisplay panel ${panelIdx}: Reading image file from storage: "${imagePath}"`);
 
     readFile(imagePath)
       .then(file => {
         if (!active) return;
         const objectUrl = URL.createObjectURL(file);
+        console.log(`[STORY-DEBUG] PanelImageDisplay panel ${panelIdx}: Successfully loaded blob URL for "${imagePath}" -> ${objectUrl.substring(0, 25)}...`);
 
         setSrc(prevSrc => {
           if (prevSrc && prevSrc.startsWith('blob:')) {
@@ -272,6 +280,7 @@ export default function PanelImageDisplay({
       })
       .catch(async err => {
         if (!active) return;
+        console.error(`[STORY-DEBUG] PanelImageDisplay panel ${panelIdx}: Error reading image file "${imagePath}":`, err);
         const isNotFound = err && (
           (err instanceof Error && err.name === 'NotFoundError') ||
           (err.name === 'NotFoundError') ||

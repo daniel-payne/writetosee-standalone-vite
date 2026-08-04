@@ -34,13 +34,20 @@ export default async function stepCoordinatePublication({ style, story }: { styl
     await writeLog('info', 'processPublicationImpl', 'Started processing publication panels');
 
     // 1. story + style => panels
-    const existingPanelsMap = new Map((publication.panels || []).map((p: any) => [p.digest || p.text, p]));
+    const existingPanels = publication.panels || [];
     const newPanels = buildPanelsFromStory(story, style);
 
     publication.panels = newPanels.map((np: any, idx: number) => {
-        const existingByDigest: any = existingPanelsMap.get(np.digest);
-        const existingByText: any = existingPanelsMap.get(np.text);
-        const existing = existingByDigest || existingByText;
+        // Match existing panel by digest, text, sceneText, or index
+        let existing = existingPanels.find((p: any) =>
+            (p.digest && p.digest === np.digest) ||
+            (p.text && p.text === np.text) ||
+            (p.sceneText && p.sceneText === np.text)
+        );
+
+        if (!existing && existingPanels[idx]) {
+            existing = existingPanels[idx];
+        }
 
         const panelInst = instructionsMap[idx] ?? instructionsMap[np.panelNo];
         const characters = panelInst ? (panelInst.characters || []) : (existing?.characters || []);
@@ -52,20 +59,33 @@ export default async function stepCoordinatePublication({ style, story }: { styl
         np.isLocked = isLocked;
 
         if (existing) {
+            const isTextUnchanged = (existing.text === np.text || existing.sceneText === np.text);
             const imagesList = existing.images || (existing.image ? [existing.image] : []);
             const hasImage = imagesList.length > 0 && Boolean(existing.image || imagesList[0]);
 
-            return {
-                ...np,
-                digest: existing.digest || np.digest,
-                images: imagesList,
-                image: existing.image || imagesList[0] || "",
-                currentImageIndex: existing.currentImageIndex ?? 0,
-                imageStatus: existing.imageStatus && existing.imageStatus !== 'completed'
-                    ? existing.imageStatus
-                    : (hasImage ? 'completed' : (existing.error ? 'failed' : 'pending')),
-                error: existing.error
-            };
+            if (isTextUnchanged) {
+                return {
+                    ...np,
+                    digest: existing.digest || np.digest,
+                    images: imagesList,
+                    image: existing.image || imagesList[0] || "",
+                    currentImageIndex: existing.currentImageIndex ?? 0,
+                    imageStatus: existing.imageStatus && existing.imageStatus !== 'completed'
+                        ? existing.imageStatus
+                        : (hasImage ? 'completed' : (existing.error ? 'failed' : 'pending')),
+                    needsRegenerate: Boolean(existing.needsRegenerate),
+                    ...(existing.error ? { error: existing.error } : {})
+                };
+            } else {
+                // Text changed for this panel! Mark for regeneration but preserve prior images history
+                return {
+                    ...np,
+                    images: imagesList,
+                    image: "",
+                    imageStatus: 'pending',
+                    needsRegenerate: true
+                };
+            }
         }
 
         return {

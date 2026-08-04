@@ -467,19 +467,48 @@ export default function Characters({
                                 className="max-h-[260px] w-auto max-w-full object-contain rounded-lg shadow-sm block"
                               />
                               {char.cropBox && char.cropBox.width > 0 && (
-                                <div
-                                  className="absolute border-2 border-primary bg-primary/20 shadow-[0_0_10px_rgba(59,130,246,0.6)] rounded pointer-events-none"
-                                  style={{
-                                    left: `${char.cropBox.x * 100}%`,
-                                    top: `${char.cropBox.y * 100}%`,
-                                    width: `${char.cropBox.width * 100}%`,
-                                    height: `${char.cropBox.height * 100}%`,
-                                  }}
-                                >
-                                  <span className="absolute -top-4 left-0 bg-primary text-primary-content text-[9px] font-bold px-1 rounded shadow-sm truncate max-w-[120px]">
-                                    {char.name}
-                                  </span>
-                                </div>
+                                <>
+                                  {/* Dark overlay outside the crop box using SVG mask */}
+                                  <svg
+                                    className="absolute inset-0 w-full h-full pointer-events-none"
+                                    viewBox="0 0 100 100"
+                                    preserveAspectRatio="none"
+                                  >
+                                    <defs>
+                                      <mask id={`crop-mask-${index}`}>
+                                        {/* White = visible (dimmed area) */}
+                                        <rect x="0" y="0" width="100" height="100" fill="white" />
+                                        {/* Black = hidden (clear cutout for the character) */}
+                                        <rect
+                                          x={char.cropBox.x * 100}
+                                          y={char.cropBox.y * 100}
+                                          width={char.cropBox.width * 100}
+                                          height={char.cropBox.height * 100}
+                                          fill="black"
+                                        />
+                                      </mask>
+                                    </defs>
+                                    <rect
+                                      x="0" y="0" width="100" height="100"
+                                      fill="rgba(0,0,0,0.5)"
+                                      mask={`url(#crop-mask-${index})`}
+                                    />
+                                  </svg>
+                                  {/* Border around the crop box */}
+                                  <div
+                                    className="absolute border-2 border-primary shadow-[0_0_10px_rgba(59,130,246,0.6)] rounded pointer-events-none"
+                                    style={{
+                                      left: `${char.cropBox.x * 100}%`,
+                                      top: `${char.cropBox.y * 100}%`,
+                                      width: `${char.cropBox.width * 100}%`,
+                                      height: `${char.cropBox.height * 100}%`,
+                                    }}
+                                  >
+                                    <span className="absolute -top-4 left-0 bg-primary text-primary-content text-[9px] font-bold px-1 rounded shadow-sm truncate max-w-[120px]">
+                                      {char.name}
+                                    </span>
+                                  </div>
+                                </>
                               )}
                             </div>
                           </div>

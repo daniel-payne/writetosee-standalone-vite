@@ -6,12 +6,15 @@ import { writeLog } from '../storage/logStorage';
 import * as fileStorage from '../storage/fileStorage';
 
 let startupPromise: Promise<void> | null = null;
+let hasStartedUp = false;
 
 export async function manageStartup(): Promise<void> {
+  if (hasStartedUp) return;
   if (startupPromise) return startupPromise;
 
   startupPromise = (async () => {
     try {
+      hasStartedUp = true;
       await writeLog('info', 'manageStartup', 'Starting unified app startup loading...');
 
       // Load all primary data files in parallel on startup

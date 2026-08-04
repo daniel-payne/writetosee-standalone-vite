@@ -17,7 +17,7 @@ export default async function stepImageGeneration() {
                 await processImageGenerationImpl();
 
                 // Reload the publication from disk to update main thread's local states and caches
-                await loadPublication().catch(async (err) =>
+                await loadPublication(true).catch(async (err) =>
                     await writeLog('error', 'processImageGeneration', `Failed to load publication after finished images: ${err instanceof Error ? err.message : String(err)}`)
                 );
             }

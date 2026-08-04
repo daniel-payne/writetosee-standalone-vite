@@ -159,7 +159,7 @@ export default async function generatePrompts(publication: any) {
             .replace("{{SCENE-TEXT}}", sceneText)
             .replace("{{NARRATIVE-TEXT}}", narrativeText);
 
-        const digestSource = [sceneText, narrativeText, styleText, cinematographicText, characterText].filter(Boolean).join("\n\n");
+        const digestSource = [sceneText, styleText, cinematographicText, characterText].filter(Boolean).join("\n\n");
         const digest = generateTextDigest(digestSource);
 
         const previousDigest = item.digest;
@@ -167,11 +167,12 @@ export default async function generatePrompts(publication: any) {
 
         // If the prompt digest changed (due to instructions, scene text, or style changes) and panel is not locked, mark for image recreation
         if (promptDigestChanged && !item.isLocked) {
-            item.needsRegenerate = true;
-            delete item.image;
-            delete item.imageUrl;
-            item.images = [];
-            item.imageStatus = 'pending';
+            if (!item.image || item.needsRegenerate) {
+                item.needsRegenerate = true;
+                delete item.image;
+                delete item.imageUrl;
+                item.imageStatus = 'pending';
+            }
         }
 
         // Save prompt text to file

@@ -195,19 +195,23 @@ export default async function generateImages(publication: any) {
                         prompt.imageStatus = 'generating';
                         delete prompt.error;
                         delete prompt.needsRegenerate;
+                        delete prompt.isManualRegenerate;
                         if (panel) {
                             panel.imageStatus = 'generating';
                             delete panel.error;
                             delete panel.needsRegenerate;
+                            delete panel.isManualRegenerate;
                         }
-                        queueSave();
+                        await queueSave();
 
                         // Create unique image filename for new generation
                         const timestamp = Date.now();
                         const newImagePath = `images/${digest}_${timestamp}.png`;
 
+                        console.log('[STORY-DEBUG] generateImages: Calling llmGenerateImage for panel', panelIndex);
                         // Call llmGenerateImage with prompt text
                         const res = await llmGenerateImage(prompt.text);
+                        console.log('[STORY-DEBUG] generateImages: Received response from llmGenerateImage for panel', panelIndex, res?.content ? 'Image data received' : 'No content');
 
                         if (res?.content) {
                             // Convert base64 data URL to Blob and write to disk
@@ -220,10 +224,18 @@ export default async function generateImages(publication: any) {
                             prompt.imageStatus = 'completed';
                             prompt.image = newImagePath;
                             prompt.imageUrl = newImagePath;
+                            delete prompt.needsRegenerate;
+                            delete prompt.isManualRegenerate;
+                            delete prompt.error;
+
                             if (panel) {
                                 panel.imageStatus = 'completed';
                                 panel.image = newImagePath;
                                 panel.imageUrl = newImagePath;
+                                delete panel.needsRegenerate;
+                                delete panel.isManualRegenerate;
+                                delete panel.error;
+
                                 if (!panel.images) {
                                     panel.images = [];
                                 }
@@ -232,8 +244,9 @@ export default async function generateImages(publication: any) {
                                 }
                                 panel.currentImageIndex = panel.images.indexOf(newImagePath);
                             }
+                            console.log('[STORY-DEBUG] generateImages: Image generated & saved to', newImagePath, 'for panel', panelIndex, 'Queueing save...');
                             await writeLog('info', 'generateImages', `Successfully generated image for panel ${panelIndex ?? 0} saved to ${newImagePath}`);
-                            queueSave();
+                            await queueSave();
                         } else {
                             throw new Error("No image data returned from provider");
                         }
@@ -251,6 +264,7 @@ export default async function generateImages(publication: any) {
                         delete prompt.image;
                         delete prompt.imageUrl;
                         delete prompt.needsRegenerate;
+                        delete prompt.isManualRegenerate;
 
                         if (panel) {
                             panel.imageStatus = 'failed';
@@ -258,6 +272,7 @@ export default async function generateImages(publication: any) {
                             delete panel.image;
                             delete panel.imageUrl;
                             delete panel.needsRegenerate;
+                            delete panel.isManualRegenerate;
                         }
                         await savePublication(publication);
                         if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {

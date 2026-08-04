@@ -48,11 +48,15 @@ export default async function llmGenerateImage(imagePrompt: string) {
         result = await processGoogleImage({ imagePrompt, apiKey, model, inputCostPerMillion, outputCostPerMillion });
     } else if (provider === 'XAI') {
         const model = "grok-imagine-image-quality";
-        result = await processxAIImage({ imagePrompt, apiKey, model });
-    } else if (provider === 'OPENROUTER') {
-        const model = "black-forest-labs/flux.2-pro" // "google/gemini-2.5-flash-image" // "black-forest-labs/flux.2-klein-4b"; //"black-forest-labs/flux.2-pro";
         const inputCostPerMillion = 0.00;
-        const outputCostPerMillion = 7.94;
+        const outputCostPerMillion = 50.00;
+
+        result = await processxAIImage({ imagePrompt, apiKey, model, inputCostPerMillion, outputCostPerMillion });
+    } else if (provider === 'OPENROUTER') {
+        const model = "openai/gpt-image-2" //, "black-forest-labs/flux.2-pro" // "google/gemini-2.5-flash-image" // "black-forest-labs/flux.2-klein-4b"; //"black-forest-labs/flux.2-pro";
+        const inputCostPerMillion = 8.00;
+        const outputCostPerMillion = 8.00;
+
         result = await processOpenRouterImage({ imagePrompt, apiKey, model, inputCostPerMillion, outputCostPerMillion });
     }
 

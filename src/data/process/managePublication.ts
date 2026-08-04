@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocalState, useSharedState, setState, StoragePersistence } from '@keldan-systems/state-mutex';
 import * as fileStorage from '@/data/storage/fileStorage';
 import generateTextDigest from '@/data/process/generate/generateTextDigest';
@@ -12,15 +12,42 @@ let inMemoryPublication: any = null;
 let inMemoryHash: string | null = null;
 let activeLoadPromise: Promise<any> | null = null;
 
+const publicationListeners = new Set<() => void>();
+
+function notifyPublicationListeners() {
+    console.log('[STORY-DEBUG] notifyPublicationListeners called. Listeners count:', publicationListeners.size);
+    publicationListeners.forEach(fn => {
+        try {
+            fn();
+        } catch {
+            // Ignore subscriber errors
+        }
+    });
+}
+
+// Synchronize publication changes across open tabs when storage changes
+if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (event) => {
+        if (event.key === 'publication-hash' && event.newValue && event.newValue !== inMemoryHash) {
+            loadPublication(true).catch((err) => {
+                console.warn('Failed to auto-reload publication from storage change:', err);
+            });
+        }
+    });
+}
+
 /**
  * Loads the publication from disk, hashing it, and updating both the state-mutex shared data
  * and the loading/error states.
  */
-export async function loadPublication(): Promise<any> {
+export async function loadPublication(forceReload = false): Promise<any> {
+    console.log('[STORY-DEBUG] loadPublication called with forceReload:', forceReload, 'inMemoryHash:', inMemoryHash);
     if (activeLoadPromise) {
+        console.log('[STORY-DEBUG] loadPublication returning activeLoadPromise');
         return activeLoadPromise;
     }
-    if (inMemoryPublication !== null) {
+    if (!forceReload && inMemoryPublication !== null) {
+        console.log('[STORY-DEBUG] loadPublication returning cached inMemoryPublication');
         return inMemoryPublication;
     }
 
@@ -65,6 +92,7 @@ export async function loadPublication(): Promise<any> {
 
             setState('publication-data', loadedPub, StoragePersistence.none);
             setState('publication-hash', calculatedHash, StoragePersistence.local);
+            notifyPublicationListeners();
 
             return loadedPub;
         } catch (e: any) {
@@ -86,6 +114,7 @@ export async function loadPublication(): Promise<any> {
 
                 setState('publication-data', defaultPub, StoragePersistence.none);
                 setState('publication-hash', defaultHash, StoragePersistence.local);
+                notifyPublicationListeners();
 
                 try {
                     await fileStorage.writeFile('data/publication.json', defaultText);
@@ -253,13 +282,15 @@ export function buildPanelsFromPublication(pub: any) {
         const errorMsg = p.error || matchingPrompt?.error || "";
         const isFailed = p.imageStatus === 'failed' || promptStatus === 'failed' || Boolean(errorMsg);
 
-        const isPendingOrGenerating = !isFailed && (needsRegenerate || p.imageStatus === 'pending' || p.imageStatus === 'generating' || promptStatus === 'pending' || promptStatus === 'generating');
+        const isCompleted = (p.imageStatus === 'completed' || promptStatus === 'completed' || hasImage) && !needsRegenerate;
 
         const imageStatus = isFailed
             ? 'failed'
-            : (isPendingOrGenerating
-                ? (p.imageStatus && p.imageStatus !== 'completed' ? p.imageStatus : (promptStatus || 'pending'))
-                : (p.imageStatus ? p.imageStatus : (hasImage ? 'completed' : (promptStatus || 'pending'))));
+            : (isCompleted
+                ? 'completed'
+                : (p.imageStatus === 'generating' || promptStatus === 'generating'
+                    ? 'generating'
+                    : 'pending'));
 
         return {
             panelNo: p.panelNo ?? p.paragraphNo ?? idx,
@@ -293,6 +324,7 @@ export async function savePublication(
     pub: any,
     setPubHashState?: (hash: string) => void
 ): Promise<string> {
+    console.log('[STORY-DEBUG] savePublication called. Panels count:', pub?.panels?.length, 'Panels image status:', pub?.panels?.map((p: any) => ({ panelNo: p.panelNo, image: p.image, imageStatus: p.imageStatus })));
     setState('publication-loading', true, StoragePersistence.none);
     setState('publication-error', null, StoragePersistence.none);
 
@@ -324,12 +356,15 @@ export async function savePublication(
             pub.panels = panels;
         }
 
+        // Create a shallow clone so state-mutex detects a new reference and triggers re-renders
+        const updatedPub = { ...pub, panels };
+
         // Update in-memory references
-        inMemoryPublication = pub;
+        inMemoryPublication = updatedPub;
         inMemoryHash = hash;
 
-        // Update state-mutex in-memory data
-        setState('publication-data', pub, StoragePersistence.none);
+        // Update state-mutex in-memory data (new reference ensures subscribers re-render)
+        setState('publication-data', updatedPub, StoragePersistence.none);
 
         // Update state-mutex to notify all other hook instances and tabs
         if (setPubHashState) {
@@ -337,6 +372,8 @@ export async function savePublication(
         } else {
             setState('publication-hash', hash, StoragePersistence.local);
         }
+
+        notifyPublicationListeners();
 
         return hash;
     } catch (e: any) {
@@ -355,6 +392,7 @@ export async function savePublication(
  * @returns [publication, setPublication]
  */
 export function usePublication(): [any, (valOrFunc: any) => Promise<void>] {
+    const [, setTick] = useState(0);
     const [pubHash, setPubHash] = useLocalState<string>('publication-hash', '');
     const [publication] = useSharedState<any>('publication-data', null);
 
@@ -362,6 +400,14 @@ export function usePublication(): [any, (valOrFunc: any) => Promise<void>] {
         const newPub = typeof valOrFunc === 'function' ? valOrFunc(inMemoryPublication || {}) : valOrFunc;
         await savePublication(newPub, setPubHash);
     };
+
+    useEffect(() => {
+        const update = () => setTick(t => t + 1);
+        publicationListeners.add(update);
+        return () => {
+            publicationListeners.delete(update);
+        };
+    }, []);
 
     // Synchronize disk loads with changes to the local storage state hash
     useEffect(() => {
@@ -371,13 +417,13 @@ export function usePublication(): [any, (valOrFunc: any) => Promise<void>] {
             return;
         }
 
-        // Hash changed and differs from current in-memory version
+        // Hash changed and differs from current in-memory version -> force reload from disk
         if (pubHash !== inMemoryHash) {
-            loadPublication();
+            loadPublication(true);
         }
     }, [pubHash]);
 
-    return [publication || {}, setPub];
+    return [inMemoryPublication || publication || {}, setPub];
 }
 
 /**

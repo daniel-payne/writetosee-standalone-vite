@@ -26,6 +26,8 @@ export default function Story({
   const containerRef = useRef<HTMLFormElement>(null);
   const panels = publication?.panels || [];
 
+  console.log('[STORY-DEBUG] Story component render. Panels count:', panels.length, 'Panels summary:', panels.map((p: any) => ({ panelNo: p.panelNo, image: p.image, imageStatus: p.imageStatus })));
+
   useEffect(() => {
     const handleResize = () => {
       setIsDesktop(window.innerWidth >= 768);
@@ -36,6 +38,7 @@ export default function Story({
   }, []);
 
   useEffect(() => {
+    console.log('[STORY-DEBUG] Story useEffect: publication changed. Panel count:', publication?.panels?.length);
     setExpandedIdx(null);
   }, [publication]);
 

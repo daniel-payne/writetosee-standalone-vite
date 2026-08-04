@@ -7,20 +7,28 @@ import { loadInstructions, saveInstructions } from '@/data/process/manageInstruc
 export async function clientAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
   const intent = formData.get('intent');
+  console.log('[STORY-DEBUG] Story.action clientAction intent:', intent);
 
   if (intent === 'SAVE-UPDATES') {
     const story = formData.get('story') as string;
+    console.log('[STORY-DEBUG] SAVE-UPDATES received story length:', story?.length);
 
     try {
       if (story !== null) {
+        console.log('[STORY-DEBUG] Saving story...');
         await saveStory(story);
       }
 
+      console.log('[STORY-DEBUG] Processing publication text...');
       await processPublication({ story });
+
+      console.log('[STORY-DEBUG] Starting workflowImageGeneration...');
       await workflowImageGeneration();
+      console.log('[STORY-DEBUG] Finished workflowImageGeneration');
 
       return { success: true, message: 'Changes saved successfully' };
     } catch (err: any) {
+      console.error('[STORY-DEBUG] Error in SAVE-UPDATES:', err);
       return { error: err.message || 'Failed to save changes' };
     }
   } else if (intent === 'CANCEL-UPDATES') {
