@@ -4,6 +4,7 @@ export interface Paragraph {
   priorText: string;
   narrativeText: string;
   narrativeDigest: string;
+  [key: string]: any;
 }
 
 export interface Page {
@@ -13,6 +14,7 @@ export interface Page {
   pageSummary: string;
   pageDigest: string;
   paragraphs: Paragraph[];
+  [key: string]: any;
 }
 
 export interface Chapter {
@@ -22,11 +24,13 @@ export interface Chapter {
   chapterSummary: string;
   chapterDigest: string;
   pages: Page[];
+  [key: string]: any;
 }
 
 export interface Story {
   title: string;
   chapters: Chapter[];
+  [key: string]: any;
 }
 
 export interface StoryRecord extends Story {
@@ -39,6 +43,9 @@ export interface Style {
   referenceUrl: string;
   referenceInstructions: string;
   useReferenceInstructions: boolean;
+  storyTitle?: string;
+  linkInstructions?: string;
+  [key: string]: any;
 }
 
 export interface StyleRecord extends Style {
@@ -51,12 +58,14 @@ export interface Character {
   referenceUrl: string;
   descriptionText: string;
   instructionsText: string;
+  [key: string]: any;
 }
 
 export interface Summary {
   summaryId: number;
   digest: string;
   summaryText: string;
+  [key: string]: any;
 }
 
 export interface ImageEntry {
@@ -67,6 +76,7 @@ export interface ImageEntry {
   sceneText: string;
   narrativeText: string;
   promptDigest: string;
+  [key: string]: any;
 }
 
 export interface Instruction {
@@ -78,9 +88,12 @@ export interface Instruction {
   cinematographicDirections: string;
   characters: string[];
   images: ImageEntry[];
+  isLocked?: boolean;
+  [key: string]: any;
 }
 
 export interface Prompt {
   digest: string;
   promptText: string;
+  [key: string]: any;
 }

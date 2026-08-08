@@ -6,7 +6,7 @@ import type {
   Instruction,
   Prompt,
   Summary
-} from './types';
+} from './TYPES';
 
 export class ProcessDB extends Dexie {
   story!: Table<StoryRecord, string>;

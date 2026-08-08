@@ -4,7 +4,7 @@ import * as fileStorage from '@/data/storage/fileStorage';
 import { processDb } from '../db';
 import { generateTextDigest } from '../parsers';
 import { existingSummariesSet } from '../loadStartup';
-import type { Story, Chapter, Page } from '../types';
+import type { Story } from '../TYPES';
 
 const SYSTEM_PROMPT = `
 You are an assistant specialized in narrative summarization. 

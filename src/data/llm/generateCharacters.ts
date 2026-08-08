@@ -1,7 +1,7 @@
 import llmGenerateText from '@/data/llm/llmGenerateText';
 import { storeCost } from '@/data/storage/costStorage';
 import { writeLog } from '@/data/storage/logStorage';
-import type { Character } from '../manageCharacters';
+import type { Character } from '@/data/process/TYPES';
 
 const SYSTEM_PROMPT = `
 You are an expert literary analyst and character extractor.
@@ -38,7 +38,6 @@ export default async function generateCharacters(storyText: string): Promise<Cha
     const rawContent = (content || '').trim();
     if (!rawContent) return [];
 
-    // Strip markdown code fences if present
     const cleaned = rawContent
       .replace(/^```(json)?/i, '')
       .replace(/```$/i, '')
@@ -48,10 +47,13 @@ export default async function generateCharacters(storyText: string): Promise<Cha
 
     if (Array.isArray(parsed)) {
       const extracted: Character[] = parsed
-        .filter((item: any) => item && typeof item.name === 'string' && item.name.trim() !== '')
-        .map((item: any) => ({
-          name: String(item.name).trim(),
-          description: String(item.description || '').trim()
+        .filter((item: any) => item && (item.name || item.characterName))
+        .map((item: any, idx: number) => ({
+          characterNo: idx,
+          characterName: String(item.characterName || item.name || '').trim(),
+          descriptionText: String(item.descriptionText || item.description || '').trim(),
+          instructionsText: '',
+          referenceUrl: ''
         }))
         .slice(0, 10);
 

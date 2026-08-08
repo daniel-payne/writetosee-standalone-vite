@@ -8,7 +8,7 @@ import {
 } from './parsers';
 import { generateSummaries } from './workflows/generateSummaries';
 import { processImages } from './workflows/processImages';
-import type { Story, Chapter, Page } from './types';
+import type { Story } from './TYPES';
 
 /**
  * Saves story text (or Story object) to story.md and replaces story in IndexedDB.

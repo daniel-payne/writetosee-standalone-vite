@@ -5,9 +5,8 @@ import type {
   Paragraph,
   Style,
   Character,
-  Instruction,
-  ImageEntry
-} from './types';
+  Instruction
+} from './TYPES';
 
 export function generateTextDigest(input: string | null | undefined): string {
   if (input == null) return "";
@@ -55,7 +54,7 @@ export function parseStoryMarkdown(markdown: string): Story {
     }
 
     if (h1Match || h2Match) {
-      if (currentChapterLines.length > 0 || chapterBlocks.length === 0) {
+      if (currentChapterLines.some(l => l.trim().length > 0)) {
         chapterBlocks.push({
           title: currentChapterTitle,
           textLines: [...currentChapterLines]
@@ -68,7 +67,7 @@ export function parseStoryMarkdown(markdown: string): Story {
     }
   }
 
-  if (currentChapterLines.length > 0 || chapterBlocks.length === 0) {
+  if (currentChapterLines.some(l => l.trim().length > 0) || chapterBlocks.length === 0) {
     chapterBlocks.push({
       title: currentChapterTitle,
       textLines: [...currentChapterLines]
@@ -78,72 +77,74 @@ export function parseStoryMarkdown(markdown: string): Story {
   let globalParagraphIndex = 0;
   let accumulatedPriorText = '';
 
-  const chapters: Chapter[] = chapterBlocks.map((cBlock, cIdx) => {
-    const rawChapterText = cBlock.textLines.join('\n').trim();
+  const chapters: Chapter[] = chapterBlocks
+    .filter(cBlock => cBlock.textLines.some(l => l.trim().length > 0))
+    .map((cBlock, cIdx) => {
+      const pageBlocks: { title: string; textLines: string[] }[] = [];
+      let currentPageTitle = 'Page 1';
+      let currentPageLines: string[] = [];
 
-    // Parse pages inside chapter (separated by '### Page' or paragraphs)
-    const pageBlocks: { title: string; textLines: string[] }[] = [];
-    let currentPageTitle = 'Page 1';
-    let currentPageLines: string[] = [];
-
-    for (const pLine of cBlock.textLines) {
-      const h3Match = pLine.match(/^###\s+(.+)$/);
-      if (h3Match) {
-        if (currentPageLines.length > 0 || pageBlocks.length === 0) {
-          pageBlocks.push({
-            title: currentPageTitle,
-            textLines: [...currentPageLines]
-          });
-          currentPageLines = [];
+      for (const pLine of cBlock.textLines) {
+        const h3Match = pLine.match(/^###\s+(.+)$/);
+        if (h3Match) {
+          if (currentPageLines.some(l => l.trim().length > 0)) {
+            pageBlocks.push({
+              title: currentPageTitle,
+              textLines: [...currentPageLines]
+            });
+            currentPageLines = [];
+          }
+          currentPageTitle = h3Match[1].trim();
+        } else {
+          currentPageLines.push(pLine);
         }
-        currentPageTitle = h3Match[1].trim();
-      } else {
-        currentPageLines.push(pLine);
       }
-    }
 
-    if (currentPageLines.length > 0 || pageBlocks.length === 0) {
-      pageBlocks.push({
-        title: currentPageTitle,
-        textLines: [...currentPageLines]
-      });
-    }
+      if (currentPageLines.some(l => l.trim().length > 0) || pageBlocks.length === 0) {
+        pageBlocks.push({
+          title: currentPageTitle,
+          textLines: [...currentPageLines]
+        });
+      }
 
-    const pages: Page[] = pageBlocks.map((pBlock, pIdx) => {
-      const pageRawText = pBlock.textLines.join('\n').trim();
-      const rawParagraphs = pageRawText.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+      const pages: Page[] = pageBlocks
+        .filter(pBlock => pBlock.textLines.some(l => l.trim().length > 0))
+        .map((pBlock, pIdx) => {
+          const pageRawText = pBlock.textLines.join('\n').trim();
+          const rawParagraphs = pageRawText.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
 
-      const paragraphs: Paragraph[] = rawParagraphs.map(pText => {
-        const pObj: Paragraph = {
-          paragraphNo: globalParagraphIndex++,
-          paragraphText: pText,
-          priorText: accumulatedPriorText,
-          narrativeText: pText,
-          narrativeDigest: generateTextDigest(pText)
-        };
-        accumulatedPriorText = (accumulatedPriorText ? `${accumulatedPriorText}\n\n${pText}` : pText).trim();
-        return pObj;
-      });
+          const paragraphs: Paragraph[] = rawParagraphs.map(pText => {
+            const pObj: Paragraph = {
+              paragraphNo: globalParagraphIndex++,
+              paragraphText: pText,
+              priorText: accumulatedPriorText,
+              narrativeText: pText,
+              narrativeDigest: generateTextDigest(pText)
+            };
+            accumulatedPriorText = (accumulatedPriorText ? `${accumulatedPriorText}\n\n${pText}` : pText).trim();
+            return pObj;
+          });
 
+          return {
+            pageNo: pIdx,
+            pageTitle: pBlock.title,
+            pageText: pageRawText,
+            pageSummary: '',
+            pageDigest: generateTextDigest(pageRawText),
+            paragraphs
+          };
+        });
+
+      const chapterRawText = cBlock.textLines.join('\n').trim();
       return {
-        pageNo: pIdx,
-        pageTitle: pBlock.title,
-        pageText: pageRawText,
-        pageSummary: '',
-        pageDigest: generateTextDigest(pageRawText),
-        paragraphs
+        chapterNo: cIdx,
+        chapterTitle: cBlock.title,
+        chapterText: chapterRawText,
+        chapterSummary: '',
+        chapterDigest: generateTextDigest(chapterRawText),
+        pages
       };
     });
-
-    return {
-      chapterNo: cIdx,
-      chapterTitle: cBlock.title,
-      chapterText: rawChapterText,
-      chapterSummary: '',
-      chapterDigest: generateTextDigest(rawChapterText),
-      pages
-    };
-  });
 
   return {
     title,
@@ -332,6 +333,20 @@ export function serializeCharactersMarkdown(characters: Character[]): string {
     .join('\n\n');
 }
 
+export function storyToParagraphs(input: string | Story): { paragraphNo: number; text: string }[] {
+  const story = typeof input === 'string' ? parseStoryMarkdown(input) : input;
+  const result: { paragraphNo: number; text: string }[] = [];
+  let count = 0;
+  for (const chap of story.chapters || []) {
+    for (const page of chap.pages || []) {
+      for (const p of page.paragraphs || []) {
+        result.push({ paragraphNo: count++, text: p.paragraphText });
+      }
+    }
+  }
+  return result;
+}
+
 // --- INSTRUCTIONS PARSER & SERIALIZER ---
 
 export function parseInstructionsMarkdown(markdown: string): Instruction[] {
@@ -354,23 +369,25 @@ export function parseInstructionsMarkdown(markdown: string): Instruction[] {
     const pageMatch = trimmed.match(/[-*+]?\s*pageId:\s*(\d+)/i);
     const chapMatch = trimmed.match(/[-*+]?\s*chapterId:\s*(\d+)/i);
     const imgIdxMatch = trimmed.match(/[-*+]?\s*imageIndex:\s*(\d+)/i);
+    const lockMatch = trimmed.match(/[-*+]?\s*(?:isLocked|locked):\s*(true|false)/i);
     const charMatch = trimmed.match(/\*{0,2}Characters:\*{0,2}\s*(.+)/i);
 
     const paragraphId = paraMatch ? parseInt(paraMatch[1], 10) : instructionNo;
     const pageId = pageMatch ? parseInt(pageMatch[1], 10) : 0;
     const chapterId = chapMatch ? parseInt(chapMatch[1], 10) : 0;
     const imageIndex = imgIdxMatch ? parseInt(imgIdxMatch[1], 10) : 0;
+    const isLocked = lockMatch ? lockMatch[1].toLowerCase() === 'true' : false;
     const charList = charMatch ? charMatch[1].split(',').map(s => s.trim()).filter(Boolean) : [];
 
     let cinematographicDirections = '';
     const dirMatch = trimmed.match(/<cinematographic-directions>([\s\S]*?)<\/cinematographic-directions>/i) ||
-                     trimmed.match(/<cinematographic-text>([\s\S]*?)<\/cinematographic-text>/i);
+      trimmed.match(/<cinematographic-text>([\s\S]*?)<\/cinematographic-text>/i);
     if (dirMatch) {
       cinematographicDirections = dirMatch[1].trim();
     } else {
       const textLines = trimmed.split(/\r?\n/).filter(l =>
         !l.match(/^#{1,6}\s+(?:Instruction|Panel)/i) &&
-        !l.match(/[-*+]?\s*(?:paragraphId|pageId|chapterId|imageIndex|Characters):/i)
+        !l.match(/[-*+]?\s*(?:paragraphId|pageId|chapterId|imageIndex|isLocked|locked|Characters):/i)
       );
       cinematographicDirections = textLines.join('\n').trim();
     }
@@ -383,7 +400,8 @@ export function parseInstructionsMarkdown(markdown: string): Instruction[] {
       imageIndex,
       cinematographicDirections,
       characters: charList,
-      images: []
+      images: [],
+      isLocked
     });
 
     counter++;
@@ -402,7 +420,8 @@ export function serializeInstructionsMarkdown(instructions: Instruction[]): stri
         `- paragraphId: ${inst.paragraphId}`,
         `- pageId: ${inst.pageId}`,
         `- chapterId: ${inst.chapterId}`,
-        `- imageIndex: ${inst.imageIndex}`
+        `- imageIndex: ${inst.imageIndex}`,
+        ...(inst.isLocked ? [`- isLocked: true`] : [])
       ];
       if (inst.characters && inst.characters.length > 0) {
         parts.push(`**Characters:** ${inst.characters.join(', ')}`);

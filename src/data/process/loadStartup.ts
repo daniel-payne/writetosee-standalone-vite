@@ -14,8 +14,9 @@ import type {
   Character,
   Instruction,
   Summary,
-  Prompt
-} from './types';
+  Prompt,
+  ImageEntry
+} from './TYPES';
 
 // In-memory index sets for rapid disk cache lookup
 export const existingImagesSet = new Set<string>();
@@ -34,20 +35,32 @@ export async function loadStartup(): Promise<{
 }> {
   setState('process-startup-loading', true, StoragePersistence.none);
   setState('process-startup-error', null, StoragePersistence.none);
+  setState('image-processing-status', 'idle', StoragePersistence.local);
 
   try {
     await ensureProcessDbOpen();
 
-    // 1. Scan disk files to populate disk indexes
+    // 1. Scan disk files to populate disk indexes and image map
     const diskFiles = await fileStorage.listFiles().catch(() => []);
     existingImagesSet.clear();
     existingSummariesSet.clear();
     existingPromptsSet.clear();
 
+    const diskImageMap = new Map<string, string[]>();
     for (const file of diskFiles) {
-      if (file.startsWith('images/')) existingImagesSet.add(file);
-      else if (file.startsWith('summaries/')) existingSummariesSet.add(file);
-      else if (file.startsWith('prompts/')) existingPromptsSet.add(file);
+      if (/\.(png|jpe?g|gif|webp|svg)$/i.test(file)) {
+        existingImagesSet.add(file);
+        const base = file.replace(/^images\//, '').replace(/\.(png|jpe?g|gif|webp|svg)$/i, '');
+        const digestKey = base.split('_')[0];
+        if (!diskImageMap.has(digestKey)) {
+          diskImageMap.set(digestKey, []);
+        }
+        diskImageMap.get(digestKey)!.push(file);
+      } else if (file.startsWith('summaries/')) {
+        existingSummariesSet.add(file);
+      } else if (file.startsWith('prompts/')) {
+        existingPromptsSet.add(file);
+      }
     }
 
     // 2. Read root markdown files from disk (or create default empty files)
@@ -61,7 +74,110 @@ export async function loadStartup(): Promise<{
     const story = parseStoryMarkdown(storyRaw);
     const style = parseStyleMarkdown(styleRaw);
     const characters = parseCharactersMarkdown(charactersRaw);
-    const instructions = parseInstructionsMarkdown(instructionsRaw);
+    const rawInstructions = parseInstructionsMarkdown(instructionsRaw);
+
+    // Build paragraph list from story
+    const paragraphList: { paragraphNo: number; paragraphText: string; narrativeText: string; pageId: number; chapterId: number }[] = [];
+    for (const chapter of story.chapters || []) {
+      for (const page of chapter.pages || []) {
+        for (const paragraph of page.paragraphs || []) {
+          paragraphList.push({
+            paragraphNo: paragraph.paragraphNo,
+            paragraphText: paragraph.paragraphText,
+            narrativeText: paragraph.narrativeText || paragraph.paragraphText,
+            pageId: page.pageNo,
+            chapterId: chapter.chapterNo
+          });
+        }
+      }
+    }
+
+    const charMap = new Map<string, Character>();
+    for (const char of characters || []) {
+      if (char.characterName) {
+        charMap.set(char.characterName.trim().toLowerCase(), char);
+      }
+    }
+
+    // Attach existing images from disk to instructions
+    const instructions: Instruction[] = paragraphList.map((p, idx) => {
+      const existing = rawInstructions.find(inst => inst.instructionNo === idx || inst.paragraphId === p.paragraphNo) || rawInstructions[idx];
+      const instCharacters = existing ? (existing.characters || []) : [];
+      const cinematographicDirections = existing ? (existing.cinematographicDirections || '') : '';
+      let imageIndex = existing ? (existing.imageIndex || 0) : 0;
+      const isLocked = existing ? Boolean(existing.isLocked) : false;
+
+      const styleText = style?.drawingInstructions || '';
+      const charTexts: string[] = [];
+      for (const cName of instCharacters) {
+        const found = charMap.get(cName.trim().toLowerCase());
+        if (found) {
+          const desc = found.descriptionText || found.instructionsText || '';
+          if (desc) charTexts.push(`${found.characterName}: ${desc}`);
+        }
+      }
+      const characterText = charTexts.join('\n');
+      const sceneText = p.paragraphText;
+      const narrativeText = p.narrativeText;
+
+      const promptSourceText = [styleText, cinematographicDirections, characterText, sceneText].filter(Boolean).join('\n\n');
+      const promptDigest = generateTextDigest(promptSourceText);
+
+      // Find any images on disk for this digest or previous digests
+      const matchingDiskFiles = diskImageMap.get(promptDigest) || [];
+      const images: ImageEntry[] = [];
+
+      if (matchingDiskFiles.length > 0) {
+        for (const diskFile of matchingDiskFiles) {
+          const base = diskFile.replace(/^images\//, '').replace(/\.(png|jpe?g|gif|webp|svg)$/i, '');
+          const digest = base.split('_')[0] || promptDigest;
+          images.push({
+            status: 'COMPLETE',
+            styleText,
+            cinematographicText: cinematographicDirections,
+            characterText,
+            sceneText,
+            narrativeText,
+            promptDigest: digest
+          });
+        }
+      } else if (existingImagesSet.has(`images/${promptDigest}.png`)) {
+        images.push({
+          status: 'COMPLETE',
+          styleText,
+          cinematographicText: cinematographicDirections,
+          characterText,
+          sceneText,
+          narrativeText,
+          promptDigest
+        });
+      }
+
+      // Check if existing instruction had historical images
+      if (existing && Array.isArray(existing.images) && existing.images.length > 0) {
+        for (const prevImg of existing.images) {
+          if (!images.some(img => img.promptDigest === prevImg.promptDigest)) {
+            images.push(prevImg);
+          }
+        }
+      }
+
+      if (imageIndex >= images.length) {
+        imageIndex = Math.max(0, images.length - 1);
+      }
+
+      return {
+        instructionNo: idx,
+        paragraphId: p.paragraphNo,
+        pageId: p.pageId,
+        chapterId: p.chapterId,
+        imageIndex,
+        cinematographicDirections,
+        characters: instCharacters,
+        images,
+        isLocked
+      };
+    });
 
     // 3. Write into Dexie IndexedDB
     await processDb.transaction('rw', [
@@ -140,7 +256,8 @@ export async function loadStartup(): Promise<{
     console.log('[loadStartup] Successfully loaded startup state. Indexed:', {
       images: existingImagesSet.size,
       summaries: existingSummariesSet.size,
-      prompts: existingPromptsSet.size
+      prompts: existingPromptsSet.size,
+      instructions: instructions.length
     });
 
     return { story, style, characters, instructions };

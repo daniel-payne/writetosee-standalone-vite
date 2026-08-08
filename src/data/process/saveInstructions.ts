@@ -7,7 +7,7 @@ import {
   generateTextDigest
 } from './parsers';
 import { processImages } from './workflows/processImages';
-import type { Instruction } from './types';
+import type { Instruction } from './TYPES';
 
 /**
  * Saves instructions list (or markdown string) to instructions.md and replaces instructions in IndexedDB.
@@ -75,4 +75,41 @@ export async function saveInstructions(input: string | Instruction[]): Promise<I
   } finally {
     setState('instructions-loading', false, StoragePersistence.none);
   }
+}
+
+export async function savePanelInstructions(
+  panelNo: number,
+  updates: { characters?: string[]; cinematographicText?: string; isLocked?: boolean; imageIndex?: number }
+): Promise<Instruction[]> {
+  const currentInstructions = await processDb.instructions.toArray();
+  const index = currentInstructions.findIndex(inst => inst.instructionNo === panelNo || inst.paragraphId === panelNo);
+
+  let updatedList: Instruction[];
+  if (index >= 0) {
+    updatedList = [...currentInstructions];
+    updatedList[index] = {
+      ...updatedList[index],
+      ...(updates.characters !== undefined ? { characters: updates.characters } : {}),
+      ...(updates.cinematographicText !== undefined ? { cinematographicDirections: updates.cinematographicText } : {}),
+      ...(updates.isLocked !== undefined ? { isLocked: updates.isLocked } : {}),
+      ...(updates.imageIndex !== undefined ? { imageIndex: updates.imageIndex } : {})
+    };
+  } else {
+    updatedList = [
+      ...currentInstructions,
+      {
+        instructionNo: panelNo,
+        paragraphId: panelNo,
+        pageId: 0,
+        chapterId: 0,
+        imageIndex: updates.imageIndex || 0,
+        cinematographicDirections: updates.cinematographicText || '',
+        characters: updates.characters || [],
+        images: [],
+        isLocked: Boolean(updates.isLocked)
+      }
+    ];
+  }
+
+  return saveInstructions(updatedList);
 }

@@ -3,7 +3,8 @@ import { useState, useEffect, useRef, useCallback, type HTMLAttributes, type Pro
 import FormDrawingInstructions from "@/components/FormDrawingInstructions";
 import FormReferenceLink from "@/components/FormReferenceLink";
 import FormStoryTitle from "@/components/FormStoryTitle";
-import { useStyle, useStyleHash } from "@/data/processOLD/manageStyle";
+import { useLocalState } from "@keldan-systems/state-mutex";
+import type { Style as StyleType } from "@/data/process/TYPES";
 import { STYLE_PRESETS } from "@/data/stylePresets";
 
 type StyleProps = {} & HTMLAttributes<HTMLDivElement>;
@@ -15,8 +16,8 @@ export default function Style({
   const navigation = useNavigation();
   const actionData = useActionData() as any;
 
-  const [style] = useStyle();
-  const [styleHash] = useStyleHash();
+  const [style] = useLocalState<StyleType | undefined>('style-data', undefined);
+  const [styleHash] = useLocalState<string>('style-hash', '');
 
   const safeJoin = (val: unknown): string => {
     if (Array.isArray(val)) {
@@ -25,23 +26,23 @@ export default function Style({
     return typeof val === 'string' ? val : '';
   };
 
-  const initialStyle = style ?? {};
+  const initialStyle: any = style ?? {};
 
   const [formData, setFormData] = useState({
     storyTitle: initialStyle.storyTitle || '',
     drawingInstructions: safeJoin(initialStyle.drawingInstructions),
     referenceUrl: initialStyle.referenceUrl || '',
-    linkInstructions: safeJoin(initialStyle.linkInstructions),
+    linkInstructions: safeJoin(initialStyle.linkInstructions || initialStyle.referenceInstructions),
   });
 
   useEffect(() => {
     if (actionData?.cancelled) {
-      const currentSaved = style ?? {};
+      const currentSaved: any = style ?? {};
       setFormData({
         storyTitle: currentSaved.storyTitle || '',
         drawingInstructions: safeJoin(currentSaved.drawingInstructions),
         referenceUrl: currentSaved.referenceUrl || '',
-        linkInstructions: safeJoin(currentSaved.linkInstructions),
+        linkInstructions: safeJoin(currentSaved.linkInstructions || currentSaved.referenceInstructions),
       });
     }
   }, [actionData, style]);
@@ -74,24 +75,19 @@ export default function Style({
     }
   }, [fetcher.state, fetcher.data]);
 
-  // Cross-tab sync: when another tab saves, localStorage 'style-hash' changes which updates
-  // styleHash here. But the style data object only updates after the async loadStyle() call
-  // in the storage listener completes. We track both: only sync formData once BOTH have
-  // moved (new hash + new style object reference), preventing the race where styleHash is
-  // new but style still holds the previous tab's stale data.
   const lastSyncedHashRef = useRef(styleHash);
   const lastSyncedStyleRef = useRef(style);
   useEffect(() => {
     const hashChanged = styleHash && styleHash !== lastSyncedHashRef.current;
-    const dataChanged = style !== null && style !== lastSyncedStyleRef.current;
+    const dataChanged = style !== undefined && style !== lastSyncedStyleRef.current;
     if (hashChanged && dataChanged) {
       lastSyncedHashRef.current = styleHash;
       lastSyncedStyleRef.current = style;
       setFormData({
-        storyTitle: style.storyTitle || '',
-        drawingInstructions: safeJoin(style.drawingInstructions),
-        referenceUrl: style.referenceUrl || '',
-        linkInstructions: safeJoin(style.linkInstructions),
+        storyTitle: (style as any)?.storyTitle || '',
+        drawingInstructions: safeJoin(style?.drawingInstructions),
+        referenceUrl: style?.referenceUrl || '',
+        linkInstructions: safeJoin((style as any)?.linkInstructions || style?.referenceInstructions),
       });
     }
   }, [styleHash, style]);
@@ -100,7 +96,7 @@ export default function Style({
     formData.storyTitle !== (initialStyle.storyTitle || '') ||
     formData.drawingInstructions !== safeJoin(initialStyle.drawingInstructions) ||
     formData.referenceUrl !== (initialStyle.referenceUrl || '') ||
-    formData.linkInstructions !== safeJoin(initialStyle.linkInstructions);
+    formData.linkInstructions !== safeJoin(initialStyle.linkInstructions || initialStyle.referenceInstructions);
 
   const isDirtyRef = useRef(isDirty);
   isDirtyRef.current = isDirty;

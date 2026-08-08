@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useCharacters } from '@/data/processOLD/manageCharacters';
+import { useLocalState } from '@keldan-systems/state-mutex';
+import type { Character } from '@/data/process/TYPES';
 
 interface PanelInstructionsModalProps {
   isOpen: boolean;
@@ -20,7 +21,7 @@ export default function PanelInstructionsModal({
   currentIsLocked = false,
   onSave
 }: PanelInstructionsModalProps) {
-  const [allCharacters] = useCharacters();
+  const [allCharacters] = useLocalState<Character[]>('characters-data', []);
   const [selectedCharacters, setSelectedCharacters] = useState<string[]>(currentCharacters);
   const [cinematographicText, setCinematographicText] = useState<string>(currentCinematographicText);
   const [isLocked, setIsLocked] = useState<boolean>(currentIsLocked);
@@ -130,15 +131,16 @@ export default function PanelInstructionsModal({
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {allCharacters.map((char) => {
-                  const isSelected = isCharSelected(char.name);
+                  const charName = char.characterName || (char as any).name || '';
+                  const isSelected = isCharSelected(charName);
                   return (
                     <button
-                      key={char.name}
+                      key={charName}
                       type="button"
-                      onClick={() => toggleCharacter(char.name)}
+                      onClick={() => toggleCharacter(charName)}
                       className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all text-xs font-semibold ${isSelected
-                          ? 'border-primary bg-primary/10 text-primary shadow-sm'
-                          : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-primary/50'
+                        ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:border-primary/50'
                         }`}
                     >
                       <input
@@ -147,7 +149,7 @@ export default function PanelInstructionsModal({
                         onChange={() => { }}
                         className="checkbox checkbox-primary checkbox-xs pointer-events-none"
                       />
-                      <span className="truncate">{char.name}</span>
+                      <span className="truncate">{charName}</span>
                     </button>
                   );
                 })}

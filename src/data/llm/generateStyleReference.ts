@@ -1,6 +1,6 @@
 import llmGenerateText from "@/data/llm/llmGenerateText";
 import { readFile } from "@/data/storage/fileStorage";
-import { writeLog } from "../../storage/logStorage";
+import { writeLog } from "@/data/storage/logStorage";
 
 async function fileToBase64(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {

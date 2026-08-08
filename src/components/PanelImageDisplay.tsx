@@ -3,8 +3,8 @@ import { readFile } from "@/data/storage/fileStorage";
 import { useFetcher } from "react-router-dom";
 import { writeLog } from "@/data/storage/logStorage";
 import PanelInstructionsModal from "./PanelInstructionsModal";
-import { useInstructions } from "@/data/processOLD/manageInstructions";
 import { useLocalState } from "@keldan-systems/state-mutex";
+import type { Instruction } from "@/data/process/TYPES";
 
 type ComponentProps = {
   paragraph: any;
@@ -123,13 +123,11 @@ export default function PanelImageDisplay({
   const [promptLoading, setPromptLoading] = useState(false);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
 
-  const [imageProcessingStatus] = useLocalState<'idle' | 'processing'>('publication-image-processing-status', 'idle');
-  const [pubProcessingStatus] = useLocalState<'idle' | 'processing'>('publication-processing-status', 'idle');
-
-  const [savedInstructions] = useInstructions();
+  const [instructionsData] = useLocalState<Instruction[]>('instructions-data', []);
+  const [imageProcessingStatus] = useLocalState<'idle' | 'processing'>('image-processing-status', 'idle');
 
   const panelIdx = paragraph?.panelNo ?? paragraph?.paragraphNo ?? 0;
-  const savedInst = savedInstructions[panelIdx];
+  const savedInst = (instructionsData || []).find((inst: Instruction) => inst.instructionNo === panelIdx || inst.paragraphId === panelIdx) || instructionsData?.[panelIdx];
 
   const handleOpenPromptModal = async () => {
     setShowPromptModal(true);
@@ -193,11 +191,13 @@ export default function PanelImageDisplay({
   const imageStatus = paragraph?.imageStatus || 'idle';
   const needsRegenerate = !isPanelFailed && Boolean(paragraph?.needsRegenerate);
 
-  const isAwaitingImage = !isPanelFailed && (imageStatus === 'pending' || imageStatus === 'generating' || needsRegenerate);
-  const isCurrentlyGenerating = !isPanelFailed && (imageStatus === 'generating' || imageStatus === 'pending' || needsRegenerate);
-  const isGlobalProcessing = imageProcessingStatus === 'processing' || pubProcessingStatus === 'processing';
+  const isCurrentlyGenerating = !isPanelFailed && (imageStatus === 'generating' || isRegenerating);
+  const isGlobalProcessing = imageProcessingStatus === 'processing';
 
-  const isThisPanelGenerating = !isPanelFailed && (isCurrentlyGenerating || isAwaitingImage || (isGlobalProcessing && (needsRegenerate || imageStatus === 'pending' || imageStatus === 'generating')));
+  const isThisPanelGenerating = !isPanelFailed && (
+    isCurrentlyGenerating ||
+    (isGlobalProcessing && (imageStatus === 'generating' || needsRegenerate))
+  );
 
   console.log(`[STORY-DEBUG] PanelImageDisplay panel ${panelIdx} render:`, {
     imagePath,
@@ -315,7 +315,7 @@ export default function PanelImageDisplay({
   return (
     <div {...rest} data-name={name}>
       <div
-        className={`h-full w-full bg-white dark:bg-slate-800 rounded-2xl shadow-md border flex flex-col overflow-hidden relative group transition-all duration-300 ${isExpanded ? 'cursor-zoom-out' : 'cursor-pointer'} ${isAwaitingImage ? 'border-primary/30 bg-primary/[0.02]' : 'border-slate-200 dark:border-slate-700'}`}
+        className={`h-full w-full bg-white dark:bg-slate-800 rounded-2xl shadow-md border flex flex-col overflow-hidden relative group transition-all duration-300 ${isExpanded ? 'cursor-zoom-out' : 'cursor-pointer'} ${isThisPanelGenerating ? 'border-primary/30 bg-primary/[0.02]' : 'border-slate-200 dark:border-slate-700'}`}
         title={paragraph.text || paragraph.sceneText || (isExpanded ? "Double click to make small" : "Double click to enlarge")}
       >
         {/* Top Badges / Indicators (Left) */}
@@ -557,7 +557,7 @@ export default function PanelImageDisplay({
                     className="btn btn-sm btn-outline rounded-xl text-xs font-bold px-4 py-2 normal-case flex items-center justify-center gap-1.5 shadow-sm hover:shadow"
                   >
                     {isRegenerating && <span className="loading loading-spinner loading-xs"></span>}
-                    {isRegenerating ? "Regenerating..." : "Regenerate Image"}
+                    {isRegenerating ? "Generating..." : (src ? "Regenerate Image" : "Generate Image")}
                   </button>
                 </div>
               </div>

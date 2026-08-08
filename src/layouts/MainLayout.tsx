@@ -3,11 +3,10 @@ import React from 'react';
 import type { HTMLAttributes, PropsWithChildren } from "react";
 import { useLocation, useLoaderData, useNavigation, useRevalidator, useNavigate } from 'react-router-dom';
 import type { MainLayoutLoaderData } from './MainLayout.loader';
-import { useLocalState, getState, setState, StoragePersistence } from '@keldan-systems/state-mutex';
+import { useLocalState } from '@keldan-systems/state-mutex';
 import { getDirectoryHandle, disconnectDirectory } from '@/data/storage/fileStorage';
 import { wipeDatabase } from '@/data/storage/db';
-import processPublication from '@/data/processOLD/workflow/workflowPublication';
-import manageStartup from '@/data/processOLD/manageStartup';
+import { loadStartup } from '@/data/process/loadStartup';
 import { writeLog } from '@/data/storage/logStorage';
 import { clearAllCaches } from '@/data/clearCaches';
 
@@ -75,45 +74,16 @@ export default function MainLayout({
   const navigate = useNavigate();
   const [theme, setTheme] = useLocalState<string>('writetosee-theme', DEFAULT_THEME);
   const [columnsPerRow, setColumnsPerRow] = useLocalState<number>('writetosee-columns-per-row', 2);
-  const [processingStatus] = useLocalState<'idle' | 'processing'>('publication-processing-status', 'idle');
-  const [imageProcessingStatus] = useLocalState<'idle' | 'processing'>('publication-image-processing-status', 'idle');
+  const [processingStatus] = useLocalState<boolean>('story-loading', false);
+  const [imageProcessingStatus] = useLocalState<'idle' | 'processing'>('image-processing-status', 'idle');
   const [isDEBUG] = useLocalState<boolean>('isDEBUG', false);
   const [safeModeVal] = useLocalState<string | boolean>('safeMode', true);
   const isSafeMode = safeModeVal === true || safeModeVal === '1' || safeModeVal === 'true';
 
   useEffect(() => {
-    const checkLockAndRecover = async () => {
-      if (typeof navigator !== 'undefined' && navigator.locks) {
-        const currentStatus = getState('publication-processing-status');
-        if (currentStatus === 'processing') {
-          await navigator.locks.request('publication-processing', { ifAvailable: true }, async (lock) => {
-            if (lock) {
-              setState('publication-processing-status', 'idle', StoragePersistence.local);
-              if (getState('publication-needs-processing') === true) {
-                setTimeout(() => {
-                  processPublication().catch(async (err) =>
-                    await writeLog('error', 'MainLayout', `Auto-recovery processing failed: ${err instanceof Error ? err.message : String(err)}`)
-                  );
-                }, 0);
-              }
-            }
-          });
-        }
-      }
-    };
-
-    checkLockAndRecover();
-
-    window.addEventListener('focus', checkLockAndRecover);
-    return () => {
-      window.removeEventListener('focus', checkLockAndRecover);
-    };
-  }, []);
-
-  useEffect(() => {
     if (loaderData?.hasDirectory && loaderData?.permissionGranted) {
-      manageStartup().catch(async (err) => {
-        await writeLog('error', 'MainLayout', `App startup publication build failed: ${err instanceof Error ? err.message : String(err)}`);
+      loadStartup().catch(async (err) => {
+        await writeLog('error', 'MainLayout', `App startup load failed: ${err instanceof Error ? err.message : String(err)}`);
       });
     }
   }, [loaderData?.hasDirectory, loaderData?.permissionGranted]);
@@ -135,7 +105,7 @@ export default function MainLayout({
   const navigation = useNavigation();
   const isSubmitting = navigation.state === 'submitting';
 
-  const isProcessing = processingStatus === 'processing';
+  const isProcessing = Boolean(processingStatus);
   const isStoryDisabled = !loaderData?.hasDirectory || !loaderData?.permissionGranted || !loaderData?.apiKey;
   const isNavDisabled = isStoryDisabled || isProcessing;
 
@@ -251,7 +221,7 @@ export default function MainLayout({
               <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 WriteToSee
               </span>
-              {processingStatus === 'processing' && (
+              {processingStatus && (
                 <span className="ml-3 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary border border-primary/20 animate-pulse shadow-sm">
                   <svg className="animate-spin h-3.5 w-3.5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -260,7 +230,7 @@ export default function MainLayout({
                   Processing Story
                 </span>
               )}
-              {processingStatus !== 'processing' && imageProcessingStatus === 'processing' && (
+              {!processingStatus && imageProcessingStatus === 'processing' && (
                 <span className="ml-3 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full bg-secondary/15 text-secondary border border-secondary/20 animate-pulse shadow-sm">
                   <svg className="animate-spin h-3.5 w-3.5 text-secondary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

@@ -1,9 +1,11 @@
 import Dexie, { type Table } from 'dexie';
 import * as fileStorage from './fileStorage';
-import generateTextDigest from '../processOLD/generate/generateTextDigest';
-import storyToParagraphs from '../processOLD/generate/generateParagraphs';
-import { parseCharactersMarkdown } from '../processOLD/manageCharacters';
-import { parseInstructionsMarkdown } from '../processOLD/manageInstructions';
+import {
+    generateTextDigest,
+    storyToParagraphs,
+    parseCharactersMarkdown,
+    parseInstructionsMarkdown
+} from '../process/parsers';
 
 export interface PanelRecord {
     id?: number;
@@ -146,10 +148,10 @@ export async function importFromFiles(): Promise<void> {
     await db.characters.clear();
     if (parsedChars.length > 0) {
         await db.characters.bulkPut(parsedChars.map(c => ({
-            name: c.name,
-            description: c.description || '',
-            instructions: c.instructions || '',
-            cropBox: c.cropBox
+            name: c.characterName || (c as any).name || '',
+            description: c.descriptionText || (c as any).description || '',
+            instructions: c.instructionsText || (c as any).instructions || '',
+            cropBox: (c as any).cropBox
         })));
     }
 
@@ -181,8 +183,7 @@ export async function importFromFiles(): Promise<void> {
     }
 
     // 6. Build panels from story
-    const tempPub = { story: storyText };
-    const paragraphs = storyToParagraphs(tempPub);
+    const paragraphs = storyToParagraphs(storyText);
 
     const panelsToInsert: PanelRecord[] = paragraphs.map((p, idx) => {
         const matchingExisting = existingPanels.find((ep: any) =>
@@ -191,7 +192,7 @@ export async function importFromFiles(): Promise<void> {
 
         const panelInst = instructionsMap[idx] ?? instructionsMap[p.paragraphNo];
         const characters = panelInst ? (panelInst.characters || []) : (matchingExisting?.characters || []);
-        const cinematographicText = panelInst ? (panelInst.cinematographicText || "") : (matchingExisting?.cinematographicText || "");
+        const cinematographicText = panelInst ? (panelInst.cinematographicDirections || (panelInst as any).cinematographicText || "") : (matchingExisting?.cinematographicText || "");
         const isLocked = panelInst ? Boolean(panelInst.isLocked) : Boolean(matchingExisting?.isLocked);
 
         const imagesList = matchingExisting?.images || (matchingExisting?.image ? [matchingExisting.image] : []);

@@ -1,8 +1,8 @@
-import { loadCharacters } from '@/data/processOLD/manageCharacters';
+import { processDb } from '@/data/process/db';
 import { listFiles, readFile } from '@/data/storage/fileStorage';
 
 export async function clientLoader() {
-  const characters = await loadCharacters().catch(() => []);
+  const characters = await processDb.characters.toArray().catch(() => []);
 
   let images: { name: string; url: string; lastModified: number }[] = [];
   try {

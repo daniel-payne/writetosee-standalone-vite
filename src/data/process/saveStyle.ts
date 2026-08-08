@@ -7,7 +7,7 @@ import {
   generateTextDigest
 } from './parsers';
 import { processImages } from './workflows/processImages';
-import type { Style } from './types';
+import type { Style } from './TYPES';
 
 /**
  * Saves style text (or Style object) to style.md and replaces style in IndexedDB.

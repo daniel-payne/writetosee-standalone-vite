@@ -1,5 +1,5 @@
-import { loadStory } from '@/data/processOLD/manageStory';
-import { loadStyle } from '@/data/processOLD/manageStyle';
+import { loadStartup } from '@/data/process/loadStartup';
+import { serializeStoryMarkdown } from '@/data/process/parsers';
 import { isPermissionGranted } from '@/data/storage/fileStorage';
 
 export interface StoryLoaderData {
@@ -11,19 +11,14 @@ export async function clientLoader(): Promise<StoryLoaderData> {
   let story = '';
 
   try {
-    console.log("Story.loader: checking permission...");
     const permissionGranted = await isPermissionGranted();
-    console.log("Story.loader: permissionGranted =", permissionGranted);
     if (permissionGranted) {
-      console.log("Story.loader: loading story...");
-      story = await loadStory();
-      console.log("Story.loader: loading style...");
-      await loadStyle();
+      const data = await loadStartup();
+      story = serializeStoryMarkdown(data.story);
     }
   } catch (err) {
     console.warn('Could not load story in clientLoader:', err);
   }
 
-  console.log("Story.loader: clientLoader finished!");
   return { story };
 }

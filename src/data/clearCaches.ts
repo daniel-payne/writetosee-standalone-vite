@@ -1,21 +1,27 @@
 import { setState, StoragePersistence } from '@keldan-systems/state-mutex';
-import { clearStoryCache } from './processOLD/manageStory';
-import { clearStyleCache } from './processOLD/manageStyle';
-import { clearPublicationCache } from './processOLD/managePublication';
+import { clearProcessDb } from './process/db';
 
 /**
  * Resets all in-memory caches, state-mutex keys, and background processing flags
  * to ensure that switching to a new folder loads all files freshly from disk.
  */
-export function clearAllCaches(): void {
-    // Clear the specific file/data caches
-    clearStoryCache();
-    clearStyleCache();
-    clearPublicationCache();
+export async function clearAllCaches(): Promise<void> {
+  await clearProcessDb().catch(() => {});
 
-    // Reset processing state keys to avoid stale background tasks or spinners
-    setState('publication-processing-status', 'idle', StoragePersistence.local);
-    setState('publication-needs-processing', false, StoragePersistence.local);
-    setState('publication-image-processing-status', 'idle', StoragePersistence.local);
-    setState('image-generation-needs-processing', false, StoragePersistence.local);
+  // Reset state-mutex keys
+  setState('story-data', null, StoragePersistence.none);
+  setState('story-hash', '', StoragePersistence.local);
+
+  setState('style-data', null, StoragePersistence.none);
+  setState('style-hash', '', StoragePersistence.local);
+
+  setState('characters-data', [], StoragePersistence.none);
+  setState('characters-hash', '', StoragePersistence.local);
+
+  setState('instructions-data', [], StoragePersistence.none);
+  setState('instructions-hash', '', StoragePersistence.local);
+
+  setState('image-processing-status', 'idle', StoragePersistence.local);
+  setState('process-startup-loading', false, StoragePersistence.none);
+  setState('process-startup-error', null, StoragePersistence.none);
 }

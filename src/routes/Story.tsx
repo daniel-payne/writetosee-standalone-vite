@@ -2,22 +2,21 @@ import { useState, useEffect, useRef, type HTMLAttributes, type PropsWithChildre
 import StoryEditor from "@/components/StoryEditor";
 import { useLoaderData, useActionData, Form } from "react-router-dom";
 import { useLocalState } from '@keldan-systems/state-mutex';
-import { usePublication } from "@/data/processOLD/managePublication";
-import { useStory } from "@/data/processOLD/manageStory";
-import { useAppStartupLoading } from "@/data/processOLD/manageStartup";
 import PanelImageDisplay from "@/components/PanelImageDisplay";
+import type { Story as StoryType, Instruction, ImageEntry } from "@/data/process/TYPES";
+import { serializeStoryMarkdown, parseStoryMarkdown } from "@/data/process/parsers";
 
 type StoryProps = {} & HTMLAttributes<HTMLDivElement>;
 
 export default function Story({
   ...rest
 }: PropsWithChildren<StoryProps>) {
-  useLoaderData();
+  const loaderData = useLoaderData() as any;
   const actionData = useActionData() as any;
 
-  const [publication] = usePublication();
-  const [story] = useStory();
-  const [isAppStartingUp] = useAppStartupLoading();
+  const [storyData] = useLocalState<StoryType | undefined>('story-data', undefined);
+  const [instructionsData] = useLocalState<Instruction[]>('instructions-data', []);
+  const [isAppStartingUp] = useLocalState<boolean>('process-startup-loading', false);
 
   const [leftWidth, setLeftWidth] = useState(25);
   const [isDragging, setIsDragging] = useState(false);
@@ -27,10 +26,51 @@ export default function Story({
   const [isDesktop, setIsDesktop] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth >= 768);
 
   const containerRef = useRef<HTMLFormElement>(null);
-  const panels = publication?.panels || [];
-  const isStartingUp = isAppStartingUp && panels.length === 0;
 
-  console.log('[STORY-DEBUG] Story component render. Panels count:', panels.length, 'Panels summary:', panels.map((p: any) => ({ panelNo: p.panelNo, image: p.image, imageStatus: p.imageStatus })));
+  const effectiveStory = storyData || (loaderData?.story ? parseStoryMarkdown(loaderData.story) : undefined);
+  const storyText = storyData ? serializeStoryMarkdown(storyData) : (loaderData?.story || '');
+
+  // Flatten story paragraphs into panels array for display
+  const paragraphList: { paragraphNo: number; paragraphText: string; narrativeText: string }[] = [];
+  for (const chap of effectiveStory?.chapters || []) {
+    for (const page of chap.pages || []) {
+      for (const p of page.paragraphs || []) {
+        paragraphList.push({
+          paragraphNo: p.paragraphNo,
+          paragraphText: p.paragraphText,
+          narrativeText: p.narrativeText || p.paragraphText
+        });
+      }
+    }
+  }
+
+  const panels = paragraphList.map((p, idx) => {
+    const inst = (instructionsData || []).find(i => i.instructionNo === idx || i.paragraphId === p.paragraphNo) || instructionsData?.[idx];
+    const activeImage = inst?.images?.[inst?.imageIndex || 0] || inst?.images?.[0];
+    const imagePath = activeImage?.promptDigest ? `images/${activeImage.promptDigest}.png` : '';
+    const status = activeImage?.status?.toLowerCase() === 'complete' ? 'completed'
+      : activeImage?.status?.toLowerCase() === 'processing' ? 'generating'
+        : activeImage?.status?.toLowerCase() === 'failed' ? 'failed'
+          : 'pending';
+
+    return {
+      panelNo: idx,
+      paragraphNo: p.paragraphNo,
+      text: p.paragraphText,
+      sceneText: p.paragraphText,
+      narrativeText: p.narrativeText,
+      imageUrl: imagePath,
+      image: imagePath,
+      imageStatus: status,
+      digest: activeImage?.promptDigest || '',
+      images: (inst?.images || []).map((img: ImageEntry) => `images/${img.promptDigest}.png`),
+      characters: inst?.characters || [],
+      cinematographicText: inst?.cinematographicDirections || '',
+      isLocked: Boolean(inst?.isLocked)
+    };
+  });
+
+  const isStartingUp = isAppStartingUp && panels.length === 0;
 
   useEffect(() => {
     const handleResize = () => {
@@ -42,9 +82,8 @@ export default function Story({
   }, []);
 
   useEffect(() => {
-    console.log('[STORY-DEBUG] Story useEffect: publication changed. Panel count:', publication?.panels?.length);
     setExpandedIdx(null);
-  }, [publication]);
+  }, [storyData]);
 
   const handleToggleExpand = (idx: number) => {
     setExpandedIdx((prev) => (prev === idx ? null : idx));
@@ -108,8 +147,8 @@ export default function Story({
             type="button"
             onClick={() => setMobileTab('text')}
             className={`flex-1 py-2.5 px-4 text-xs font-bold text-center border-b-2 transition-colors flex items-center justify-center gap-2 ${mobileTab === 'text'
-                ? 'border-primary text-primary bg-primary/5'
-                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              ? 'border-primary text-primary bg-primary/5'
+              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -121,8 +160,8 @@ export default function Story({
             type="button"
             onClick={() => setMobileTab('images')}
             className={`flex-1 py-2.5 px-4 text-xs font-bold text-center border-b-2 transition-colors flex items-center justify-center gap-2 ${mobileTab === 'images'
-                ? 'border-primary text-primary bg-primary/5'
-                : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+              ? 'border-primary text-primary bg-primary/5'
+              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -142,7 +181,7 @@ export default function Story({
           >
             <StoryEditor
               key={actionData?.timestamp ? `cancel-${actionData.timestamp}` : 'story-editor'}
-              defaultValue={story}
+              defaultValue={storyText}
             />
           </div>
         )}

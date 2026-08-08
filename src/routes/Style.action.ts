@@ -1,7 +1,8 @@
-import { saveStyle, loadStyle } from "@/data/processOLD/manageStyle";
+import { saveStyle } from "@/data/process/saveStyle";
+import { processDb } from "@/data/process/db";
 import { writeLog } from "@/data/storage/logStorage";
 import { STYLE_PRESETS } from "@/data/stylePresets";
-import generateStyleReference from "@/data/processOLD/generate/generateStyleReference";
+import generateStyleReference from "@/data/llm/generateStyleReference";
 
 export async function clientAction({ request }: any) {
   const formData = await request.formData();
@@ -20,7 +21,15 @@ export async function clientAction({ request }: any) {
     }
 
     try {
-      const currentStyle = await loadStyle();
+      const currentRecord = await processDb.style.get('main');
+      const currentStyle = currentRecord || {
+        drawingInstructions: '',
+        panelPerParagraph: true,
+        referenceUrl: '',
+        referenceInstructions: '',
+        useReferenceInstructions: true
+      };
+
       const updatedStyle = {
         ...currentStyle,
         drawingInstructions: presetText.trim(),
@@ -50,27 +59,23 @@ export async function clientAction({ request }: any) {
   }
 
   if (intent === 'SAVE-UPDATES') {
-    const storyTitle = (formData.get('storyTitle') as string) || '';
-    const imageDisplayMode = (formData.get('imageDisplayMode') as string) || 'per_paragraph';
     const drawingInstructionsText = (formData.get('drawingInstructions') as string) || '';
     const referenceUrl = (formData.get('referenceUrl') as string) || '';
     const linkInstructionsText = (formData.get('linkInstructions') as string) || '';
 
-    console.log("Style.action SAVE-UPDATES:", { storyTitle, imageDisplayMode, drawingInstructionsText, referenceUrl, linkInstructionsText });
-
     const style = {
-      storyTitle,
-      imageDisplayMode,
       drawingInstructions: drawingInstructionsText.trim(),
+      panelPerParagraph: true,
       referenceUrl,
-      linkInstructions: linkInstructionsText.trim(),
+      referenceInstructions: linkInstructionsText.trim(),
+      useReferenceInstructions: true
     };
 
     try {
       await saveStyle(style);
       return { success: true };
     } catch (error) {
-      await writeLog('error', 'Style.action', `Failed to save style.json: ${error instanceof Error ? error.message : String(error)}`);
+      await writeLog('error', 'Style.action', `Failed to save style: ${error instanceof Error ? error.message : String(error)}`);
       return { success: false, error: 'Failed to save' };
     }
   }

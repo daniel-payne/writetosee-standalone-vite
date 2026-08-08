@@ -10,14 +10,19 @@ import type {
   Style,
   Character,
   Instruction,
-  ImageEntry,
-  Prompt
-} from '../types';
+  ImageEntry
+} from '../TYPES';
 
 function dataURLtoBlob(dataUrl: string): Blob {
-  const parts = dataUrl.split(',');
-  const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/png';
-  const bstr = atob(parts[1]);
+  let mime = 'image/png';
+  let bstr = '';
+  if (dataUrl.includes(',')) {
+    const parts = dataUrl.split(',');
+    mime = parts[0].match(/:(.*?);/)?.[1] || 'image/png';
+    bstr = atob(parts[1]);
+  } else {
+    bstr = atob(dataUrl);
+  }
   let n = bstr.length;
   const u8arr = new Uint8Array(n);
   while (n--) {
@@ -30,12 +35,12 @@ export async function processImages(
   story: Story,
   style: Style,
   characters: Character[],
-  instructions: Instruction[]
+  instructions: Instruction[],
+  options?: { forceRegenerateInstructionNo?: number }
 ): Promise<Instruction[]> {
   setState('image-processing-status', 'processing', StoragePersistence.local);
 
   try {
-    const updatedInstructions: Instruction[] = [];
     const costs: number[] = [];
 
     // Flatten story paragraphs for easy lookup
@@ -88,7 +93,6 @@ export async function processImages(
 
       // Check if image file exists on disk
       const imageFileName = `images/${promptDigest}.png`;
-      const promptFileName = `prompts/${promptDigest}.md`;
       const isImageOnDisk = existingImagesSet.has(imageFileName);
 
       const existingImages = existing?.images || [];
@@ -143,7 +147,7 @@ export async function processImages(
 
       // Save prompt text to disk & IndexedDB
       if (!existingPromptsSet.has(promptFileName)) {
-        await fileStorage.writeFile(promptFileName, fullPromptText).catch(() => {});
+        await fileStorage.writeFile(promptFileName, fullPromptText).catch(() => { });
         existingPromptsSet.add(promptFileName);
       }
       await processDb.prompts.put({
@@ -151,8 +155,10 @@ export async function processImages(
         promptText: fullPromptText
       });
 
-      // If image is already on disk, skip generation
-      if (existingImagesSet.has(imageFileName)) {
+      const isForced = options?.forceRegenerateInstructionNo === inst.instructionNo;
+
+      // If image is already on disk and not forced, skip generation
+      if (existingImagesSet.has(imageFileName) && !isForced) {
         activeImage.status = 'COMPLETE';
         continue;
       }
@@ -161,6 +167,7 @@ export async function processImages(
       try {
         activeImage.status = 'PROCESSING';
         await processDb.instructions.put(inst);
+        setState('instructions-data', [...finalInstructions], StoragePersistence.none);
 
         console.log(`[processImages] Generating image for instruction ${inst.instructionNo} (digest: ${promptDigest})`);
         const res = await llmGenerateImage(fullPromptText);
@@ -172,6 +179,7 @@ export async function processImages(
 
           activeImage.status = 'COMPLETE';
           await processDb.instructions.put(inst);
+          setState('instructions-data', [...finalInstructions], StoragePersistence.none);
 
           if (res.totalCost) {
             costs.push(res.totalCost);
@@ -183,6 +191,7 @@ export async function processImages(
         console.error(`[processImages] Image generation failed for instruction ${inst.instructionNo}:`, err);
         activeImage.status = 'FAILED';
         await processDb.instructions.put(inst);
+        setState('instructions-data', [...finalInstructions], StoragePersistence.none);
       }
     }
 

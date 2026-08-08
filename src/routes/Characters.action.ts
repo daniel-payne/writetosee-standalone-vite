@@ -1,7 +1,8 @@
 import { type ActionFunctionArgs } from 'react-router-dom';
-import { saveCharacters, loadCharacters, mergeCharactersAdditively } from '@/data/processOLD/manageCharacters';
-import generateCharacters from '@/data/processOLD/generate/generateCharacters';
-import { loadStory } from '@/data/processOLD/manageStory';
+import { saveCharacters, mergeCharactersAdditively } from '@/data/process/saveCharacters';
+import { processDb } from '@/data/process/db';
+import { serializeStoryMarkdown } from '@/data/process/parsers';
+import generateCharacters from '@/data/llm/generateCharacters';
 import { writeLog } from '@/data/storage/logStorage';
 
 export async function clientAction({ request }: ActionFunctionArgs) {
@@ -23,19 +24,20 @@ export async function clientAction({ request }: ActionFunctionArgs) {
     }
   } else if (intent === 'CANCEL-UPDATES') {
     try {
-      const original = await loadCharacters();
+      const original = await processDb.characters.toArray();
       return { success: true, message: 'Changes cancelled', characters: original, timestamp: Date.now() };
     } catch (err: any) {
       return { error: err.message || 'Failed to cancel updates' };
     }
   } else if (intent === 'EXTRACT-CHARACTERS') {
     try {
-      const storyText = await loadStory();
+      const storyRecord = await processDb.story.get('main');
+      const storyText = storyRecord ? serializeStoryMarkdown(storyRecord) : '';
       if (!storyText || storyText.trim() === '') {
         return { error: 'No story text available to extract characters from.' };
       }
 
-      const existingCharacters = await loadCharacters();
+      const existingCharacters = await processDb.characters.toArray();
       const extracted = await generateCharacters(storyText);
 
       const merged = mergeCharactersAdditively(existingCharacters, extracted);
