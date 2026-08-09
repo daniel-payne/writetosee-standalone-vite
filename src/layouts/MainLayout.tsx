@@ -332,21 +332,35 @@ export default function MainLayout({
 
         <div className="flex-1 flex justify-end items-center gap-2">
           {/* Card Width Selector Pill */}
-          <div className="flex items-center gap-0.5 bg-base-content/10 backdrop-blur-md rounded-xl p-1 border border-base-content/10">
-            {[1, 2, 3, 4, 5, 6, 10, 12].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setColumnsPerRow(n)}
-                className={`px-2 py-0.5 text-xs font-bold rounded-lg transition-all duration-150 ${
-                  columnsPerRow === n
-                    ? 'bg-base-content/25 text-base-content shadow-sm font-extrabold'
-                    : 'text-base-content/50 hover:text-base-content hover:bg-base-content/10'
-                }`}
-              >
-                {n}
-              </button>
-            ))}
+          <div
+            className={`flex items-center gap-0.5 rounded-xl p-1 border transition-colors duration-300 ${
+              theme === DEFAULT_THEME
+                ? 'border-warning/30'
+                : 'border-info/30'
+            }`}
+          >
+            {[1, 2, 3, 4, 5, 6, 10, 12].map((n) => {
+              const isSelected = columnsPerRow === n;
+              const isDefaultTheme = theme === DEFAULT_THEME;
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setColumnsPerRow(n)}
+                  className={`px-2 py-0.5 text-xs font-bold rounded-lg transition-all duration-150 ${
+                    isSelected
+                      ? isDefaultTheme
+                        ? 'bg-warning text-warning-content shadow-sm shadow-warning/30 font-extrabold'
+                        : 'bg-info text-info-content shadow-sm shadow-info/30 font-extrabold'
+                      : isDefaultTheme
+                        ? 'text-warning/80 hover:text-warning hover:bg-warning/10'
+                        : 'text-info/80 hover:text-info hover:bg-info/10'
+                  }`}
+                >
+                  {n}
+                </button>
+              );
+            })}
           </div>
 
           <button
