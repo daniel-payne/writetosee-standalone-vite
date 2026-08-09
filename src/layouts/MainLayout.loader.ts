@@ -13,7 +13,7 @@ export interface MainLayoutLoaderData {
 }
 
 export async function clientLoader({ request }: any): Promise<MainLayoutLoaderData> {
-  console.log("MainLayout.loader: starting clientLoader...");
+  console.log("[TRACE:LOADER] MainLayout.loader: clientLoader() started");
   const url = new URL(request.url);
   let urlApiKey = url.searchParams.get('apiKey');
 
@@ -45,22 +45,22 @@ export async function clientLoader({ request }: any): Promise<MainLayoutLoaderDa
   let directoryName: string | null = null;
 
   try {
-    console.log("MainLayout.loader: checking saved directory...");
+    console.log("[TRACE:LOADER] MainLayout.loader: checking saved directory...");
     hasDirectory = await fileStorage.hasSavedDirectory();
-    console.log("MainLayout.loader: hasDirectory =", hasDirectory);
+    console.log("[TRACE:LOADER] MainLayout.loader: hasDirectory =", hasDirectory);
     if (hasDirectory) {
-      console.log("MainLayout.loader: checking permission...");
+      console.log("[TRACE:LOADER] MainLayout.loader: checking permission...");
       permissionGranted = await fileStorage.isPermissionGranted();
-      console.log("MainLayout.loader: permissionGranted =", permissionGranted);
+      console.log("[TRACE:LOADER] MainLayout.loader: permissionGranted =", permissionGranted);
       directoryName = await fileStorage.getSavedDirectoryName();
       if (permissionGranted) {
-        console.log("MainLayout.loader: listing files...");
+        console.log("[TRACE:LOADER] MainLayout.loader: listing files...");
         filesList = await fileStorage.listFiles();
-        console.log("MainLayout.loader: filesList =", filesList);
+        console.log("[TRACE:LOADER] MainLayout.loader: filesList =", filesList);
       }
     }
   } catch (err) {
-    console.warn('Could not check directory status in MainLayout.', err);
+    console.warn('[TRACE:LOADER] Could not check directory status in MainLayout.', err);
   }
 
   const story = filesList.find((file) => file === 'story.md');
@@ -68,6 +68,6 @@ export async function clientLoader({ request }: any): Promise<MainLayoutLoaderDa
   const characters = filesList.find((file) => file === 'characters.json');
   const panels = filesList.find((file) => file === 'panels.json');
 
-  console.log("MainLayout.loader: clientLoader finished!");
+  console.log("[TRACE:LOADER] MainLayout.loader: clientLoader finished, directoryName =", directoryName);
   return { hasDirectory, permissionGranted, directoryName, apiKey, safeMode, story, images, characters, panels };
 }

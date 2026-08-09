@@ -58,22 +58,7 @@ export async function saveInstructions(input: string | Instruction[]): Promise<I
       };
     });
 
-    // 1. Serialize and write to disk /instructions.md
-    const markdown = serializeInstructionsMarkdown(instructions);
-    await fileStorage.writeFile('instructions.md', markdown);
-
-    // 2. Replace in Dexie IndexedDB
-    await processDb.instructions.clear();
-    if (instructions.length > 0) {
-      await processDb.instructions.bulkPut(instructions);
-    }
-
-    // 3. Update main-thread state
-    const hash = generateTextDigest(markdown);
-    setState('instructions-data', instructions, StoragePersistence.none);
-    setState('instructions-hash', hash, StoragePersistence.local);
-
-    // 4. Fetch dependencies and trigger processImages
+    // 1. Fetch dependencies and run processImages
     const [storyRecord, styleRecord, charactersList] = await Promise.all([
       processDb.story.get('main'),
       processDb.style.get('main'),
@@ -91,11 +76,32 @@ export async function saveInstructions(input: string | Instruction[]): Promise<I
       style_hash: ''
     };
 
-    processImages(story, style, charactersList, instructions).catch(err => {
+    let finalInstructions = instructions;
+    try {
+      const updated = await processImages(story, style, charactersList, instructions);
+      if (updated && updated.length > 0) {
+        finalInstructions = updated;
+      }
+    } catch (err) {
       console.error('[saveInstructions] processImages error:', err);
-    });
+    }
 
-    return instructions;
+    // 2. Serialize and write to disk /instructions.md
+    const markdown = serializeInstructionsMarkdown(finalInstructions);
+    await fileStorage.writeFile('instructions.md', markdown);
+
+    // 3. Replace in Dexie IndexedDB
+    await processDb.instructions.clear();
+    if (finalInstructions.length > 0) {
+      await processDb.instructions.bulkPut(finalInstructions);
+    }
+
+    // 4. Update main-thread state
+    const hash = generateTextDigest(markdown);
+    setState('instructions-data', finalInstructions, StoragePersistence.none);
+    setState('instructions-hash', hash, StoragePersistence.local);
+
+    return finalInstructions;
   } catch (err: any) {
     const errorMsg = err?.message || 'Failed to save instructions';
     console.error('[saveInstructions] Error:', err);

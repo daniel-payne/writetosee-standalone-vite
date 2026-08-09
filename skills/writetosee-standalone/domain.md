@@ -141,6 +141,7 @@ CREATE TABLE paragraphs (
 
     prior_text                 TEXT         NULL,
     preceding_text             TEXT         NULL,
+    narrative_text             TEXT         NULL,
     narrative_summary          TEXT         NULL,
     narrative_digest           TEXT         NULL,
 
@@ -155,6 +156,7 @@ COMMENT ON COLUMN paragraphs.page_no           IS 'Foreign key reference to the 
 COMMENT ON COLUMN paragraphs.paragraph_text    IS 'The original narrative text sentence or paragraph in the story.';
 COMMENT ON COLUMN paragraphs.prior_text        IS 'Accumulated paragraph text on this page preceding this paragraph.'; 
 COMMENT ON COLUMN paragraphs.preceding_text    IS 'Accumulated summaries for all preceding chapters, and summaries for all preceding pages in the current chapter.';
+COMMENT ON COLUMN paragraphs.narrative_text    IS 'Concatenation of preceding_text + prior_text.';
 COMMENT ON COLUMN paragraphs.narrative_summary IS 'Preceding context followed by prior text, compressed through LLM if total context exceeds 500 words.';
 COMMENT ON COLUMN paragraphs.narrative_digest  IS 'The SHA256 hash of the narrative_summary field for prompt cache lookup.';
 
@@ -171,7 +173,6 @@ CREATE TABLE style (
     reference_url              TEXT         DEFAULT '',
     reference_instructions     TEXT         DEFAULT '',
     use_reference_instructions BOOLEAN      NOT NULL DEFAULT TRUE,
-    style_hash                 TEXT         NOT NULL
 );
 
 COMMENT ON COLUMN style.story_id               IS 'Primary key: unique identifier for the active project style configuration referencing story(story_id).';
@@ -180,7 +181,6 @@ COMMENT ON COLUMN style.panel_per_paragraph    IS 'Flag determining whether each
 COMMENT ON COLUMN style.reference_url          IS 'URL or file path to an artist sample or visual reference image.';
 COMMENT ON COLUMN style.reference_instructions IS 'Detailed visual descriptors and prompt modifiers derived from the reference image.';
 COMMENT ON COLUMN style.use_reference_instructions IS 'Flag to automatically inject reference instructions into image generation prompts.';
-COMMENT ON COLUMN style.style_hash             IS 'The SHA256 hash of the complete style configuration for cache invalidation.';
 
 -- ----------------------------------------------------------------------------
 -- 3. Characters & Entity Registry
@@ -188,18 +188,27 @@ COMMENT ON COLUMN style.style_hash             IS 'The SHA256 hash of the comple
 -- ----------------------------------------------------------------------------
 
 CREATE TABLE characters (
-    character_id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    character_no               INTEGER      NOT NULL,
-    character_name             TEXT         NOT NULL UNIQUE,
+    character_name             TEXT         PRIMARY KEY,
+    
+    character_no               INTEGER      NULL,
     reference_url              TEXT         DEFAULT '',
+    crop_box                   TEXT         NULL,
+    crop_x                     REAL         NULL,
+    crop_y                     REAL         NULL,
+    crop_width                 REAL         NULL,
+    crop_height                REAL         NULL,
     description_text           TEXT         NOT NULL DEFAULT '',
     instructions_text          TEXT         NOT NULL DEFAULT ''
 );
 
-COMMENT ON COLUMN characters.character_id      IS 'Primary key: unique identifier for the character entity.';
-COMMENT ON COLUMN characters.character_no      IS 'Sequential 1-based order of the character in the roster.';
 COMMENT ON COLUMN characters.character_name    IS 'Unique canonical name of the character (case-insensitive index). Names may contain ampersands and commas.';
+COMMENT ON COLUMN characters.character_no      IS 'Sequential 1-based order of the character in the roster.';
 COMMENT ON COLUMN characters.reference_url     IS 'Reference portrait URL or image path for facial and costume consistency.';
+COMMENT ON COLUMN characters.crop_box          IS 'JSON string or object containing normalized bounding box coordinates { x, y, width, height } (0.0 to 1.0) used to isolate the character in the reference image for vision analysis.';
+COMMENT ON COLUMN characters.crop_x            IS 'Normalized horizontal start coordinate (0.0 to 1.0) of bounding box for character analysis.';
+COMMENT ON COLUMN characters.crop_y            IS 'Normalized vertical start coordinate (0.0 to 1.0) of bounding box for character analysis.';
+COMMENT ON COLUMN characters.crop_width        IS 'Normalized width (0.0 to 1.0) of bounding box for character analysis.';
+COMMENT ON COLUMN characters.crop_height       IS 'Normalized height (0.0 to 1.0) of bounding box for character analysis.';
 COMMENT ON COLUMN characters.description_text  IS 'Detailed visual description of physical appearance, age, clothing, and features.';
 COMMENT ON COLUMN characters.instructions_text IS 'Specific rendering and character prompt directives injected when this character appears.';
 

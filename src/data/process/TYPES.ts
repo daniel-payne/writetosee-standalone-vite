@@ -109,8 +109,12 @@ export interface Character {
   description?: string;
   instructions_text: string;
   instructionsText?: string;
-  instructions?: string;
-  cropBox?: { x: number; y: number; width: number; height: number };
+  cropBox?: { x: number; y: number; width: number; height: number } | null;
+  crop_box?: { x: number; y: number; width: number; height: number } | string | null;
+  crop_x?: number | null;
+  crop_y?: number | null;
+  crop_width?: number | null;
+  crop_height?: number | null;
   [key: string]: any;
 }
 

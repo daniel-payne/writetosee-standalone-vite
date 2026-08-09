@@ -49,7 +49,11 @@ export default async function processxAIImage({
         if (!response.ok) {
             const errorText = await response.text();
             await writeLog('error', 'processxAIImage', `API Error: ${response.status} - ${errorText}`);
-            throw new Error(`API Error: ${response.status} - ${errorText}`);
+            const err: any = new Error(`API Error: ${response.status} - ${errorText}`);
+            err.status = response.status;
+            err.rawError = errorText;
+            err.provider = 'xAI';
+            throw err;
         }
 
         const data = await response.json();

@@ -4,6 +4,7 @@ import { processDb } from './db';
 import {
   parseCharactersMarkdown,
   serializeCharactersMarkdown,
+  serializeInstructionsMarkdown,
   generateTextDigest,
   serializeStoryMarkdown
 } from './parsers';
@@ -37,6 +38,7 @@ export async function saveCharacters(input: string | Character[]): Promise<Chara
       const desc = c.description_text || c.descriptionText || c.description || '';
       const inst = c.instructions_text || c.instructionsText || c.instructions || '';
       const cId = c.character_id || c.characterId || `char_${idx}_${Date.now()}`;
+      const box = c.cropBox || (typeof c.crop_box === 'object' ? c.crop_box : (typeof c.crop_box === 'string' ? JSON.parse(c.crop_box) : undefined));
 
       return {
         ...c,
@@ -50,6 +52,12 @@ export async function saveCharacters(input: string | Character[]): Promise<Chara
         reference_url: refUrl,
         referenceUrl: refUrl,
         image: refUrl,
+        cropBox: box || undefined,
+        crop_box: box ? JSON.stringify(box) : undefined,
+        crop_x: box ? box.x : undefined,
+        crop_y: box ? box.y : undefined,
+        crop_width: box ? box.width : undefined,
+        crop_height: box ? box.height : undefined,
         description_text: desc,
         descriptionText: desc,
         description: desc,
@@ -92,9 +100,15 @@ export async function saveCharacters(input: string | Character[]): Promise<Chara
       style_hash: ''
     };
 
-    processImages(story, style, characters, instructionsList).catch(err => {
+    try {
+      const updatedInstructions = await processImages(story, style, characters, instructionsList);
+      if (updatedInstructions && updatedInstructions.length > 0) {
+        const instMd = serializeInstructionsMarkdown(updatedInstructions);
+        await fileStorage.writeFile('instructions.md', instMd).catch(() => {});
+      }
+    } catch (err) {
       console.error('[saveCharacters] processImages error:', err);
-    });
+    }
 
     return characters;
   } catch (err: any) {
@@ -137,10 +151,20 @@ export function mergeCharactersAdditively(existing: Character[], extracted: Char
         result[existingIndex].referenceUrl = ref;
         result[existingIndex].image = ref;
       }
+      const box = newChar.cropBox || (typeof newChar.crop_box === 'object' ? newChar.crop_box : (typeof newChar.crop_box === 'string' ? JSON.parse(newChar.crop_box) : undefined));
+      if (box && !result[existingIndex].cropBox && !result[existingIndex].crop_box) {
+        result[existingIndex].cropBox = box;
+        result[existingIndex].crop_box = typeof box === 'string' ? box : JSON.stringify(box);
+        result[existingIndex].crop_x = box.x;
+        result[existingIndex].crop_y = box.y;
+        result[existingIndex].crop_width = box.width;
+        result[existingIndex].crop_height = box.height;
+      }
     } else {
       const desc = newChar.description_text || newChar.descriptionText || (newChar as any).description || '';
       const inst = newChar.instructions_text || newChar.instructionsText || (newChar as any).instructions || '';
       const ref = newChar.reference_url || newChar.referenceUrl || (newChar as any).image || '';
+      const box = newChar.cropBox || (typeof newChar.crop_box === 'object' ? newChar.crop_box : (typeof newChar.crop_box === 'string' ? JSON.parse(newChar.crop_box) : undefined));
 
       result.push({
         character_id: `char_${result.length}_${Date.now()}`,
@@ -153,6 +177,12 @@ export function mergeCharactersAdditively(existing: Character[], extracted: Char
         reference_url: ref,
         referenceUrl: ref,
         image: ref,
+        cropBox: box || undefined,
+        crop_box: box ? JSON.stringify(box) : undefined,
+        crop_x: box ? box.x : undefined,
+        crop_y: box ? box.y : undefined,
+        crop_width: box ? box.width : undefined,
+        crop_height: box ? box.height : undefined,
         description_text: desc,
         descriptionText: desc,
         description: desc,
@@ -267,8 +297,8 @@ export async function analyzeCharacterImage(
   }
 
   const cleanPath = imagePath.trim();
-  let base64Data = '';
-  let mimeType = 'image/png';
+  let base64Data: string;
+  let mimeType: string;
 
   if (cleanPath.startsWith('blob:') || cleanPath.startsWith('data:')) {
     const res = await fetch(cleanPath);

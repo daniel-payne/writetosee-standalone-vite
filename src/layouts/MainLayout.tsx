@@ -81,8 +81,16 @@ export default function MainLayout({
   const isSafeMode = safeModeVal === true || safeModeVal === '1' || safeModeVal === 'true';
 
   useEffect(() => {
+    console.log('[TRACE:MAIN_LAYOUT] useEffect checking loaderData:', {
+      hasDirectory: loaderData?.hasDirectory,
+      permissionGranted: loaderData?.permissionGranted,
+      directoryName: loaderData?.directoryName,
+      hasApiKey: Boolean(loaderData?.apiKey)
+    });
     if (loaderData?.hasDirectory && loaderData?.permissionGranted) {
+      console.log('[TRACE:MAIN_LAYOUT] Triggering loadStartup()...');
       loadStartup().catch(async (err) => {
+        console.error('[TRACE:MAIN_LAYOUT] App startup load failed:', err);
         await writeLog('error', 'MainLayout', `App startup load failed: ${err instanceof Error ? err.message : String(err)}`);
       });
     }

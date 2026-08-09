@@ -4,6 +4,7 @@ import { processDb } from './db';
 import {
   parseStoryMarkdown,
   serializeStoryMarkdown,
+  serializeInstructionsMarkdown,
   generateTextDigest
 } from './parsers';
 import { generateSummaries } from './workflows/generateSummaries';
@@ -102,6 +103,9 @@ export async function saveStory(
 
         for (const paragraph of page.paragraphs || []) {
           const paraNo = paragraph.paragraph_no ?? paragraph.paragraphNo ?? 0;
+          const narrativeText = paragraph.narrative_text || paragraph.narrativeText || [paragraph.preceding_text, paragraph.prior_text].filter(Boolean).join('\n\n') || paragraph.paragraph_text || '';
+          const narrativeDigest = paragraph.narrative_digest || paragraph.narrativeDigest || generateTextDigest(narrativeText || paragraph.paragraph_text || '');
+
           flatParagraphs.push({
             paragraph_no: paraNo,
             paragraphNo: paraNo,
@@ -115,9 +119,12 @@ export async function saveStory(
             priorText: paragraph.prior_text || paragraph.priorText || '',
             preceding_text: paragraph.preceding_text || paragraph.precedingText || '',
             precedingText: paragraph.preceding_text || paragraph.precedingText || '',
+            narrative_text: narrativeText,
+            narrativeText: narrativeText,
             narrative_summary: paragraph.narrative_summary || paragraph.narrativeSummary || '',
-            narrativeText: paragraph.paragraph_text || paragraph.paragraphText || '',
-            narrative_digest: paragraph.narrative_digest || paragraph.narrativeDigest || generateTextDigest(paragraph.paragraph_text || paragraph.paragraphText || '')
+            narrativeSummary: paragraph.narrative_summary || paragraph.narrativeSummary || '',
+            narrative_digest: narrativeDigest,
+            narrativeDigest: narrativeDigest
           });
         }
       }
@@ -161,7 +168,7 @@ export async function saveStory(
     setState('story-data', currentStory, StoragePersistence.none);
     setState('story-hash', hash, StoragePersistence.local);
 
-    // 5. Fetch dependencies and trigger processImages
+    // 5. Fetch dependencies and run processImages
     const [styleRecord, charactersList, instructionsList] = await Promise.all([
       processDb.style.get('main'),
       processDb.characters.toArray(),
@@ -178,10 +185,15 @@ export async function saveStory(
       style_hash: ''
     };
 
-    // Trigger processImages asynchronously
-    processImages(currentStory, style, charactersList, instructionsList).catch(err => {
+    try {
+      const updatedInstructions = await processImages(currentStory, style, charactersList, instructionsList);
+      if (updatedInstructions && updatedInstructions.length > 0) {
+        const instMd = serializeInstructionsMarkdown(updatedInstructions);
+        await fileStorage.writeFile('instructions.md', instMd).catch(() => {});
+      }
+    } catch (err) {
       console.error('[saveStory] processImages error:', err);
-    });
+    }
 
     return currentStory;
   } catch (err: any) {

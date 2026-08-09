@@ -61,7 +61,11 @@ export default async function processGoogleImage({
             if (!response.ok) {
                 const errorText = await response.text();
                 await writeLog('error', 'processGoogleImage', `API Error: ${response.status} - ${errorText}`);
-                throw new Error(`API Error: ${response.status} - ${errorText}`);
+                const err: any = new Error(`API Error: ${response.status} - ${errorText}`);
+                err.status = response.status;
+                err.rawError = errorText;
+                err.provider = 'Google (Imagen)';
+                throw err;
             }
 
             const data = await response.json();
@@ -150,7 +154,11 @@ export default async function processGoogleImage({
             if (!response.ok) {
                 const errorText = await response.text();
                 await writeLog('error', 'processGoogleImage', `API Error: ${response.status} - ${errorText}`);
-                throw new Error(`API Error: ${response.status} - ${errorText}`);
+                const err: any = new Error(`API Error: ${response.status} - ${errorText}`);
+                err.status = response.status;
+                err.rawError = errorText;
+                err.provider = 'Google (Gemini Image)';
+                throw err;
             }
 
             const data = await response.json();

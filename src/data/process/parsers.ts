@@ -35,6 +35,8 @@ export function parseStoryMarkdown(markdown: string): Story {
       story_title: 'Untitled Story',
       title: 'Untitled Story',
       story_text: '',
+      story_summary: '',
+      story_digest: '',
       chapters: []
     };
   }
@@ -79,7 +81,7 @@ export function parseStoryMarkdown(markdown: string): Story {
   }
 
   let globalParagraphIndex = 0;
-  let accumulatedPriorText = '';
+  const chapterPrecedingTexts: string[] = [];
 
   const chapters: Chapter[] = chapterBlocks
     .filter(cBlock => cBlock.textLines.some(l => l.trim().length > 0))
@@ -111,13 +113,24 @@ export function parseStoryMarkdown(markdown: string): Story {
         });
       }
 
+      const pagePrecedingTexts: string[] = [];
+
       const pages: Page[] = pageBlocks
         .filter(pBlock => pBlock.textLines.some(l => l.trim().length > 0))
         .map((pBlock, pIdx) => {
           const pageRawText = pBlock.textLines.join('\n').trim();
           const rawParagraphs = pageRawText.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
 
+          let pagePriorText = '';
+
+          // Preceding text for paragraphs in this page: all preceding chapters + preceding pages in current chapter
+          const precedingParts = [...chapterPrecedingTexts, ...pagePrecedingTexts];
+          const precedingText = precedingParts.join('\n\n').trim();
+
           const paragraphs: Paragraph[] = rawParagraphs.map(pText => {
+            const currentPrior = pagePriorText;
+            const narrativeText = [precedingText, currentPrior].filter(Boolean).join('\n\n').trim();
+
             const pObj: Paragraph = {
               paragraph_no: globalParagraphIndex,
               paragraphNo: globalParagraphIndex,
@@ -127,17 +140,23 @@ export function parseStoryMarkdown(markdown: string): Story {
               pageNo: pIdx,
               paragraph_text: pText,
               paragraphText: pText,
-              prior_text: accumulatedPriorText,
-              priorText: accumulatedPriorText,
+              prior_text: currentPrior,
+              priorText: currentPrior,
+              preceding_text: precedingText,
+              precedingText: precedingText,
+              narrative_text: narrativeText,
+              narrativeText: narrativeText,
               narrative_summary: '',
-              narrativeText: pText,
-              narrative_digest: generateTextDigest(pText),
-              narrativeDigest: generateTextDigest(pText)
+              narrativeSummary: '',
+              narrative_digest: generateTextDigest(narrativeText || pText),
+              narrativeDigest: generateTextDigest(narrativeText || pText)
             };
             globalParagraphIndex++;
-            accumulatedPriorText = (accumulatedPriorText ? `${accumulatedPriorText}\n\n${pText}` : pText).trim();
+            pagePriorText = (pagePriorText ? `${pagePriorText}\n\n${pText}` : pText).trim();
             return pObj;
           });
+
+          pagePrecedingTexts.push(pageRawText);
 
           return {
             page_no: pIdx,
@@ -157,6 +176,8 @@ export function parseStoryMarkdown(markdown: string): Story {
         });
 
       const chapterRawText = cBlock.textLines.join('\n').trim();
+      chapterPrecedingTexts.push(chapterRawText);
+
       return {
         chapter_no: cIdx,
         chapterNo: cIdx,
@@ -236,10 +257,8 @@ export function parseStyleMarkdown(markdown: string): Style {
   }
 
   const lines = markdown.split(/\r?\n/);
-  let drawingInstructions = '';
   let panelPerParagraph = true;
   let referenceUrl = '';
-  let referenceInstructions = '';
   let useReferenceInstructions = true;
 
   let currentSection = 'drawing';
@@ -283,8 +302,8 @@ export function parseStyleMarkdown(markdown: string): Style {
     }
   }
 
-  drawingInstructions = drawingLines.join('\n').trim() || defaultStyle.drawing_instructions;
-  referenceInstructions = refInstLines.join('\n').trim();
+  const drawingInstructions = drawingLines.join('\n').trim() || defaultStyle.drawing_instructions;
+  const referenceInstructions = refInstLines.join('\n').trim();
 
   const styleHash = generateTextDigest(markdown);
 
@@ -350,9 +369,25 @@ export function parseCharactersMarkdown(markdown: string): Character[] {
     const refUrlMatch = trimmed.match(/[-*+]?\s*ReferenceUrl:\s*(.+)/i) || trimmed.match(/!\[.*?\]\((.*?)\)/);
     const referenceUrl = refUrlMatch ? refUrlMatch[1].trim() : '';
 
+    const cropBoxMatch = trimmed.match(/[-*+]?\s*(?:CropBox|crop_box|BoundingBox):\s*(.+)/i);
+    let cropBox: { x: number; y: number; width: number; height: number } | undefined;
+    if (cropBoxMatch) {
+      try {
+        const parsed = JSON.parse(cropBoxMatch[1].trim());
+        if (parsed && typeof parsed === 'object' && typeof parsed.x === 'number') {
+          cropBox = parsed;
+        }
+      } catch {
+        const nums = cropBoxMatch[1].split(',').map(s => parseFloat(s.trim()));
+        if (nums.length === 4 && nums.every(n => !isNaN(n))) {
+          cropBox = { x: nums[0], y: nums[1], width: nums[2], height: nums[3] };
+        }
+      }
+    }
+
     const instMatch = trimmed.match(/\*{0,2}Instructions:\*{0,2}\s*([\s\S]*)$/i);
     let instructionsText = '';
-    let descriptionText = '';
+    let descriptionText: string;
 
     if (instMatch) {
       instructionsText = instMatch[1].trim();
@@ -360,11 +395,13 @@ export function parseCharactersMarkdown(markdown: string): Character[] {
         .replace(/^#{1,6}\s+.+$/m, '')
         .replace(/\*{0,2}Instructions:\*{0,2}[\s\S]*$/i, '')
         .replace(/[-*+]?\s*ReferenceUrl:\s*.+/gi, '')
+        .replace(/[-*+]?\s*(?:CropBox|crop_box|BoundingBox):\s*.+/gi, '')
         .trim();
     } else {
       descriptionText = trimmed
         .replace(/^#{1,6}\s+.+$/m, '')
         .replace(/[-*+]?\s*ReferenceUrl:\s*.+/gi, '')
+        .replace(/[-*+]?\s*(?:CropBox|crop_box|BoundingBox):\s*.+/gi, '')
         .trim();
     }
 
@@ -379,6 +416,12 @@ export function parseCharactersMarkdown(markdown: string): Character[] {
       reference_url: referenceUrl,
       referenceUrl,
       image: referenceUrl,
+      cropBox,
+      crop_box: cropBox ? JSON.stringify(cropBox) : undefined,
+      crop_x: cropBox?.x,
+      crop_y: cropBox?.y,
+      crop_width: cropBox?.width,
+      crop_height: cropBox?.height,
       description_text: descriptionText,
       descriptionText,
       description: descriptionText,
@@ -402,10 +445,14 @@ export function serializeCharactersMarkdown(characters: Character[]): string {
       const refUrl = c.reference_url || c.referenceUrl || c.image || '';
       const desc = c.description_text || c.descriptionText || c.description || '';
       const inst = c.instructions_text || c.instructionsText || c.instructions || '';
+      const box = c.cropBox || (typeof c.crop_box === 'object' ? c.crop_box : (typeof c.crop_box === 'string' ? JSON.parse(c.crop_box) : null));
 
       const parts: string[] = [`## ${name}`];
       if (refUrl) {
         parts.push(`- ReferenceUrl: ${refUrl.trim()}`);
+      }
+      if (box && box.width > 0 && box.height > 0) {
+        parts.push(`- CropBox: ${JSON.stringify(box)}`);
       }
       if (desc && desc.trim()) {
         parts.push(desc.trim());
@@ -458,6 +505,8 @@ export function parseInstructionsMarkdown(markdown: string): Instruction[] {
     const chapMatch = trimmed.match(/[-*+]?\s*chapterId:\s*(\d+)/i) || trimmed.match(/[-*+]?\s*chapter_no:\s*(\d+)/i);
     const imgIdxMatch = trimmed.match(/[-*+]?\s*imageIndex:\s*(\d+)/i);
     const lockMatch = trimmed.match(/[-*+]?\s*(?:isLocked|locked|is_locked):\s*(true|false)/i);
+    const promptDigestMatch = trimmed.match(/[-*+]?\s*(?:currentPromptDigest|current_prompt_digest|promptDigest):\s*(.+)/i);
+    const assignedDigestsMatch = trimmed.match(/[-*+]?\s*(?:assignedPromptDigests|assigned_prompt_digests):\s*(.+)/i);
     const charMatch = trimmed.match(/\*{0,2}Characters:\*{0,2}\s*(.+)/i);
 
     const paragraphId = paraMatch ? parseInt(paraMatch[1], 10) : instructionNo;
@@ -465,9 +514,21 @@ export function parseInstructionsMarkdown(markdown: string): Instruction[] {
     const chapterId = chapMatch ? parseInt(chapMatch[1], 10) : 0;
     const imageIndex = imgIdxMatch ? parseInt(imgIdxMatch[1], 10) : 0;
     const isLocked = lockMatch ? lockMatch[1].toLowerCase() === 'true' : false;
+    const currentPromptDigest = promptDigestMatch ? promptDigestMatch[1].trim() : null;
+    let assignedPromptDigests: string[] = [];
+    if (assignedDigestsMatch) {
+      try {
+        assignedPromptDigests = JSON.parse(assignedDigestsMatch[1].trim());
+      } catch {
+        assignedPromptDigests = assignedDigestsMatch[1].split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+    if (currentPromptDigest && !assignedPromptDigests.includes(currentPromptDigest)) {
+      assignedPromptDigests.push(currentPromptDigest);
+    }
     const charList = charMatch ? charMatch[1].split(',').map(s => s.trim()).filter(Boolean) : [];
 
-    let cinematographicDirections = '';
+    let cinematographicDirections: string;
     const dirMatch = trimmed.match(/<cinematographic-directions>([\s\S]*?)<\/cinematographic-directions>/i) ||
       trimmed.match(/<cinematographic-text>([\s\S]*?)<\/cinematographic-text>/i);
     if (dirMatch) {
@@ -475,7 +536,7 @@ export function parseInstructionsMarkdown(markdown: string): Instruction[] {
     } else {
       const textLines = trimmed.split(/\r?\n/).filter(l =>
         !l.match(/^#{1,6}\s+(?:Instruction|Panel)/i) &&
-        !l.match(/[-*+]?\s*(?:paragraphId|pageId|chapterId|imageIndex|isLocked|locked|is_locked|Characters|paragraph_no|page_no|chapter_no):/i)
+        !l.match(/[-*+]?\s*(?:paragraphId|pageId|chapterId|imageIndex|isLocked|locked|is_locked|currentPromptDigest|current_prompt_digest|promptDigest|assignedPromptDigests|assigned_prompt_digests|Characters|paragraph_no|page_no|chapter_no):/i)
       );
       cinematographicDirections = textLines.join('\n').trim();
     }
@@ -497,6 +558,9 @@ export function parseInstructionsMarkdown(markdown: string): Instruction[] {
       cinematographicText: cinematographicDirections,
       assigned_characters: charList,
       characters: charList,
+      assigned_prompt_digests: assignedPromptDigests,
+      current_prompt_digest: currentPromptDigest,
+      promptDigest: currentPromptDigest || undefined,
       images: [],
       is_locked: isLocked,
       isLocked
@@ -519,6 +583,8 @@ export function serializeInstructionsMarkdown(instructions: Instruction[]): stri
       const chapterId = inst.chapter_no ?? inst.chapterNo ?? inst.chapterId ?? 0;
       const imageIndex = inst.imageIndex ?? 0;
       const isLocked = Boolean(inst.is_locked ?? inst.isLocked);
+      const currentDigest = inst.current_prompt_digest || inst.promptDigest;
+      const assignedDigests = inst.assigned_prompt_digests;
       const chars = inst.assigned_characters ?? inst.characters ?? [];
       const charArr = Array.isArray(chars) ? chars : (typeof chars === 'string' ? JSON.parse(chars) : []);
       const dirs = inst.cinematographic_directions ?? inst.cinematographicDirections ?? inst.cinematographicText ?? '';
@@ -529,7 +595,9 @@ export function serializeInstructionsMarkdown(instructions: Instruction[]): stri
         `- pageId: ${pageId}`,
         `- chapterId: ${chapterId}`,
         `- imageIndex: ${imageIndex}`,
-        ...(isLocked ? [`- isLocked: true`] : [])
+        ...(isLocked ? [`- isLocked: true`] : []),
+        ...(currentDigest ? [`- currentPromptDigest: ${currentDigest}`] : []),
+        ...(Array.isArray(assignedDigests) && assignedDigests.length > 0 ? [`- assignedPromptDigests: ${JSON.stringify(assignedDigests)}`] : [])
       ];
       if (charArr.length > 0) {
         parts.push(`**Characters:** ${charArr.join(', ')}`);

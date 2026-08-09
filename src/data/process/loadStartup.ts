@@ -26,6 +26,13 @@ export const existingImagesSet = new Set<string>();
 export const existingSummariesSet = new Set<string>();
 export const existingPromptsSet = new Set<string>();
 
+let activeStartupPromise: Promise<{
+  story: Story;
+  style: Style;
+  characters: Character[];
+  instructions: Instruction[];
+}> | null = null;
+
 /**
  * Loads story, style, instructions, characters from disk into Dexie IndexedDB and triggers
  * post-ingestion summarization, prompt compilation, and automated image generation.
@@ -36,15 +43,29 @@ export async function loadStartup(): Promise<{
   characters: Character[];
   instructions: Instruction[];
 }> {
-  setState('process-startup-loading', true, StoragePersistence.none);
-  setState('process-startup-error', null, StoragePersistence.none);
-  setState('image-processing-status', 'idle', StoragePersistence.local);
+  if (activeStartupPromise) {
+    console.log('[TRACE:STARTUP] loadStartup() is already in-flight! Reusing active promise.');
+    return activeStartupPromise;
+  }
 
-  try {
+  activeStartupPromise = (async () => {
+    console.log('[TRACE:STARTUP] =================== loadStartup() STARTED ===================');
+    setState('process-startup-loading', true, StoragePersistence.none);
+    setState('process-startup-error', null, StoragePersistence.none);
+    setState('image-processing-status', 'idle', StoragePersistence.local);
+
+    try {
+    console.log('[TRACE:STARTUP] Step 0: Ensuring Dexie database is open...');
     await ensureProcessDbOpen();
 
     // 1. Scan disk files to populate disk indexes
-    const diskFiles = await fileStorage.listFiles().catch(() => []);
+    console.log('[TRACE:STARTUP] Step 1: Scanning disk files via listFiles()...');
+    const diskFiles = await fileStorage.listFiles().catch((err) => {
+      console.error('[TRACE:STARTUP] listFiles() error:', err);
+      return [];
+    });
+    console.log('[TRACE:STARTUP] Step 1: Found disk files count =', diskFiles.length, diskFiles);
+
     existingImagesSet.clear();
     existingSummariesSet.clear();
     existingPromptsSet.clear();
@@ -67,19 +88,38 @@ export async function loadStartup(): Promise<{
         existingPromptsSet.add(file);
       }
     }
+    console.log('[TRACE:STARTUP] Step 1: existingImagesSet size =', existingImagesSet.size, Array.from(existingImagesSet));
+    console.log('[TRACE:STARTUP] Step 1: existingPromptsSet size =', existingPromptsSet.size, Array.from(existingPromptsSet));
+    console.log('[TRACE:STARTUP] Step 1: existingSummariesSet size =', existingSummariesSet.size, Array.from(existingSummariesSet));
 
     // 2. Read root markdown files from disk (or create default empty files)
+    console.log('[TRACE:STARTUP] Step 2: Reading root markdown files (story.md, style.md, characters.md, instructions.md)...');
     const [storyRaw, styleRaw, charactersRaw, instructionsRaw] = await Promise.all([
-      fileStorage.readFile('story.md').then(f => f.text()).catch(() => ''),
-      fileStorage.readFile('style.md').then(f => f.text()).catch(() => ''),
-      fileStorage.readFile('characters.md').then(f => f.text()).catch(() => ''),
-      fileStorage.readFile('instructions.md').then(f => f.text()).catch(() => '')
+      fileStorage.readFile('story.md').then(f => f.text()).catch(e => { console.log('[TRACE:STARTUP] story.md not found or empty:', e.message); return ''; }),
+      fileStorage.readFile('style.md').then(f => f.text()).catch(e => { console.log('[TRACE:STARTUP] style.md not found or empty:', e.message); return ''; }),
+      fileStorage.readFile('characters.md').then(f => f.text()).catch(e => { console.log('[TRACE:STARTUP] characters.md not found or empty:', e.message); return ''; }),
+      fileStorage.readFile('instructions.md').then(f => f.text()).catch(e => { console.log('[TRACE:STARTUP] instructions.md not found or empty:', e.message); return ''; })
     ]);
 
-    let story = parseStoryMarkdown(storyRaw);
+    console.log('[TRACE:STARTUP] Step 2: Raw file lengths:', {
+      storyLen: storyRaw.length,
+      styleLen: styleRaw.length,
+      charactersLen: charactersRaw.length,
+      instructionsLen: instructionsRaw.length
+    });
+
+    const story = parseStoryMarkdown(storyRaw);
     const style = parseStyleMarkdown(styleRaw);
     const characters = parseCharactersMarkdown(charactersRaw);
     const rawInstructions = parseInstructionsMarkdown(instructionsRaw);
+
+    console.log('[TRACE:STARTUP] Step 3: Parsed entities:', {
+      storyTitle: story.story_title,
+      chaptersCount: story.chapters?.length || 0,
+      charactersCount: characters.length,
+      rawInstructionsCount: rawInstructions.length,
+      rawInstructions: rawInstructions.map(i => ({ no: i.instructionNo, pNo: i.paragraph_no, currentDigest: i.current_prompt_digest, assignedDigests: i.assigned_prompt_digests }))
+    });
 
     // Build paragraph list from story
     const flatParagraphs: any[] = [];
@@ -121,15 +161,9 @@ export async function loadStartup(): Promise<{
       }
     }
 
-    const charMap = new Map<string, Character>();
-    for (const char of characters || []) {
-      const name = char.character_name || char.characterName || char.name || '';
-      if (name) {
-        charMap.set(name.trim().toLowerCase(), char);
-      }
-    }
+    console.log('[TRACE:STARTUP] Step 3: flatParagraphs count =', flatParagraphs.length);
 
-    // Build synthesized instruction list for all paragraphs
+    // Build instruction list for all paragraphs, preserving existing instructions from instructions.md
     const instructions: Instruction[] = flatParagraphs.map((p, idx) => {
       const existing = rawInstructions.find(inst =>
         (inst.instructionNo === idx) ||
@@ -138,39 +172,35 @@ export async function loadStartup(): Promise<{
       ) || rawInstructions[idx];
 
       const instCharacters = existing ? (existing.assigned_characters || existing.characters || []) : [];
-      const charArr = Array.isArray(instCharacters) ? instCharacters : [];
+      const charArr = Array.isArray(instCharacters) ? instCharacters : (typeof instCharacters === 'string' ? JSON.parse(instCharacters) : []);
       const cinematographicDirections = existing ? (existing.cinematographic_directions || existing.cinematographicDirections || existing.cinematographicText || '') : '';
-      let imageIndex = existing ? (existing.imageIndex || 0) : 0;
+      const imageIndex = existing ? (existing.imageIndex || 0) : 0;
       const isLocked = existing ? Boolean(existing.is_locked ?? existing.isLocked) : false;
 
-      const styleText = style.drawing_instructions || style.drawingInstructions || '';
-      const charTexts: string[] = [];
-      for (const cName of charArr) {
-        const found = charMap.get(cName.trim().toLowerCase());
-        if (found) {
-          const desc = found.description_text || found.descriptionText || found.instructions_text || found.instructionsText || '';
-          if (desc) charTexts.push(`${cName}: ${desc}`);
-        }
+      const currentPromptDigest = existing?.current_prompt_digest || existing?.promptDigest || null;
+      let assignedPromptDigests: string[] = [];
+      if (existing?.assigned_prompt_digests) {
+        assignedPromptDigests = Array.isArray(existing.assigned_prompt_digests)
+          ? existing.assigned_prompt_digests
+          : (typeof existing.assigned_prompt_digests === 'string' ? JSON.parse(existing.assigned_prompt_digests) : []);
       }
-      const characterText = charTexts.join('\n');
-      const sceneText = p.paragraph_text;
-      const narrativeText = p.narrative_summary || p.paragraph_text;
+      if (currentPromptDigest && !assignedPromptDigests.includes(currentPromptDigest)) {
+        assignedPromptDigests.push(currentPromptDigest);
+      }
 
-      const promptSourceText = [styleText, cinematographicDirections, characterText, sceneText].filter(Boolean).join('\n\n');
-      const promptDigest = generateTextDigest(promptSourceText);
-
-      const isImageOnDisk = existingImagesSet.has(`images/${promptDigest}.png`);
-      const initialStatus: 'PROCESSING' | 'SAVED' | 'FAILED' | 'COMPLETE' = isImageOnDisk ? 'COMPLETE' : 'PROCESSING';
-
-      const images: ImageEntry[] = [{
-        status: initialStatus,
-        styleText,
-        cinematographicText: cinematographicDirections,
-        characterText,
-        sceneText,
-        narrativeText,
-        promptDigest
-      }];
+      // Build images list from assigned_prompt_digests and disk cache
+      const images: ImageEntry[] = (assignedPromptDigests.length > 0 ? assignedPromptDigests : (currentPromptDigest ? [currentPromptDigest] : [])).map(digest => {
+        const isImageOnDisk = existingImagesSet.has(`images/${digest}.png`);
+        return {
+          status: isImageOnDisk ? 'SAVED' : 'PROCESSING',
+          styleText: style.drawing_instructions || style.drawingInstructions || '',
+          cinematographicText: cinematographicDirections,
+          characterText: '',
+          sceneText: p.paragraph_text,
+          narrativeText: '',
+          promptDigest: digest
+        };
+      });
 
       return {
         instructionNo: idx,
@@ -189,16 +219,26 @@ export async function loadStartup(): Promise<{
         cinematographicText: cinematographicDirections,
         assigned_characters: charArr,
         characters: charArr,
-        assigned_prompt_digests: [promptDigest],
-        current_prompt_digest: promptDigest,
-        promptDigest,
+        assigned_prompt_digests: assignedPromptDigests,
+        current_prompt_digest: currentPromptDigest,
+        promptDigest: currentPromptDigest || undefined,
         images,
         is_locked: isLocked,
         isLocked
       };
     });
 
+    console.log('[TRACE:STARTUP] Step 3: Synthesized instructions for Dexie:', instructions.map(i => ({
+      no: i.instructionNo,
+      pNo: i.paragraph_no,
+      currentPromptDigest: i.current_prompt_digest,
+      assignedDigests: i.assigned_prompt_digests,
+      imagesCount: i.images?.length,
+      imageStatuses: i.images?.map(img => ({ digest: img.promptDigest, status: img.status }))
+    })));
+
     // 3. Write into Dexie IndexedDB tables
+    console.log('[TRACE:STARTUP] Step 4: Writing domain entities to Dexie tables...');
     await processDb.transaction('rw', [
       processDb.story,
       processDb.chapters,
@@ -245,6 +285,8 @@ export async function loadStartup(): Promise<{
       }
     });
 
+    console.log('[TRACE:STARTUP] Step 4: Dexie database successfully updated with', diskImages.length, 'disk images');
+
     // 4. Ingest disk summaries & prompts into Dexie
     const summariesToPut: Summary[] = [];
     for (const summaryFile of Array.from(existingSummariesSet)) {
@@ -290,6 +332,7 @@ export async function loadStartup(): Promise<{
     if (promptsToPut.length > 0) {
       await processDb.prompts.bulkPut(promptsToPut);
     }
+    console.log('[TRACE:STARTUP] Step 5: Ingested prompts count =', promptsToPut.length, 'summaries count =', summariesToPut.length);
 
     // 5. Update main thread state-mutex stores for reactive UI sync
     setState('story-data', story, StoragePersistence.none);
@@ -304,23 +347,30 @@ export async function loadStartup(): Promise<{
     setState('instructions-data', instructions, StoragePersistence.none);
     setState('instructions-hash', generateTextDigest(instructionsRaw), StoragePersistence.local);
 
-    console.log('[loadStartup] Successfully loaded startup state. Running post-ingestion pipelines...');
-
-    // 6. Post-ingestion summarization pipeline
-    generateSummaries(story).catch(err => console.warn('[loadStartup] Summaries pipeline warning:', err));
-
-    // 7. Automated image generation for uncached prompts
-    processImages(story, style, characters, instructions).catch(err => {
-      console.warn('[loadStartup] Image generation pipeline warning:', err);
+    console.log('[TRACE:STARTUP] Step 6: Running post-ingestion summarization pipeline...');
+    const reconciledStory = await generateSummaries(story).catch(err => {
+      console.warn('[TRACE:STARTUP] Summaries pipeline warning:', err);
+      return story;
     });
 
-    return { story, style, characters, instructions };
+    console.log('[TRACE:STARTUP] Step 7/8: Running processImages pipeline...');
+    processImages(reconciledStory, style, characters, instructions).catch(err => {
+      console.warn('[TRACE:STARTUP] Image generation pipeline warning:', err);
+    });
+
+    console.log('[TRACE:STARTUP] =================== loadStartup() FINISHED ===================');
+    return { story: reconciledStory, style, characters, instructions };
   } catch (err: any) {
     const errorMsg = err?.message || 'Failed loadStartup';
-    console.error('[loadStartup] Error:', err);
+    console.error('[TRACE:STARTUP] FATAL ERROR in loadStartup:', err);
     setState('process-startup-error', errorMsg, StoragePersistence.none);
     throw err;
   } finally {
     setState('process-startup-loading', false, StoragePersistence.none);
   }
+  })().finally(() => {
+    activeStartupPromise = null;
+  });
+
+  return activeStartupPromise;
 }

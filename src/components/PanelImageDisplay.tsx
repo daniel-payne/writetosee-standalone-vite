@@ -4,7 +4,7 @@ import { useFetcher } from "react-router-dom";
 import { writeLog } from "@/data/storage/logStorage";
 import PanelInstructionsModal from "./PanelInstructionsModal";
 import { useLocalState } from "@keldan-systems/state-mutex";
-import type { Instruction } from "@/data/process/TYPES";
+import { processDb } from "@/data/process/db";
 
 type ComponentProps = {
   paragraph: any;
@@ -123,11 +123,9 @@ export default function PanelImageDisplay({
   const [promptLoading, setPromptLoading] = useState(false);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
 
-  const [instructionsData] = useLocalState<Instruction[]>('instructions-data', []);
   const [imageProcessingStatus] = useLocalState<'idle' | 'processing'>('image-processing-status', 'idle');
 
   const panelIdx = paragraph?.panelNo ?? paragraph?.paragraphNo ?? 0;
-  const savedInst = (instructionsData || []).find((inst: Instruction) => inst.instructionNo === panelIdx || inst.paragraphId === panelIdx) || instructionsData?.[panelIdx];
 
   const handleOpenPromptModal = async () => {
     setShowPromptModal(true);
@@ -136,8 +134,37 @@ export default function PanelImageDisplay({
 
     const digest = paragraph?.digest;
     if (digest) {
+      // 1. If panel is failed, check if images/${digest}.error exists
+      if (paragraph?.imageStatus === 'failed') {
+        try {
+          const errFile = await readFile(`images/${digest}.error`);
+          const errText = await errFile.text();
+          if (errText && errText.trim()) {
+            setModalPromptText(errText);
+            setPromptLoading(false);
+            return;
+          }
+        } catch {
+          // Continue to prompt resolution
+        }
+      }
+
+      // 2. First check Dexie prompts table
       try {
-        const file = await readFile(`prompts/${digest}.txt`);
+        const promptRecord = await processDb.prompts.get(digest);
+        const pText = promptRecord?.prompt_text || promptRecord?.promptText;
+        if (pText && pText.trim()) {
+          setModalPromptText(pText);
+          setPromptLoading(false);
+          return;
+        }
+      } catch {
+        // Fallback to disk read
+      }
+
+      // 3. Read from disk prompts/
+      try {
+        const file = await readFile(`prompts/${digest}.md`).catch(() => readFile(`prompts/${digest}.txt`));
         const text = await file.text();
         if (text && text.trim()) {
           setModalPromptText(text);
@@ -162,16 +189,9 @@ export default function PanelImageDisplay({
     }
   };
 
-  const activeInst = savedInst || {
-    panelNo: panelIdx,
-    characters: paragraph?.characters || [],
-    cinematographicText: paragraph?.cinematographicText || "",
-    isLocked: paragraph?.isLocked || false
-  };
-
-  const isLocked = activeInst.isLocked;
-  const assignedCharacters = activeInst.characters || [];
-  const cinematographicText = activeInst.cinematographicText || "";
+  const isLocked = Boolean(paragraph?.isLocked);
+  const assignedCharacters = paragraph?.characters || [];
+  const cinematographicText = paragraph?.cinematographicText || "";
 
   const isPanelFailed = Boolean(paragraph?.error || paragraph?.imageStatus === 'failed');
 
@@ -199,7 +219,7 @@ export default function PanelImageDisplay({
     (isGlobalProcessing && (imageStatus === 'generating' || needsRegenerate))
   );
 
-  console.log(`[STORY-DEBUG] PanelImageDisplay panel ${panelIdx} render:`, {
+  console.log(`[TRACE:PANEL] Panel ${panelIdx} render:`, {
     imagePath,
     imageStatus,
     needsRegenerate,
@@ -208,7 +228,8 @@ export default function PanelImageDisplay({
     imgError,
     isThisPanelGenerating,
     isRegenerating,
-    isPanelFailed
+    isPanelFailed,
+    digest: paragraph?.digest
   });
 
   const handleRegenerate = (e?: React.MouseEvent) => {
@@ -216,6 +237,7 @@ export default function PanelImageDisplay({
       e.stopPropagation();
     }
     if (isRegenerating) return;
+    console.log(`[TRACE:PANEL] Panel ${panelIdx}: Triggering REGENERATE-IMAGE for "${imagePath}"`);
     fetcher.submit(
       { intent: 'REGENERATE-IMAGE', imagePath: imagePath || '', paragraphIndex: String(panelIdx) },
       { method: 'post', action: '/story' }
@@ -227,6 +249,7 @@ export default function PanelImageDisplay({
       setShowModal(false);
       return;
     }
+    console.log(`[TRACE:PANEL] Panel ${panelIdx}: Selected image version "${selectedPath}"`);
     fetcher.submit(
       {
         intent: 'SELECT-PARAGRAPH-IMAGE',
@@ -239,6 +262,7 @@ export default function PanelImageDisplay({
   };
 
   const handleSaveInstructions = (data: { characters: string[]; cinematographicText: string; isLocked: boolean }) => {
+    console.log(`[TRACE:PANEL] Panel ${panelIdx}: Saving instructions:`, data);
     fetcher.submit(
       {
         intent: 'SAVE-PANEL-INSTRUCTIONS',
@@ -254,6 +278,7 @@ export default function PanelImageDisplay({
   // Keep track of the active load request to ignore outdated promises
   useEffect(() => {
     if (!imagePath) {
+      console.log(`[TRACE:PANEL] Panel ${panelIdx}: No imagePath provided, resetting src.`);
       setSrc('');
       setLoading(false);
       return;
@@ -261,26 +286,26 @@ export default function PanelImageDisplay({
 
     let active = true;
     setLoading(true);
-    setImgError(false);
-    console.log(`[STORY-DEBUG] PanelImageDisplay panel ${panelIdx}: Reading image file from storage: "${imagePath}"`);
+    console.log(`[TRACE:PANEL] Panel ${panelIdx}: useEffect executing readFile("${imagePath}") (status: ${imageStatus}, global: ${imageProcessingStatus}, digest: ${paragraph?.digest})`);
 
     readFile(imagePath)
       .then(file => {
         if (!active) return;
         const objectUrl = URL.createObjectURL(file);
-        console.log(`[STORY-DEBUG] PanelImageDisplay panel ${panelIdx}: Successfully loaded blob URL for "${imagePath}" -> ${objectUrl.substring(0, 25)}...`);
+        console.log(`[TRACE:PANEL] Panel ${panelIdx}: Successfully loaded blob URL for "${imagePath}" (${file.size} bytes) -> ${objectUrl.substring(0, 30)}...`);
 
         setSrc(prevSrc => {
-          if (prevSrc && prevSrc.startsWith('blob:')) {
+          if (prevSrc && prevSrc.startsWith('blob:') && prevSrc !== objectUrl) {
             URL.revokeObjectURL(prevSrc);
           }
           return objectUrl;
         });
+        setImgError(false);
         setLoading(false);
       })
       .catch(async err => {
         if (!active) return;
-        console.error(`[STORY-DEBUG] PanelImageDisplay panel ${panelIdx}: Error reading image file "${imagePath}":`, err);
+        console.warn(`[TRACE:PANEL] Panel ${panelIdx}: readFile("${imagePath}") FAILED:`, err);
         const isNotFound = err && (
           (err instanceof Error && err.name === 'NotFoundError') ||
           (err.name === 'NotFoundError') ||
@@ -289,14 +314,19 @@ export default function PanelImageDisplay({
         if (!isNotFound) {
           await writeLog('error', 'ParagraphImageDisplay', `Failed to load paragraph image: ${err instanceof Error ? err.message : String(err)}`);
         }
-        setImgError(true);
+        // If image is still generating, do not treat missing file as hard error
+        if (imageStatus === 'generating' || imageProcessingStatus === 'processing') {
+          setImgError(false);
+        } else {
+          setImgError(true);
+        }
         setLoading(false);
       });
 
     return () => {
       active = false;
     };
-  }, [imagePath, reloadTrigger]);
+  }, [imagePath, imageStatus, imageProcessingStatus, reloadTrigger, paragraph?.digest]);
 
   // Clean up the final object URL only when the component unmounts
   useEffect(() => {

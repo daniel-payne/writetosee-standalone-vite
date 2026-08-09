@@ -162,24 +162,35 @@ async function getDirectoryHandleForPath(
   return currentHandle;
 }
 
+let writeQueue: Promise<void> = Promise.resolve();
+
 /**
  * Write a file (text or binary/blob) to the saved directory, supporting subdirectories (e.g. "sub/dir/file.txt")
+ * Uses a sequential queue to prevent File System Access API race conditions and locked .crswap files.
  */
 export async function writeFile(fileName: string, content: string | Blob): Promise<void> {
-  const dirHandle = await getDirectoryHandle();
-  if (!dirHandle) {
-    await writeLog('error', 'writeFile', `No directory selected or access not granted when writing to ${fileName}.`);
-    throw new Error('No directory selected or access not granted.');
-  }
+  const performWrite = async () => {
+    console.log(`[TRACE:STORAGE] writeFile starting for "${fileName}"...`);
+    const dirHandle = await getDirectoryHandle();
+    if (!dirHandle) {
+      await writeLog('error', 'writeFile', `No directory selected or access not granted when writing to ${fileName}.`);
+      throw new Error('No directory selected or access not granted.');
+    }
 
-  const parts = fileName.split('/');
-  const fileLeaf = parts.pop()!;
-  
-  const targetDirHandle = await getDirectoryHandleForPath(dirHandle, parts, true);
-  const fileHandle = await targetDirHandle.getFileHandle(fileLeaf, { create: true });
-  const writable = await fileHandle.createWritable();
-  await writable.write(content);
-  await writable.close();
+    const parts = fileName.split('/');
+    const fileLeaf = parts.pop()!;
+    
+    const targetDirHandle = await getDirectoryHandleForPath(dirHandle, parts, true);
+    const fileHandle = await targetDirHandle.getFileHandle(fileLeaf, { create: true });
+    const writable = await fileHandle.createWritable({ keepExistingData: false });
+    await writable.write(content);
+    await writable.close();
+    console.log(`[TRACE:STORAGE] writeFile completed successfully for "${fileName}"`);
+  };
+
+  const next = writeQueue.then(performWrite, performWrite);
+  writeQueue = next;
+  return next;
 }
 
 /**

@@ -53,7 +53,7 @@ export default async function llmGenerateImage(imagePrompt: string) {
 
         result = await processxAIImage({ imagePrompt, apiKey, model, inputCostPerMillion, outputCostPerMillion });
     } else if (provider === 'OPENROUTER') {
-        const model = "openai/gpt-image-2" //, "black-forest-labs/flux.2-pro" // "google/gemini-2.5-flash-image" // "black-forest-labs/flux.2-klein-4b"; //"black-forest-labs/flux.2-pro";
+        const model = "google/gemini-2.5-flash-image" //, "openai/gpt-image-2" "black-forest-labs/flux.2-pro" // "google/gemini-2.5-flash-image" // "black-forest-labs/flux.2-klein-4b"; //"black-forest-labs/flux.2-pro";
         const inputCostPerMillion = 8.00;
         const outputCostPerMillion = 8.00;
 

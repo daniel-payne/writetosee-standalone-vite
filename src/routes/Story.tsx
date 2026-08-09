@@ -66,6 +66,15 @@ export default function Story({
     }
   }
 
+  console.log('[TRACE:STORY] Render Story component:', {
+    hasStory: Boolean(story),
+    paragraphsCount: paragraphs.length,
+    instructionsCount: instructions.length,
+    liveImagesCount: liveImages.length,
+    isAppStartingUp,
+    imageStatusMap: Array.from(imageStatusMap.entries())
+  });
+
   const panels = paragraphList.map((p, idx) => {
     const inst = instructions.find(i =>
       (i.instructionNo === idx) ||
@@ -85,7 +94,7 @@ export default function Story({
       status = 'generating';
     } else if (dexieStatus === 'FAILED') {
       status = 'failed';
-    } else if (activeImage?.status?.toLowerCase() === 'complete') {
+    } else if (activeImage?.status?.toLowerCase() === 'complete' || activeImage?.status?.toLowerCase() === 'saved') {
       status = 'completed';
     } else if (activeImage?.status?.toLowerCase() === 'processing') {
       status = 'generating';
@@ -96,7 +105,7 @@ export default function Story({
     const assignedChars = inst?.assigned_characters ?? inst?.characters ?? [];
     const charArr = Array.isArray(assignedChars) ? assignedChars : [];
 
-    return {
+    const panelObj = {
       panelNo: idx,
       paragraphNo: p.paragraphNo,
       text: p.paragraphText,
@@ -111,6 +120,19 @@ export default function Story({
       cinematographicText: inst?.cinematographic_directions || inst?.cinematographicDirections || inst?.cinematographicText || '',
       isLocked: Boolean(inst?.is_locked ?? inst?.isLocked)
     };
+
+    console.log(`[TRACE:STORY] Panel ${idx}:`, {
+      paragraphNo: p.paragraphNo,
+      promptDigest,
+      imagePath,
+      dexieStatus,
+      computedStatus: status,
+      activeImageStatus: activeImage?.status,
+      instCurrentPromptDigest: inst?.current_prompt_digest,
+      instAssignedDigests: inst?.assigned_prompt_digests
+    });
+
+    return panelObj;
   });
 
   const isStartingUp = isAppStartingUp && panels.length === 0;

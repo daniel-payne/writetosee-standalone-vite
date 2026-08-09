@@ -145,9 +145,63 @@ DIRECTIVES: <rendering instructions>
 Generates high-resolution scene illustrations for each illustrated panel based on the compiled 5-segment prompt.
 
 ### Prompt Assembly Structure
-Every prompt is assembled from 5 distinct segments:
-$$\text{prompt\_text} = \text{style\_text} + \text{cinematographic\_text} + \text{character\_text} + \text{narrative\_text} + \text{scene\_text}$$
+Every prompt is assembled from 5 distinct segments wrapped in the standard book illustration prompt template:
 
+```markdown
+# Role
+You are an illustrator for a book.
+Please draw an illustration for the scene-text bellow.
+The narrative-text lays out the story before the current scene, and the scene-text is the current scene.
+
+
+## Drawing Instructions
+
+<style-text>
+{{STYLE_TEXT}}
+</style-text>
+
+### Strict Rules
+1. A wide-angle, edge-to-edge scene that completely fills 100% of the image space from corner to corner.
+2. The camera is pulled back so the environment extends fully to the very edges of the rectangular canvas.
+3. Keep the background in focus, and of the same style as the foreground object.
+4. Do not illustrate any words, signs, or speech bubbles unless specifically asked for in the text.
+5. Do not make any illustration with rounded edges; the completed illustration should be a rectangle.
+6. Do not draw any frame, boundary, or any decoration around the image.
+7. Do not draw any text in the image.
+8. Do not use copyright symbols (©, ™, ®) or any other markings in the illustration.
+
+### Output Format
+1. The illustration is to fill the complete drawing area.
+2. Do not make any illustration with rounded edges; the completed illustration should be a rectangle.
+3. Do not draw any frame, boundary, or any decoration around the image (i.e., fameless, full-bleed, no white margins, edge-to-edge environment). 
+4. Keep the background in focus and of the same style as the foreground. Do not make the background blurry or out of focus. The background should be as detailed as the foreground.
+5. Do not draw any text in the image. 
+6. Do not use copyright symbols (©, ™, ®) or any other markings in the illustration.
+
+<cinematographic-text>
+{{CINEMATOGRAPHIC_TEXT}}
+</cinematographic-text>
+
+## Character Instructions
+
+The scene contains the following characters, please use these instructions when drawing the scene:
+
+<character-text>
+{{CHARACTER_TEXT}}
+</character-text>
+
+## Scene Instructions
+
+<scene-text>
+{{SCENE_TEXT}}
+</scene-text>
+
+<narrative-text>
+{{NARRATIVE_TEXT}}
+</narrative-text>
+```
+
+#### Segments Definition:
 1. **`style_text`**: Global drawing medium, lighting rules, and reference style modifiers from `style` table.
 2. **`cinematographic_text`**: Camera angle (e.g. wide establishing shot, low-angle close up), framing, and scene mood from `instructions.cinematographic_directions`.
 3. **`character_text`**: Visual traits and rendering directives for all characters present in `instructions.assigned_characters`.

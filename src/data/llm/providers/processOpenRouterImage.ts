@@ -141,7 +141,11 @@ async function processViaImagesEndpoint({
         const errorText = await res.text();
         const formattedError = formatOpenRouterError(errorText, res.status);
         await writeLog('error', 'processOpenRouterImage', `OpenRouter Images HTTP ${res.status} Error: ${formattedError}`);
-        throw new Error(formattedError);
+        const err: any = new Error(formattedError);
+        err.status = res.status;
+        err.rawError = errorText;
+        err.provider = 'OpenRouter (/api/v1/images)';
+        throw err;
     }
 
     const data = await res.json();
@@ -292,7 +296,11 @@ async function processViaChatEndpoint({
         const errorText = await response.text();
         const formattedError = formatOpenRouterError(errorText, response.status);
         await writeLog('error', 'processOpenRouterImage', `OpenRouter HTTP ${response.status} Error: ${formattedError}`);
-        throw new Error(formattedError);
+        const err: any = new Error(formattedError);
+        err.status = response.status;
+        err.rawError = errorText;
+        err.provider = 'OpenRouter (/api/v1/chat/completions)';
+        throw err;
     }
 
     const data = await response.json();

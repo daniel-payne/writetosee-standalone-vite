@@ -4,6 +4,7 @@ import { processDb } from './db';
 import {
   parseStyleMarkdown,
   serializeStyleMarkdown,
+  serializeInstructionsMarkdown,
   generateTextDigest
 } from './parsers';
 import { processImages } from './workflows/processImages';
@@ -53,9 +54,15 @@ export async function saveStyle(input: string | Style): Promise<Style> {
 
     const story = storyRecord || { title: '', chapters: [] };
 
-    processImages(story, style, charactersList, instructionsList).catch(err => {
+    try {
+      const updatedInstructions = await processImages(story, style, charactersList, instructionsList);
+      if (updatedInstructions && updatedInstructions.length > 0) {
+        const instMd = serializeInstructionsMarkdown(updatedInstructions);
+        await fileStorage.writeFile('instructions.md', instMd).catch(() => {});
+      }
+    } catch (err) {
       console.error('[saveStyle] processImages error:', err);
-    });
+    }
 
     return style;
   } catch (err: any) {
