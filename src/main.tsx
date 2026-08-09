@@ -103,29 +103,13 @@ window.localstate = {
   }
 };
 
-const handleCleanup = () => {
-  if (window.localstate) {
-    try {
-      const apiKey = sessionStorage.getItem('apiKey');
-      if (apiKey) {
-        window.localstate.clear('publication-data');
-      }
-    } catch {
-      // Ignore security errors in some iframe contexts
-    }
-  }
-};
-
-window.addEventListener('pagehide', handleCleanup);
-window.addEventListener('beforeunload', handleCleanup);
-
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import App from './App.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
   </StrictMode>,
-)
+);

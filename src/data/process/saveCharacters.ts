@@ -8,7 +8,7 @@ import {
   serializeStoryMarkdown
 } from './parsers';
 import { processImages } from './workflows/processImages';
-import type { Character } from './TYPES';
+import type { Character, Style } from './TYPES';
 import llmGenerateText from '@/data/llm/llmGenerateText';
 import llmGenerateAnalysis from '@/data/llm/llmGenerateAnalysis';
 import { storeCost } from '@/data/storage/costStorage';
@@ -29,11 +29,35 @@ export async function saveCharacters(input: string | Character[]): Promise<Chara
       characters = input;
     }
 
-    // Ensure characterNo sequential numbering
-    characters = characters.map((c, idx) => ({
-      ...c,
-      characterNo: c.characterNo ?? idx
-    }));
+    // Ensure characterNo and character_no sequential numbering
+    characters = characters.map((c, idx) => {
+      const cNo = c.character_no ?? c.characterNo ?? idx;
+      const cName = c.character_name || c.characterName || c.name || `Character ${idx + 1}`;
+      const refUrl = c.reference_url || c.referenceUrl || c.image || '';
+      const desc = c.description_text || c.descriptionText || c.description || '';
+      const inst = c.instructions_text || c.instructionsText || c.instructions || '';
+      const cId = c.character_id || c.characterId || `char_${idx}_${Date.now()}`;
+
+      return {
+        ...c,
+        character_id: cId,
+        characterId: cId,
+        character_no: cNo,
+        characterNo: cNo,
+        character_name: cName,
+        characterName: cName,
+        name: cName,
+        reference_url: refUrl,
+        referenceUrl: refUrl,
+        image: refUrl,
+        description_text: desc,
+        descriptionText: desc,
+        description: desc,
+        instructions_text: inst,
+        instructionsText: inst,
+        instructions: inst
+      };
+    });
 
     // 1. Serialize and write to disk /characters.md
     const markdown = serializeCharactersMarkdown(characters);
@@ -58,12 +82,14 @@ export async function saveCharacters(input: string | Character[]): Promise<Chara
     ]);
 
     const story = storyRecord || { title: '', chapters: [] };
-    const style = styleRecord || {
-      drawingInstructions: '',
-      panelPerParagraph: true,
-      referenceUrl: '',
-      referenceInstructions: '',
-      useReferenceInstructions: true
+    const style: Style = styleRecord || {
+      story_id: 'main',
+      drawing_instructions: '',
+      panel_per_paragraph: true,
+      reference_url: '',
+      reference_instructions: '',
+      use_reference_instructions: true,
+      style_hash: ''
     };
 
     processImages(story, style, characters, instructionsList).catch(err => {
@@ -85,36 +111,54 @@ export function mergeCharactersAdditively(existing: Character[], extracted: Char
   const result: Character[] = existing.map(c => ({ ...c }));
 
   for (const newChar of extracted) {
-    const newName = newChar.characterName || (newChar as any).name || '';
+    const newName = newChar.character_name || newChar.characterName || (newChar as any).name || '';
     if (!newName.trim()) continue;
 
     const existingIndex = result.findIndex(
-      c => (c.characterName || (c as any).name || '').trim().toLowerCase() === newName.trim().toLowerCase()
+      c => (c.character_name || c.characterName || (c as any).name || '').trim().toLowerCase() === newName.trim().toLowerCase()
     );
 
     if (existingIndex >= 0) {
-      if (newChar.descriptionText) {
-        if (!result[existingIndex].descriptionText) {
-          result[existingIndex].descriptionText = newChar.descriptionText;
-        }
+      const desc = newChar.description_text || newChar.descriptionText || (newChar as any).description;
+      if (desc && !result[existingIndex].description_text && !result[existingIndex].descriptionText) {
+        result[existingIndex].description_text = desc;
+        result[existingIndex].descriptionText = desc;
+        result[existingIndex].description = desc;
       }
-      if (newChar.instructionsText) {
-        if (!result[existingIndex].instructionsText) {
-          result[existingIndex].instructionsText = newChar.instructionsText;
-        }
+      const inst = newChar.instructions_text || newChar.instructionsText || (newChar as any).instructions;
+      if (inst && !result[existingIndex].instructions_text && !result[existingIndex].instructionsText) {
+        result[existingIndex].instructions_text = inst;
+        result[existingIndex].instructionsText = inst;
+        result[existingIndex].instructions = inst;
       }
-      if (newChar.referenceUrl) {
-        if (!result[existingIndex].referenceUrl) {
-          result[existingIndex].referenceUrl = newChar.referenceUrl;
-        }
+      const ref = newChar.reference_url || newChar.referenceUrl || (newChar as any).image;
+      if (ref && !result[existingIndex].reference_url && !result[existingIndex].referenceUrl) {
+        result[existingIndex].reference_url = ref;
+        result[existingIndex].referenceUrl = ref;
+        result[existingIndex].image = ref;
       }
     } else {
+      const desc = newChar.description_text || newChar.descriptionText || (newChar as any).description || '';
+      const inst = newChar.instructions_text || newChar.instructionsText || (newChar as any).instructions || '';
+      const ref = newChar.reference_url || newChar.referenceUrl || (newChar as any).image || '';
+
       result.push({
+        character_id: `char_${result.length}_${Date.now()}`,
+        characterId: `char_${result.length}_${Date.now()}`,
+        character_no: result.length,
         characterNo: result.length,
+        character_name: newName.trim(),
         characterName: newName.trim(),
-        referenceUrl: newChar.referenceUrl || '',
-        descriptionText: newChar.descriptionText || (newChar as any).description || '',
-        instructionsText: newChar.instructionsText || (newChar as any).instructions || ''
+        name: newName.trim(),
+        reference_url: ref,
+        referenceUrl: ref,
+        image: ref,
+        description_text: desc,
+        descriptionText: desc,
+        description: desc,
+        instructions_text: inst,
+        instructionsText: inst,
+        instructions: inst
       });
     }
   }

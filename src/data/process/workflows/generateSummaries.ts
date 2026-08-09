@@ -4,14 +4,14 @@ import * as fileStorage from '@/data/storage/fileStorage';
 import { processDb } from '../db';
 import { generateTextDigest } from '../parsers';
 import { existingSummariesSet } from '../loadStartup';
-import type { Story } from '../TYPES';
+import type { Story, Summary } from '../TYPES';
 
 const SYSTEM_PROMPT = `
-You are an assistant specialized in narrative summarization. 
-Analyze the provided story text and generate a concise, high-level summary.
+You are an assistant specialized in narrative summarization for visual storytelling.
+Analyze the provided story text and generate a concise, high-level narrative summary.
 Guidelines:
 1. Length: Approximately 50-75 words.
-2. Focus on characters, conflict, and key developments.
+2. Focus on characters, conflict, setting details, and key narrative developments.
 3. Output only the plain summary text. Do not add headers or commentary wrappers.
 `;
 
@@ -21,7 +21,7 @@ export async function getOrGenerateSummary(text: string, digestInput?: string): 
   const digest = digestInput || generateTextDigest(text);
   const fileName = `summaries/${digest}.md`;
 
-  // 1. Check disk index / IndexedDB cache first
+  // 1. Check disk index / cache first
   if (existingSummariesSet.has(fileName)) {
     try {
       const file = await fileStorage.readFile(fileName);
@@ -30,14 +30,14 @@ export async function getOrGenerateSummary(text: string, digestInput?: string): 
         return content.trim();
       }
     } catch {
-      // file read failed, fall through to regenerate
+      // file read failed, fall through
     }
   }
 
-  // Check Dexie summary table
-  const existingRecord = await processDb.summaries.where('digest').equals(digest).first();
-  if (existingRecord && existingRecord.summaryText) {
-    return existingRecord.summaryText;
+  // Check Dexie summaries table
+  const existingRecord = await processDb.summaries.get(digest);
+  if (existingRecord && (existingRecord.summary_text || existingRecord.summaryText)) {
+    return existingRecord.summary_text || existingRecord.summaryText || '';
   }
 
   // 2. Generate summary via LLM
@@ -46,18 +46,21 @@ export async function getOrGenerateSummary(text: string, digestInput?: string): 
     const { content, totalCost } = await llmGenerateText(SYSTEM_PROMPT, userPrompt);
     const summaryText = (content || text.slice(0, 200)).trim();
 
-    // 3. Save to disk cache & IndexedDB
+    // 3. Save to disk cache & Dexie IndexedDB
     await fileStorage.writeFile(fileName, summaryText).catch(err => {
       console.warn(`[generateSummaries] Failed writing ${fileName} to disk:`, err);
     });
     existingSummariesSet.add(fileName);
 
     const count = await processDb.summaries.count();
-    await processDb.summaries.put({
+    const summaryEntry: Summary = {
       summaryId: count + 1,
+      summary_digest: digest,
       digest,
+      summary_text: summaryText,
       summaryText
-    });
+    };
+    await processDb.summaries.put(summaryEntry);
 
     if (totalCost) {
       await storeCost([totalCost], 'summary');
@@ -71,20 +74,28 @@ export async function getOrGenerateSummary(text: string, digestInput?: string): 
 }
 
 /**
- * /workflows/generateSummaries: Takes story summaries for each page and chapter,
- * utilizing the summary cache in /summaries.
+ * /workflows/generateSummaries: Generates or looks up summaries for story, chapters, and pages,
+ * utilizing the summary cache in /summaries and Dexie summaries table.
  */
 export async function generateSummaries(story: Story): Promise<Story> {
   if (!story || !story.chapters) return story;
 
   for (const chapter of story.chapters) {
-    if (chapter.chapterText) {
-      chapter.chapterSummary = await getOrGenerateSummary(chapter.chapterText, chapter.chapterDigest);
+    const chapText = chapter.chapter_text || chapter.chapterText || '';
+    if (chapText) {
+      const chapDigest = chapter.chapter_digest || chapter.chapterDigest || generateTextDigest(chapText);
+      const summ = await getOrGenerateSummary(chapText, chapDigest);
+      chapter.chapter_summary = summ;
+      chapter.chapterSummary = summ;
     }
 
     for (const page of chapter.pages || []) {
-      if (page.pageText) {
-        page.pageSummary = await getOrGenerateSummary(page.pageText, page.pageDigest);
+      const pageText = page.page_text || page.pageText || '';
+      if (pageText) {
+        const pageDigest = page.page_digest || page.pageDigest || generateTextDigest(pageText);
+        const summ = await getOrGenerateSummary(pageText, pageDigest);
+        page.page_summary = summ;
+        page.pageSummary = summ;
       }
     }
   }

@@ -29,14 +29,18 @@ export async function saveStyle(input: string | Style): Promise<Style> {
     const markdown = serializeStyleMarkdown(style);
     await fileStorage.writeFile('style.md', markdown);
 
+    const hash = generateTextDigest(markdown);
+    style.style_hash = hash;
+    style.styleHash = hash;
+
     // 2. Replace in Dexie IndexedDB
     await processDb.style.put({
+      story_id: 'main',
       id: 'main',
       ...style
     });
 
     // 3. Update main-thread state
-    const hash = generateTextDigest(markdown);
     setState('style-data', style, StoragePersistence.none);
     setState('style-hash', hash, StoragePersistence.local);
 

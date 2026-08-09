@@ -4,7 +4,6 @@ import { savePanelInstructions } from '@/data/process/saveInstructions';
 import { loadStartup } from '@/data/process/loadStartup';
 import { processImages } from '@/data/process/workflows/processImages';
 import { processDb } from '@/data/process/db';
-import { exportToFiles } from '@/data/storage/db';
 
 export async function clientAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -20,8 +19,6 @@ export async function clientAction({ request }: ActionFunctionArgs) {
         console.log('[STORY-DEBUG] Saving story & running image processing...');
         await saveStory(story);
       }
-
-      await exportToFiles().catch(() => {});
 
       return { success: true, message: 'Changes saved successfully', timestamp: Date.now() };
     } catch (err: any) {

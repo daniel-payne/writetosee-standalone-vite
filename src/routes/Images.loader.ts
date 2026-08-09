@@ -33,8 +33,9 @@ export async function clientLoader() {
       );
 
       if (foundInst) {
-        paragraphNo = foundInst.instructionNo + 1;
-        const activeEntry = foundInst.images[foundInst.imageIndex] || foundInst.images.find(i => i.promptDigest === digest);
+        paragraphNo = (foundInst.instructionNo ?? foundInst.paragraph_no ?? 0) + 1;
+        const instImages = foundInst.images || [];
+        const activeEntry = instImages[foundInst.imageIndex ?? 0] || instImages.find(i => i.promptDigest === digest);
         if (activeEntry) {
           text = activeEntry.sceneText || activeEntry.narrativeText || "";
         }
@@ -49,8 +50,10 @@ export async function clientLoader() {
         }
       }
 
+      const instImages = foundInst?.images || [];
+      const imgIdx = foundInst?.imageIndex ?? 0;
       const isActive = Boolean(
-        foundInst && foundInst.images[foundInst.imageIndex]?.promptDigest === digest
+        foundInst && instImages[imgIdx]?.promptDigest === digest
       );
 
       return {

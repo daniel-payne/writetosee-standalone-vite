@@ -2,8 +2,10 @@ import { useState, useEffect, useRef, type HTMLAttributes, type PropsWithChildre
 import StoryEditor from "@/components/StoryEditor";
 import { useLoaderData, useActionData, Form } from "react-router-dom";
 import { useLocalState } from '@keldan-systems/state-mutex';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { processDb } from '@/data/process/db';
 import PanelImageDisplay from "@/components/PanelImageDisplay";
-import type { Story as StoryType, Instruction, ImageEntry } from "@/data/process/TYPES";
+import type { ImageEntry } from "@/data/process/TYPES";
 import { serializeStoryMarkdown, parseStoryMarkdown } from "@/data/process/parsers";
 
 type StoryProps = {} & HTMLAttributes<HTMLDivElement>;
@@ -14,10 +16,14 @@ export default function Story({
   const loaderData = useLoaderData() as any;
   const actionData = useActionData() as any;
 
-  const [storyData] = useLocalState<StoryType | undefined>('story-data', undefined);
-  const [instructionsData] = useLocalState<Instruction[]>('instructions-data', []);
-  const [isAppStartingUp] = useLocalState<boolean>('process-startup-loading', false);
+  // Dexie live queries for domain entities
+  const story = useLiveQuery(() => processDb.story.get('main'));
+  const paragraphs = useLiveQuery(() => processDb.paragraphs.toArray()) ?? [];
+  const instructions = useLiveQuery(() => processDb.instructions.toArray()) ?? [];
+  const liveImages = useLiveQuery(() => processDb.images.toArray()) ?? [];
 
+  // Local state for UI display preferences
+  const [isAppStartingUp] = useLocalState<boolean>('process-startup-loading', false);
   const [leftWidth, setLeftWidth] = useState(25);
   const [isDragging, setIsDragging] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
@@ -27,31 +33,68 @@ export default function Story({
 
   const containerRef = useRef<HTMLFormElement>(null);
 
-  const effectiveStory = storyData || (loaderData?.story ? parseStoryMarkdown(loaderData.story) : undefined);
-  const storyText = storyData ? serializeStoryMarkdown(storyData) : (loaderData?.story || '');
+  const effectiveStory = story || (loaderData?.story ? parseStoryMarkdown(loaderData.story) : undefined);
+  const storyText = story ? (story.story_text || serializeStoryMarkdown(story)) : (loaderData?.story || '');
 
-  // Flatten story paragraphs into panels array for display
-  const paragraphList: { paragraphNo: number; paragraphText: string; narrativeText: string }[] = [];
-  for (const chap of effectiveStory?.chapters || []) {
-    for (const page of chap.pages || []) {
-      for (const p of page.paragraphs || []) {
-        paragraphList.push({
-          paragraphNo: p.paragraphNo,
-          paragraphText: p.paragraphText,
-          narrativeText: p.narrativeText || p.paragraphText
-        });
+  // Build image status map from Dexie live images table
+  const imageStatusMap = new Map<string, string>();
+  for (const img of liveImages) {
+    if (img.image_digest) {
+      imageStatusMap.set(img.image_digest, img.image_status);
+    }
+  }
+
+  // Flatten story paragraphs if paragraphs table is not yet populated
+  let paragraphList: { paragraphNo: number; paragraphText: string; narrativeText: string }[] = [];
+  if (paragraphs.length > 0) {
+    paragraphList = paragraphs.map(p => ({
+      paragraphNo: p.paragraph_no ?? p.paragraphNo ?? 0,
+      paragraphText: p.paragraph_text || p.paragraphText || '',
+      narrativeText: p.narrative_summary || p.narrativeSummary || p.narrativeText || p.paragraph_text || p.paragraphText || ''
+    }));
+  } else {
+    for (const chap of effectiveStory?.chapters || []) {
+      for (const page of chap.pages || []) {
+        for (const p of page.paragraphs || []) {
+          paragraphList.push({
+            paragraphNo: p.paragraph_no ?? p.paragraphNo ?? 0,
+            paragraphText: p.paragraph_text || p.paragraphText || '',
+            narrativeText: p.narrative_summary || p.narrativeSummary || p.narrativeText || p.paragraph_text || p.paragraphText || ''
+          });
+        }
       }
     }
   }
 
   const panels = paragraphList.map((p, idx) => {
-    const inst = (instructionsData || []).find(i => i.instructionNo === idx || i.paragraphId === p.paragraphNo) || instructionsData?.[idx];
+    const inst = instructions.find(i =>
+      (i.instructionNo === idx) ||
+      (i.paragraph_no === p.paragraphNo) ||
+      (i.paragraphId === p.paragraphNo)
+    ) || instructions[idx];
+
     const activeImage = inst?.images?.[inst?.imageIndex || 0] || inst?.images?.[0];
-    const imagePath = activeImage?.promptDigest ? `images/${activeImage.promptDigest}.png` : '';
-    const status = activeImage?.status?.toLowerCase() === 'complete' ? 'completed'
-      : activeImage?.status?.toLowerCase() === 'processing' ? 'generating'
-        : activeImage?.status?.toLowerCase() === 'failed' ? 'failed'
-          : 'pending';
+    const promptDigest = activeImage?.promptDigest || inst?.current_prompt_digest || inst?.promptDigest || '';
+    const imagePath = promptDigest ? `images/${promptDigest}.png` : '';
+
+    const dexieStatus = promptDigest ? imageStatusMap.get(promptDigest) : undefined;
+    let status = 'pending';
+    if (dexieStatus === 'SAVED') {
+      status = 'completed';
+    } else if (dexieStatus === 'PROCESSING') {
+      status = 'generating';
+    } else if (dexieStatus === 'FAILED') {
+      status = 'failed';
+    } else if (activeImage?.status?.toLowerCase() === 'complete') {
+      status = 'completed';
+    } else if (activeImage?.status?.toLowerCase() === 'processing') {
+      status = 'generating';
+    } else if (activeImage?.status?.toLowerCase() === 'failed') {
+      status = 'failed';
+    }
+
+    const assignedChars = inst?.assigned_characters ?? inst?.characters ?? [];
+    const charArr = Array.isArray(assignedChars) ? assignedChars : [];
 
     return {
       panelNo: idx,
@@ -62,11 +105,11 @@ export default function Story({
       imageUrl: imagePath,
       image: imagePath,
       imageStatus: status,
-      digest: activeImage?.promptDigest || '',
+      digest: promptDigest,
       images: (inst?.images || []).map((img: ImageEntry) => `images/${img.promptDigest}.png`),
-      characters: inst?.characters || [],
-      cinematographicText: inst?.cinematographicDirections || '',
-      isLocked: Boolean(inst?.isLocked)
+      characters: charArr,
+      cinematographicText: inst?.cinematographic_directions || inst?.cinematographicDirections || inst?.cinematographicText || '',
+      isLocked: Boolean(inst?.is_locked ?? inst?.isLocked)
     };
   });
 
@@ -83,7 +126,7 @@ export default function Story({
 
   useEffect(() => {
     setExpandedIdx(null);
-  }, [storyData]);
+  }, [storyText]);
 
   const handleToggleExpand = (idx: number) => {
     setExpandedIdx((prev) => (prev === idx ? null : idx));

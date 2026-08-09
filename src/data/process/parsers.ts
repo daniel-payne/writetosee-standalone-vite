@@ -30,7 +30,11 @@ export function generateTextDigest(input: string | null | undefined): string {
 export function parseStoryMarkdown(markdown: string): Story {
   if (!markdown || !markdown.trim()) {
     return {
+      story_id: 'main',
+      id: 'main',
+      story_title: 'Untitled Story',
       title: 'Untitled Story',
+      story_text: '',
       chapters: []
     };
   }
@@ -115,21 +119,38 @@ export function parseStoryMarkdown(markdown: string): Story {
 
           const paragraphs: Paragraph[] = rawParagraphs.map(pText => {
             const pObj: Paragraph = {
-              paragraphNo: globalParagraphIndex++,
+              paragraph_no: globalParagraphIndex,
+              paragraphNo: globalParagraphIndex,
+              chapter_no: cIdx,
+              chapterNo: cIdx,
+              page_no: pIdx,
+              pageNo: pIdx,
+              paragraph_text: pText,
               paragraphText: pText,
+              prior_text: accumulatedPriorText,
               priorText: accumulatedPriorText,
+              narrative_summary: '',
               narrativeText: pText,
+              narrative_digest: generateTextDigest(pText),
               narrativeDigest: generateTextDigest(pText)
             };
+            globalParagraphIndex++;
             accumulatedPriorText = (accumulatedPriorText ? `${accumulatedPriorText}\n\n${pText}` : pText).trim();
             return pObj;
           });
 
           return {
+            page_no: pIdx,
             pageNo: pIdx,
+            chapter_no: cIdx,
+            chapterNo: cIdx,
+            page_title: pBlock.title,
             pageTitle: pBlock.title,
+            page_text: pageRawText,
             pageText: pageRawText,
+            page_summary: '',
             pageSummary: '',
+            page_digest: generateTextDigest(pageRawText),
             pageDigest: generateTextDigest(pageRawText),
             paragraphs
           };
@@ -137,32 +158,50 @@ export function parseStoryMarkdown(markdown: string): Story {
 
       const chapterRawText = cBlock.textLines.join('\n').trim();
       return {
+        chapter_no: cIdx,
         chapterNo: cIdx,
+        story_id: 'main',
+        storyId: 'main',
+        chapter_title: cBlock.title,
         chapterTitle: cBlock.title,
+        chapter_text: chapterRawText,
         chapterText: chapterRawText,
+        chapter_summary: '',
         chapterSummary: '',
+        chapter_digest: generateTextDigest(chapterRawText),
         chapterDigest: generateTextDigest(chapterRawText),
         pages
       };
     });
 
+  const fullStoryText = markdown.trim();
+
   return {
+    story_id: 'main',
+    id: 'main',
+    story_title: title,
     title,
+    story_text: fullStoryText,
+    story_summary: '',
+    story_digest: generateTextDigest(fullStoryText),
     chapters
   };
 }
 
 export function serializeStoryMarkdown(story: Story): string {
-  const parts: string[] = [`# ${story.title || 'Untitled Story'}`];
+  const title = story.story_title || story.title || 'Untitled Story';
+  const parts: string[] = [`# ${title}`];
 
   for (const chapter of story.chapters || []) {
-    parts.push(`## ${chapter.chapterTitle || `Chapter ${chapter.chapterNo + 1}`}`);
+    const chapTitle = chapter.chapter_title || chapter.chapterTitle || `Chapter ${(chapter.chapter_no ?? chapter.chapterNo ?? 0) + 1}`;
+    parts.push(`## ${chapTitle}`);
     for (const page of chapter.pages || []) {
-      if (chapter.pages.length > 1) {
-        parts.push(`### ${page.pageTitle || `Page ${page.pageNo + 1}`}`);
+      if ((chapter.pages || []).length > 1) {
+        const pTitle = page.page_title || page.pageTitle || `Page ${(page.page_no ?? page.pageNo ?? 0) + 1}`;
+        parts.push(`### ${pTitle}`);
       }
       for (const p of page.paragraphs || []) {
-        parts.push(p.paragraphText);
+        parts.push(p.paragraph_text || p.paragraphText || '');
       }
     }
   }
@@ -174,14 +213,25 @@ export function serializeStoryMarkdown(story: Story): string {
 
 export function parseStyleMarkdown(markdown: string): Style {
   const defaultStyle: Style = {
+    story_id: 'main',
+    id: 'main',
+    drawing_instructions: 'Vibrant, colorful illustration style, bright colors, clear shapes.',
     drawingInstructions: 'Vibrant, colorful illustration style, bright colors, clear shapes.',
+    panel_per_paragraph: true,
     panelPerParagraph: true,
+    reference_url: '',
     referenceUrl: '',
+    reference_instructions: '',
     referenceInstructions: '',
-    useReferenceInstructions: true
+    use_reference_instructions: true,
+    useReferenceInstructions: true,
+    style_hash: '',
+    styleHash: ''
   };
 
   if (!markdown || !markdown.trim()) {
+    defaultStyle.style_hash = generateTextDigest(defaultStyle.drawing_instructions);
+    defaultStyle.styleHash = defaultStyle.style_hash;
     return defaultStyle;
   }
 
@@ -233,29 +283,46 @@ export function parseStyleMarkdown(markdown: string): Style {
     }
   }
 
-  drawingInstructions = drawingLines.join('\n').trim() || defaultStyle.drawingInstructions;
+  drawingInstructions = drawingLines.join('\n').trim() || defaultStyle.drawing_instructions;
   referenceInstructions = refInstLines.join('\n').trim();
 
+  const styleHash = generateTextDigest(markdown);
+
   return {
+    story_id: 'main',
+    id: 'main',
+    drawing_instructions: drawingInstructions,
     drawingInstructions,
+    panel_per_paragraph: panelPerParagraph,
     panelPerParagraph,
+    reference_url: referenceUrl,
     referenceUrl,
+    reference_instructions: referenceInstructions,
     referenceInstructions,
-    useReferenceInstructions
+    use_reference_instructions: useReferenceInstructions,
+    useReferenceInstructions,
+    style_hash: styleHash,
+    styleHash
   };
 }
 
 export function serializeStyleMarkdown(style: Style): string {
+  const panelPerParagraph = style.panel_per_paragraph ?? style.panelPerParagraph ?? true;
+  const referenceUrl = style.reference_url ?? style.referenceUrl ?? '';
+  const useReferenceInstructions = style.use_reference_instructions ?? style.useReferenceInstructions ?? true;
+  const drawingInstructions = style.drawing_instructions ?? style.drawingInstructions ?? '';
+  const referenceInstructions = style.reference_instructions ?? style.referenceInstructions ?? '';
+
   const parts: string[] = [
     `# Style Instructions`,
-    `- panelPerParagraph: ${style.panelPerParagraph}`,
-    `- referenceUrl: ${style.referenceUrl || ''}`,
-    `- useReferenceInstructions: ${style.useReferenceInstructions}`,
-    `\n## Drawing Instructions\n${style.drawingInstructions || ''}`
+    `- panelPerParagraph: ${panelPerParagraph}`,
+    `- referenceUrl: ${referenceUrl}`,
+    `- useReferenceInstructions: ${useReferenceInstructions}`,
+    `\n## Drawing Instructions\n${drawingInstructions}`
   ];
 
-  if (style.referenceInstructions && style.referenceInstructions.trim()) {
-    parts.push(`\n## Reference Instructions\n${style.referenceInstructions.trim()}`);
+  if (referenceInstructions && referenceInstructions.trim()) {
+    parts.push(`\n## Reference Instructions\n${referenceInstructions.trim()}`);
   }
 
   return parts.join('\n\n');
@@ -302,12 +369,25 @@ export function parseCharactersMarkdown(markdown: string): Character[] {
     }
 
     characters.push({
-      characterNo: charCount++,
+      character_id: `char_${charCount}_${Date.now()}`,
+      characterId: `char_${charCount}_${Date.now()}`,
+      character_no: charCount,
+      characterNo: charCount,
+      character_name: name,
       characterName: name,
+      name,
+      reference_url: referenceUrl,
       referenceUrl,
+      image: referenceUrl,
+      description_text: descriptionText,
       descriptionText,
-      instructionsText
+      description: descriptionText,
+      instructions_text: instructionsText,
+      instructionsText,
+      instructions: instructionsText
     });
+
+    charCount++;
   }
 
   return characters;
@@ -316,17 +396,22 @@ export function parseCharactersMarkdown(markdown: string): Character[] {
 export function serializeCharactersMarkdown(characters: Character[]): string {
   if (!characters || characters.length === 0) return '';
   return characters
-    .filter(c => c.characterName && c.characterName.trim())
+    .filter(c => (c.character_name || c.characterName || c.name) && (c.character_name || c.characterName || c.name)!.trim())
     .map(c => {
-      const parts: string[] = [`## ${c.characterName.trim()}`];
-      if (c.referenceUrl) {
-        parts.push(`- ReferenceUrl: ${c.referenceUrl.trim()}`);
+      const name = (c.character_name || c.characterName || c.name)!.trim();
+      const refUrl = c.reference_url || c.referenceUrl || c.image || '';
+      const desc = c.description_text || c.descriptionText || c.description || '';
+      const inst = c.instructions_text || c.instructionsText || c.instructions || '';
+
+      const parts: string[] = [`## ${name}`];
+      if (refUrl) {
+        parts.push(`- ReferenceUrl: ${refUrl.trim()}`);
       }
-      if (c.descriptionText && c.descriptionText.trim()) {
-        parts.push(c.descriptionText.trim());
+      if (desc && desc.trim()) {
+        parts.push(desc.trim());
       }
-      if (c.instructionsText && c.instructionsText.trim()) {
-        parts.push(`**Instructions:**\n${c.instructionsText.trim()}`);
+      if (inst && inst.trim()) {
+        parts.push(`**Instructions:**\n${inst.trim()}`);
       }
       return parts.join('\n\n');
     })
@@ -340,7 +425,10 @@ export function storyToParagraphs(input: string | Story): { paragraphNo: number;
   for (const chap of story.chapters || []) {
     for (const page of chap.pages || []) {
       for (const p of page.paragraphs || []) {
-        result.push({ paragraphNo: count++, text: p.paragraphText });
+        result.push({
+          paragraphNo: count++,
+          text: p.paragraph_text || p.paragraphText || ''
+        });
       }
     }
   }
@@ -365,11 +453,11 @@ export function parseInstructionsMarkdown(markdown: string): Instruction[] {
 
     const instructionNo = parseInt(headerMatch[1], 10) || counter;
 
-    const paraMatch = trimmed.match(/[-*+]?\s*paragraphId:\s*(\d+)/i);
-    const pageMatch = trimmed.match(/[-*+]?\s*pageId:\s*(\d+)/i);
-    const chapMatch = trimmed.match(/[-*+]?\s*chapterId:\s*(\d+)/i);
+    const paraMatch = trimmed.match(/[-*+]?\s*paragraphId:\s*(\d+)/i) || trimmed.match(/[-*+]?\s*paragraph_no:\s*(\d+)/i);
+    const pageMatch = trimmed.match(/[-*+]?\s*pageId:\s*(\d+)/i) || trimmed.match(/[-*+]?\s*page_no:\s*(\d+)/i);
+    const chapMatch = trimmed.match(/[-*+]?\s*chapterId:\s*(\d+)/i) || trimmed.match(/[-*+]?\s*chapter_no:\s*(\d+)/i);
     const imgIdxMatch = trimmed.match(/[-*+]?\s*imageIndex:\s*(\d+)/i);
-    const lockMatch = trimmed.match(/[-*+]?\s*(?:isLocked|locked):\s*(true|false)/i);
+    const lockMatch = trimmed.match(/[-*+]?\s*(?:isLocked|locked|is_locked):\s*(true|false)/i);
     const charMatch = trimmed.match(/\*{0,2}Characters:\*{0,2}\s*(.+)/i);
 
     const paragraphId = paraMatch ? parseInt(paraMatch[1], 10) : instructionNo;
@@ -387,20 +475,30 @@ export function parseInstructionsMarkdown(markdown: string): Instruction[] {
     } else {
       const textLines = trimmed.split(/\r?\n/).filter(l =>
         !l.match(/^#{1,6}\s+(?:Instruction|Panel)/i) &&
-        !l.match(/[-*+]?\s*(?:paragraphId|pageId|chapterId|imageIndex|isLocked|locked|Characters):/i)
+        !l.match(/[-*+]?\s*(?:paragraphId|pageId|chapterId|imageIndex|isLocked|locked|is_locked|Characters|paragraph_no|page_no|chapter_no):/i)
       );
       cinematographicDirections = textLines.join('\n').trim();
     }
 
     instructions.push({
       instructionNo,
+      paragraph_no: paragraphId,
+      paragraphNo: paragraphId,
       paragraphId,
+      page_no: pageId,
+      pageNo: pageId,
       pageId,
+      chapter_no: chapterId,
+      chapterNo: chapterId,
       chapterId,
       imageIndex,
+      cinematographic_directions: cinematographicDirections,
       cinematographicDirections,
+      cinematographicText: cinematographicDirections,
+      assigned_characters: charList,
       characters: charList,
       images: [],
+      is_locked: isLocked,
       isLocked
     });
 
@@ -413,21 +511,31 @@ export function parseInstructionsMarkdown(markdown: string): Instruction[] {
 export function serializeInstructionsMarkdown(instructions: Instruction[]): string {
   if (!instructions || instructions.length === 0) return '';
   return instructions
-    .sort((a, b) => a.instructionNo - b.instructionNo)
+    .sort((a, b) => (a.instructionNo ?? a.paragraph_no ?? 0) - (b.instructionNo ?? b.paragraph_no ?? 0))
     .map(inst => {
+      const num = inst.instructionNo ?? inst.paragraph_no ?? 0;
+      const paragraphId = inst.paragraph_no ?? inst.paragraphNo ?? inst.paragraphId ?? num;
+      const pageId = inst.page_no ?? inst.pageNo ?? inst.pageId ?? 0;
+      const chapterId = inst.chapter_no ?? inst.chapterNo ?? inst.chapterId ?? 0;
+      const imageIndex = inst.imageIndex ?? 0;
+      const isLocked = Boolean(inst.is_locked ?? inst.isLocked);
+      const chars = inst.assigned_characters ?? inst.characters ?? [];
+      const charArr = Array.isArray(chars) ? chars : (typeof chars === 'string' ? JSON.parse(chars) : []);
+      const dirs = inst.cinematographic_directions ?? inst.cinematographicDirections ?? inst.cinematographicText ?? '';
+
       const parts: string[] = [
-        `## Instruction ${inst.instructionNo}`,
-        `- paragraphId: ${inst.paragraphId}`,
-        `- pageId: ${inst.pageId}`,
-        `- chapterId: ${inst.chapterId}`,
-        `- imageIndex: ${inst.imageIndex}`,
-        ...(inst.isLocked ? [`- isLocked: true`] : [])
+        `## Instruction ${num}`,
+        `- paragraphId: ${paragraphId}`,
+        `- pageId: ${pageId}`,
+        `- chapterId: ${chapterId}`,
+        `- imageIndex: ${imageIndex}`,
+        ...(isLocked ? [`- isLocked: true`] : [])
       ];
-      if (inst.characters && inst.characters.length > 0) {
-        parts.push(`**Characters:** ${inst.characters.join(', ')}`);
+      if (charArr.length > 0) {
+        parts.push(`**Characters:** ${charArr.join(', ')}`);
       }
-      if (inst.cinematographicDirections && inst.cinematographicDirections.trim()) {
-        parts.push(`<cinematographic-directions>\n${inst.cinematographicDirections.trim()}\n</cinematographic-directions>`);
+      if (dirs && dirs.trim()) {
+        parts.push(`<cinematographic-directions>\n${dirs.trim()}\n</cinematographic-directions>`);
       }
       return parts.join('\n\n');
     })

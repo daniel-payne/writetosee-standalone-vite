@@ -7,7 +7,7 @@ import {
   generateTextDigest
 } from './parsers';
 import { processImages } from './workflows/processImages';
-import type { Instruction } from './TYPES';
+import type { Instruction, Style } from './TYPES';
 
 /**
  * Saves instructions list (or markdown string) to instructions.md and replaces instructions in IndexedDB.
@@ -25,11 +25,38 @@ export async function saveInstructions(input: string | Instruction[]): Promise<I
       instructions = input;
     }
 
-    // Ensure instructionNo sequential numbering
-    instructions = instructions.map((inst, idx) => ({
-      ...inst,
-      instructionNo: inst.instructionNo ?? idx
-    }));
+    // Ensure instructionNo and DDL columns are present
+    instructions = instructions.map((inst, idx) => {
+      const num = inst.instructionNo ?? inst.paragraph_no ?? inst.paragraphNo ?? idx;
+      const paraId = inst.paragraph_no ?? inst.paragraphNo ?? inst.paragraphId ?? num;
+      const pageId = inst.page_no ?? inst.pageNo ?? inst.pageId ?? 0;
+      const chapId = inst.chapter_no ?? inst.chapterNo ?? inst.chapterId ?? 0;
+      const chars = inst.assigned_characters ?? inst.characters ?? [];
+      const charArr = Array.isArray(chars) ? chars : [];
+      const dirs = inst.cinematographic_directions ?? inst.cinematographicDirections ?? inst.cinematographicText ?? '';
+      const isLocked = Boolean(inst.is_locked ?? inst.isLocked);
+
+      return {
+        ...inst,
+        instructionNo: num,
+        paragraph_no: paraId,
+        paragraphNo: paraId,
+        paragraphId: paraId,
+        page_no: pageId,
+        pageNo: pageId,
+        pageId,
+        chapter_no: chapId,
+        chapterNo: chapId,
+        chapterId: chapId,
+        cinematographic_directions: dirs,
+        cinematographicDirections: dirs,
+        cinematographicText: dirs,
+        assigned_characters: charArr,
+        characters: charArr,
+        is_locked: isLocked,
+        isLocked
+      };
+    });
 
     // 1. Serialize and write to disk /instructions.md
     const markdown = serializeInstructionsMarkdown(instructions);
@@ -54,12 +81,14 @@ export async function saveInstructions(input: string | Instruction[]): Promise<I
     ]);
 
     const story = storyRecord || { title: '', chapters: [] };
-    const style = styleRecord || {
-      drawingInstructions: '',
-      panelPerParagraph: true,
-      referenceUrl: '',
-      referenceInstructions: '',
-      useReferenceInstructions: true
+    const style: Style = styleRecord || {
+      story_id: 'main',
+      drawing_instructions: '',
+      panel_per_paragraph: true,
+      reference_url: '',
+      reference_instructions: '',
+      use_reference_instructions: true,
+      style_hash: ''
     };
 
     processImages(story, style, charactersList, instructions).catch(err => {
@@ -82,16 +111,20 @@ export async function savePanelInstructions(
   updates: { characters?: string[]; cinematographicText?: string; isLocked?: boolean; imageIndex?: number }
 ): Promise<Instruction[]> {
   const currentInstructions = await processDb.instructions.toArray();
-  const index = currentInstructions.findIndex(inst => inst.instructionNo === panelNo || inst.paragraphId === panelNo);
+  const index = currentInstructions.findIndex(inst =>
+    (inst.instructionNo === panelNo) ||
+    (inst.paragraph_no === panelNo) ||
+    (inst.paragraphId === panelNo)
+  );
 
   let updatedList: Instruction[];
   if (index >= 0) {
     updatedList = [...currentInstructions];
     updatedList[index] = {
       ...updatedList[index],
-      ...(updates.characters !== undefined ? { characters: updates.characters } : {}),
-      ...(updates.cinematographicText !== undefined ? { cinematographicDirections: updates.cinematographicText } : {}),
-      ...(updates.isLocked !== undefined ? { isLocked: updates.isLocked } : {}),
+      ...(updates.characters !== undefined ? { characters: updates.characters, assigned_characters: updates.characters } : {}),
+      ...(updates.cinematographicText !== undefined ? { cinematographicDirections: updates.cinematographicText, cinematographic_directions: updates.cinematographicText, cinematographicText: updates.cinematographicText } : {}),
+      ...(updates.isLocked !== undefined ? { isLocked: updates.isLocked, is_locked: updates.isLocked } : {}),
       ...(updates.imageIndex !== undefined ? { imageIndex: updates.imageIndex } : {})
     };
   } else {
@@ -99,13 +132,23 @@ export async function savePanelInstructions(
       ...currentInstructions,
       {
         instructionNo: panelNo,
+        paragraph_no: panelNo,
+        paragraphNo: panelNo,
         paragraphId: panelNo,
+        page_no: 0,
+        pageNo: 0,
         pageId: 0,
+        chapter_no: 0,
+        chapterNo: 0,
         chapterId: 0,
         imageIndex: updates.imageIndex || 0,
+        cinematographic_directions: updates.cinematographicText || '',
         cinematographicDirections: updates.cinematographicText || '',
+        cinematographicText: updates.cinematographicText || '',
+        assigned_characters: updates.characters || [],
         characters: updates.characters || [],
         images: [],
+        is_locked: Boolean(updates.isLocked),
         isLocked: Boolean(updates.isLocked)
       }
     ];

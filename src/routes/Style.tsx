@@ -4,6 +4,8 @@ import FormDrawingInstructions from "@/components/FormDrawingInstructions";
 import FormReferenceLink from "@/components/FormReferenceLink";
 import FormStoryTitle from "@/components/FormStoryTitle";
 import { useLocalState } from "@keldan-systems/state-mutex";
+import { useLiveQuery } from "dexie-react-hooks";
+import { processDb } from "@/data/process/db";
 import type { Style as StyleType } from "@/data/process/TYPES";
 import { STYLE_PRESETS } from "@/data/stylePresets";
 
@@ -16,8 +18,12 @@ export default function Style({
   const navigation = useNavigation();
   const actionData = useActionData() as any;
 
-  const [style] = useLocalState<StyleType | undefined>('style-data', undefined);
+  // Dexie live query for style
+  const liveStyle = useLiveQuery(() => processDb.style.get('main'));
+  const [styleMutex] = useLocalState<StyleType | undefined>('style-data', undefined);
   const [styleHash] = useLocalState<string>('style-hash', '');
+
+  const style = liveStyle || styleMutex;
 
   const safeJoin = (val: unknown): string => {
     if (Array.isArray(val)) {
@@ -29,20 +35,20 @@ export default function Style({
   const initialStyle: any = style ?? {};
 
   const [formData, setFormData] = useState({
-    storyTitle: initialStyle.storyTitle || '',
-    drawingInstructions: safeJoin(initialStyle.drawingInstructions),
-    referenceUrl: initialStyle.referenceUrl || '',
-    linkInstructions: safeJoin(initialStyle.linkInstructions || initialStyle.referenceInstructions),
+    storyTitle: initialStyle.story_title || initialStyle.storyTitle || '',
+    drawingInstructions: safeJoin(initialStyle.drawing_instructions || initialStyle.drawingInstructions),
+    referenceUrl: initialStyle.reference_url || initialStyle.referenceUrl || '',
+    linkInstructions: safeJoin(initialStyle.linkInstructions || initialStyle.reference_instructions || initialStyle.referenceInstructions),
   });
 
   useEffect(() => {
     if (actionData?.cancelled) {
       const currentSaved: any = style ?? {};
       setFormData({
-        storyTitle: currentSaved.storyTitle || '',
-        drawingInstructions: safeJoin(currentSaved.drawingInstructions),
-        referenceUrl: currentSaved.referenceUrl || '',
-        linkInstructions: safeJoin(currentSaved.linkInstructions || currentSaved.referenceInstructions),
+        storyTitle: currentSaved.story_title || currentSaved.storyTitle || '',
+        drawingInstructions: safeJoin(currentSaved.drawing_instructions || currentSaved.drawingInstructions),
+        referenceUrl: currentSaved.reference_url || currentSaved.referenceUrl || '',
+        linkInstructions: safeJoin(currentSaved.linkInstructions || currentSaved.reference_instructions || currentSaved.referenceInstructions),
       });
     }
   }, [actionData, style]);
@@ -52,17 +58,14 @@ export default function Style({
   const isAnalyzing = fetcher.state !== 'idle';
 
   useEffect(() => {
-    console.log("Style.tsx: Fetcher state changed:", fetcher.state, "wasLoadingRef:", wasLoadingRef.current);
     if (fetcher.state !== 'idle') {
       wasLoadingRef.current = true;
     }
   }, [fetcher.state]);
 
   useEffect(() => {
-    console.log("Style.tsx: Fetcher idle check - state:", fetcher.state, "wasLoadingRef:", wasLoadingRef.current, "data:", fetcher.data);
     if (fetcher.state === 'idle' && wasLoadingRef.current) {
       wasLoadingRef.current = false;
-      console.log("Style.tsx: Fetcher completed! success:", fetcher.data?.success, "linkInstructions length:", fetcher.data?.linkInstructions?.length);
       if (fetcher.data?.success && fetcher.data?.linkInstructions) {
         Promise.resolve().then(() => {
           setFormData(prev => ({
@@ -84,25 +87,30 @@ export default function Style({
       lastSyncedHashRef.current = styleHash;
       lastSyncedStyleRef.current = style;
       setFormData({
-        storyTitle: (style as any)?.storyTitle || '',
-        drawingInstructions: safeJoin(style?.drawingInstructions),
-        referenceUrl: style?.referenceUrl || '',
-        linkInstructions: safeJoin((style as any)?.linkInstructions || style?.referenceInstructions),
+        storyTitle: (style as any)?.story_title || (style as any)?.storyTitle || '',
+        drawingInstructions: safeJoin(style?.drawing_instructions || style?.drawingInstructions),
+        referenceUrl: style?.reference_url || style?.referenceUrl || '',
+        linkInstructions: safeJoin((style as any)?.linkInstructions || style?.reference_instructions || style?.referenceInstructions),
       });
     }
   }, [styleHash, style]);
 
   const isDirty =
-    formData.storyTitle !== (initialStyle.storyTitle || '') ||
-    formData.drawingInstructions !== safeJoin(initialStyle.drawingInstructions) ||
-    formData.referenceUrl !== (initialStyle.referenceUrl || '') ||
-    formData.linkInstructions !== safeJoin(initialStyle.linkInstructions || initialStyle.referenceInstructions);
+    formData.storyTitle !== ((initialStyle.story_title || initialStyle.storyTitle) || '') ||
+    formData.drawingInstructions !== safeJoin(initialStyle.drawing_instructions || initialStyle.drawingInstructions) ||
+    formData.referenceUrl !== (initialStyle.reference_url || initialStyle.referenceUrl || '') ||
+    formData.linkInstructions !== safeJoin(initialStyle.linkInstructions || initialStyle.reference_instructions || initialStyle.referenceInstructions);
 
   const isDirtyRef = useRef(isDirty);
-  isDirtyRef.current = isDirty;
-
   const navigationStateRef = useRef(navigation.state);
-  navigationStateRef.current = navigation.state;
+
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+
+  useEffect(() => {
+    navigationStateRef.current = navigation.state;
+  }, [navigation.state]);
 
   const blockerFunction = useCallback(
     ({ currentLocation, nextLocation }: any) => {
@@ -141,12 +149,10 @@ export default function Style({
   }, [isDirty]);
 
   const handleChange = (e: any) => {
-    console.log("handleChange called: name =", e.target.name, "value =", e.target.value);
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handlePresetSelect = (presetKey: string) => {
-    console.log("handlePresetSelect called in Style.tsx with key:", presetKey);
     let newInstructions = '';
     if (presetKey === 'CHILDREN') {
       newInstructions = STYLE_PRESETS.CHILDRENS_BOOK.trim();

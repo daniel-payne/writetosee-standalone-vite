@@ -10,7 +10,8 @@ import type {
   Style,
   Character,
   Instruction,
-  ImageEntry
+  ImageEntry,
+  ImageEntity
 } from '../TYPES';
 
 function dataURLtoBlob(dataUrl: string): Blob {
@@ -49,11 +50,11 @@ export async function processImages(
       for (const page of chapter.pages || []) {
         for (const paragraph of page.paragraphs || []) {
           paragraphList.push({
-            paragraphNo: paragraph.paragraphNo,
-            paragraphText: paragraph.paragraphText,
-            narrativeText: paragraph.narrativeText || paragraph.paragraphText,
-            pageId: page.pageNo,
-            chapterId: chapter.chapterNo
+            paragraphNo: paragraph.paragraph_no ?? paragraph.paragraphNo ?? 0,
+            paragraphText: paragraph.paragraph_text || paragraph.paragraphText || '',
+            narrativeText: paragraph.narrative_summary || paragraph.narrativeSummary || paragraph.narrativeText || paragraph.paragraph_text || paragraph.paragraphText || '',
+            pageId: page.page_no ?? page.pageNo ?? 0,
+            chapterId: chapter.chapter_no ?? chapter.chapterNo ?? 0
           });
         }
       }
@@ -61,34 +62,45 @@ export async function processImages(
 
     const charMap = new Map<string, Character>();
     for (const char of characters || []) {
-      if (char.characterName) {
-        charMap.set(char.characterName.trim().toLowerCase(), char);
+      const name = char.character_name || char.characterName || char.name;
+      if (name) {
+        charMap.set(name.trim().toLowerCase(), char);
       }
     }
 
     // Build or sync instructions for all paragraphs
     const finalInstructions: Instruction[] = paragraphList.map((p, idx) => {
-      const existing = (instructions || []).find(inst => inst.instructionNo === idx || inst.paragraphId === p.paragraphNo) || instructions[idx];
+      const existing = (instructions || []).find(inst =>
+        (inst.instructionNo === idx) ||
+        (inst.paragraph_no === p.paragraphNo) ||
+        (inst.paragraphId === p.paragraphNo)
+      ) || instructions[idx];
 
-      const instCharacters = existing ? (existing.characters || []) : [];
-      const cinematographicDirections = existing ? (existing.cinematographicDirections || '') : '';
+      const instCharacters = existing ? (existing.assigned_characters || existing.characters || []) : [];
+      const charArr = Array.isArray(instCharacters) ? instCharacters : [];
+      const cinematographicDirections = existing ? (existing.cinematographic_directions || existing.cinematographicDirections || existing.cinematographicText || '') : '';
       const imageIndex = existing ? (existing.imageIndex || 0) : 0;
+      const isLocked = existing ? Boolean(existing.is_locked ?? existing.isLocked) : false;
 
-      // Build text segments
-      const styleText = style?.drawingInstructions || '';
+      // Build 5 prompt segments
+      let styleText = style?.drawing_instructions || style?.drawingInstructions || '';
+      if ((style?.use_reference_instructions ?? style?.useReferenceInstructions) && (style?.reference_instructions || style?.referenceInstructions)) {
+        styleText = [styleText, (style.reference_instructions || style.referenceInstructions)].filter(Boolean).join('\n');
+      }
+
       const charTexts: string[] = [];
-      for (const cName of instCharacters) {
+      for (const cName of charArr) {
         const found = charMap.get(cName.trim().toLowerCase());
         if (found) {
-          const desc = found.descriptionText || found.instructionsText || '';
-          if (desc) charTexts.push(`${found.characterName}: ${desc}`);
+          const desc = found.description_text || found.descriptionText || found.instructions_text || found.instructionsText || '';
+          if (desc) charTexts.push(`${cName}: ${desc}`);
         }
       }
       const characterText = charTexts.join('\n');
       const sceneText = p.paragraphText;
       const narrativeText = p.narrativeText;
 
-      const promptSourceText = [styleText, cinematographicDirections, characterText, sceneText].filter(Boolean).join('\n\n');
+      const promptSourceText = [styleText, cinematographicDirections, characterText, narrativeText, sceneText].filter(Boolean).join('\n\n');
       const promptDigest = generateTextDigest(promptSourceText);
 
       // Check if image file exists on disk
@@ -115,23 +127,39 @@ export async function processImages(
 
       return {
         instructionNo: idx,
+        paragraph_no: p.paragraphNo,
+        paragraphNo: p.paragraphNo,
         paragraphId: p.paragraphNo,
+        page_no: p.pageId,
+        pageNo: p.pageId,
         pageId: p.pageId,
+        chapter_no: p.chapterId,
+        chapterNo: p.chapterId,
         chapterId: p.chapterId,
         imageIndex,
+        cinematographic_directions: cinematographicDirections,
         cinematographicDirections,
-        characters: instCharacters,
-        images: updatedImages
+        cinematographicText: cinematographicDirections,
+        assigned_characters: charArr,
+        characters: charArr,
+        assigned_prompt_digests: [promptDigest],
+        current_prompt_digest: promptDigest,
+        promptDigest,
+        images: updatedImages,
+        is_locked: isLocked,
+        isLocked
       };
     });
 
-    // Save initial instruction structure to IndexedDB
+    // Save initial instruction structure to Dexie
     await processDb.instructions.clear();
-    await processDb.instructions.bulkPut(finalInstructions);
+    if (finalInstructions.length > 0) {
+      await processDb.instructions.bulkPut(finalInstructions);
+    }
 
     // Process image generation for entries missing on disk
     for (const inst of finalInstructions) {
-      const activeImage = inst.images[inst.imageIndex];
+      const activeImage = inst.images?.[inst.imageIndex ?? 0];
       if (!activeImage) continue;
 
       const promptDigest = activeImage.promptDigest;
@@ -142,17 +170,25 @@ export async function processImages(
         activeImage.styleText,
         activeImage.cinematographicText,
         activeImage.characterText,
+        activeImage.narrativeText,
         activeImage.sceneText
       ].filter(Boolean).join('\n\n');
 
-      // Save prompt text to disk & IndexedDB
+      // Save prompt text to disk & Dexie prompts table
       if (!existingPromptsSet.has(promptFileName)) {
         await fileStorage.writeFile(promptFileName, fullPromptText).catch(() => { });
         existingPromptsSet.add(promptFileName);
       }
       await processDb.prompts.put({
+        prompt_digest: promptDigest,
         digest: promptDigest,
-        promptText: fullPromptText
+        prompt_text: fullPromptText,
+        promptText: fullPromptText,
+        style_text: activeImage.styleText || '',
+        cinematographic_text: activeImage.cinematographicText || '',
+        character_text: activeImage.characterText || '',
+        narrative_text: activeImage.narrativeText || '',
+        scene_text: activeImage.sceneText || ''
       });
 
       const isForced = options?.forceRegenerateInstructionNo === inst.instructionNo;
@@ -160,6 +196,12 @@ export async function processImages(
       // If image is already on disk and not forced, skip generation
       if (existingImagesSet.has(imageFileName) && !isForced) {
         activeImage.status = 'COMPLETE';
+        const imgRecord: ImageEntity = {
+          image_digest: promptDigest,
+          image_status: 'SAVED',
+          created_at: new Date()
+        };
+        await processDb.images.put(imgRecord);
         continue;
       }
 
@@ -167,6 +209,11 @@ export async function processImages(
       try {
         activeImage.status = 'PROCESSING';
         await processDb.instructions.put(inst);
+        await processDb.images.put({
+          image_digest: promptDigest,
+          image_status: 'PROCESSING',
+          created_at: new Date()
+        });
         setState('instructions-data', [...finalInstructions], StoragePersistence.none);
 
         console.log(`[processImages] Generating image for instruction ${inst.instructionNo} (digest: ${promptDigest})`);
@@ -179,6 +226,11 @@ export async function processImages(
 
           activeImage.status = 'COMPLETE';
           await processDb.instructions.put(inst);
+          await processDb.images.put({
+            image_digest: promptDigest,
+            image_status: 'SAVED',
+            created_at: new Date()
+          });
           setState('instructions-data', [...finalInstructions], StoragePersistence.none);
 
           if (res.totalCost) {
@@ -191,6 +243,11 @@ export async function processImages(
         console.error(`[processImages] Image generation failed for instruction ${inst.instructionNo}:`, err);
         activeImage.status = 'FAILED';
         await processDb.instructions.put(inst);
+        await processDb.images.put({
+          image_digest: promptDigest,
+          image_status: 'FAILED',
+          created_at: new Date()
+        });
         setState('instructions-data', [...finalInstructions], StoragePersistence.none);
       }
     }
@@ -205,7 +262,7 @@ export async function processImages(
     return finalInstructions;
   } catch (err: any) {
     console.error('[processImages] Error in workflow:', err);
-    setState('image-processing-status', 'failed', StoragePersistence.local);
+    setState('image-processing-status', 'idle', StoragePersistence.local);
     throw err;
   }
 }

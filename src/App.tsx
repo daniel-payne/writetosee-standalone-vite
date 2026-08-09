@@ -35,16 +35,11 @@ import Video from './routes/Video';
 import { clientLoader as videoLoader } from './routes/Video.loader';
 import { clientAction as videoAction } from './routes/Video.action';
 
-import Publication from './routes/Publication';
-import { clientLoader as publicationLoader } from './routes/Publication.loader';
-import { clientAction as publicationAction } from './routes/Publication.action';
-
 import Costs from './routes/Costs';
 import { clientLoader as costsLoader } from './routes/Costs.loader';
 
 import Logs from './routes/Logs';
 import { clientLoader as logsLoader } from './routes/Logs.loader';
-
 
 const router = createBrowserRouter([
   {
@@ -142,13 +137,6 @@ const router = createBrowserRouter([
         element: <Video />,
         loader: videoLoader,
         action: videoAction,
-      },
-
-      {
-        path: '/publication',
-        element: <Publication />,
-        loader: publicationLoader,
-        action: publicationAction,
       },
       {
         path: '/costs',

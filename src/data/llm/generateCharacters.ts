@@ -49,10 +49,19 @@ export default async function generateCharacters(storyText: string): Promise<Cha
       const extracted: Character[] = parsed
         .filter((item: any) => item && (item.name || item.characterName))
         .map((item: any, idx: number) => ({
+          character_id: `char_${idx}_${Date.now()}`,
+          characterId: `char_${idx}_${Date.now()}`,
+          character_no: idx,
           characterNo: idx,
+          character_name: String(item.characterName || item.name || '').trim(),
           characterName: String(item.characterName || item.name || '').trim(),
+          name: String(item.characterName || item.name || '').trim(),
+          description_text: String(item.descriptionText || item.description || '').trim(),
           descriptionText: String(item.descriptionText || item.description || '').trim(),
+          description: String(item.descriptionText || item.description || '').trim(),
+          instructions_text: '',
           instructionsText: '',
+          reference_url: '',
           referenceUrl: ''
         }))
         .slice(0, 10);

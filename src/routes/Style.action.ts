@@ -3,6 +3,7 @@ import { processDb } from "@/data/process/db";
 import { writeLog } from "@/data/storage/logStorage";
 import { STYLE_PRESETS } from "@/data/stylePresets";
 import generateStyleReference from "@/data/llm/generateStyleReference";
+import type { Style } from "@/data/process/TYPES";
 
 export async function clientAction({ request }: any) {
   const formData = await request.formData();
@@ -22,17 +23,20 @@ export async function clientAction({ request }: any) {
 
     try {
       const currentRecord = await processDb.style.get('main');
-      const currentStyle = currentRecord || {
-        drawingInstructions: '',
-        panelPerParagraph: true,
-        referenceUrl: '',
-        referenceInstructions: '',
-        useReferenceInstructions: true
+      const currentStyle: Style = currentRecord || {
+        story_id: 'main',
+        drawing_instructions: '',
+        panel_per_paragraph: true,
+        reference_url: '',
+        reference_instructions: '',
+        use_reference_instructions: true,
+        style_hash: ''
       };
 
-      const updatedStyle = {
+      const updatedStyle: Style = {
         ...currentStyle,
-        drawingInstructions: presetText.trim(),
+        drawing_instructions: presetText.trim(),
+        drawingInstructions: presetText.trim()
       };
 
       await saveStyle(updatedStyle);
@@ -63,12 +67,19 @@ export async function clientAction({ request }: any) {
     const referenceUrl = (formData.get('referenceUrl') as string) || '';
     const linkInstructionsText = (formData.get('linkInstructions') as string) || '';
 
-    const style = {
+    const style: Style = {
+      story_id: 'main',
+      drawing_instructions: drawingInstructionsText.trim(),
       drawingInstructions: drawingInstructionsText.trim(),
+      panel_per_paragraph: true,
       panelPerParagraph: true,
+      reference_url: referenceUrl,
       referenceUrl,
+      reference_instructions: linkInstructionsText.trim(),
       referenceInstructions: linkInstructionsText.trim(),
-      useReferenceInstructions: true
+      use_reference_instructions: true,
+      useReferenceInstructions: true,
+      style_hash: ''
     };
 
     try {

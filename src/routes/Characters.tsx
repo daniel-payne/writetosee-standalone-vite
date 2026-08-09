@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback, type HTMLAttributes, type PropsWithChildren } from "react";
 import { Form, useLoaderData, useActionData, useNavigation, useBlocker, useFetcher } from "react-router-dom";
 import { useLocalState } from "@keldan-systems/state-mutex";
+import { useLiveQuery } from "dexie-react-hooks";
+import { processDb } from "@/data/process/db";
 import { analyzeCharacterStory, analyzeCharacterImage } from "@/data/process/saveCharacters";
 import type { Character } from "@/data/process/TYPES";
 import { writeFile } from "@/data/storage/fileStorage";
@@ -16,6 +18,7 @@ export default function Characters({
   const navigation = useNavigation();
   const fetcher = useFetcher();
 
+  const liveCharacters = useLiveQuery(() => processDb.characters.toArray());
   const [savedCharacters] = useLocalState<Character[]>('characters-data', []);
   const [charactersHash] = useLocalState<string>('characters-hash', '');
 
@@ -71,18 +74,25 @@ export default function Characters({
 
   // Initial load sync
   useEffect(() => {
-    if (savedCharacters && savedCharacters.length > 0 && characterList.length === 0) {
+    if (liveCharacters && liveCharacters.length > 0 && !isDirtyRef.current) {
+      setCharacterList(liveCharacters);
+    } else if (savedCharacters && savedCharacters.length > 0 && characterList.length === 0) {
       setCharacterList(savedCharacters);
     }
-  }, [savedCharacters]);
+  }, [liveCharacters, savedCharacters]);
 
   // Check dirty state
   const isDirty = JSON.stringify(characterList) !== JSON.stringify(savedCharacters || []);
   const isDirtyRef = useRef(isDirty);
-  isDirtyRef.current = isDirty;
-
   const navigationStateRef = useRef(navigation.state);
-  navigationStateRef.current = navigation.state;
+
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+
+  useEffect(() => {
+    navigationStateRef.current = navigation.state;
+  }, [navigation.state]);
 
   const blockerFunction = useCallback(
     ({ currentLocation, nextLocation }: any) => {

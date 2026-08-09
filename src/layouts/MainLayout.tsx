@@ -111,8 +111,6 @@ export default function MainLayout({
 
   const currentApiKey = loaderData?.apiKey || (typeof window !== 'undefined' ? window.sessionStorage.getItem("apiKey") : null) || '';
 
-
-
   const handleGrantPermission = async () => {
     try {
       const handle = await getDirectoryHandle();
@@ -135,13 +133,10 @@ export default function MainLayout({
     }
   };
 
-
   let styleLinkStyle = unselectedStyle;
   let storyLinkStyle = unselectedStyle;
   let charactersLinkStyle = unselectedStyle;
-  // let _panelsLinkStyle = unselectedStyle;
   let imagesLinkStyle = debugUnselectedStyle;
-  let publicationLinkStyle = debugUnselectedStyle;
   let costsLinkStyle = debugUnselectedStyle;
   let logsLinkStyle = debugUnselectedStyle;
   let aboutLinkStyle = unselectedStyle;
@@ -154,20 +149,12 @@ export default function MainLayout({
     storyLinkStyle = selectedStyle;
   }
 
-  // if (isActive('/panels')) {
-  //   _panelsLinkStyle = selectedStyle;
-  // }
-
   if (isActive('/characters')) {
     charactersLinkStyle = selectedStyle;
   }
 
   if (isActive('/images')) {
     imagesLinkStyle = debugSelectedStyle;
-  }
-
-  if (isActive('/publication')) {
-    publicationLinkStyle = debugSelectedStyle;
   }
 
   if (isActive('/costs')) {
@@ -183,12 +170,10 @@ export default function MainLayout({
   }
 
   if (isNavDisabled) {
-    // _panelsLinkStyle = disabledStyle;
     charactersLinkStyle = disabledStyle;
     imagesLinkStyle = disabledStyle;
     storyLinkStyle = disabledStyle;
     styleLinkStyle = disabledStyle;
-    publicationLinkStyle = disabledStyle;
     costsLinkStyle = disabledStyle;
     logsLinkStyle = disabledStyle;
     aboutLinkStyle = disabledStyle;
@@ -224,7 +209,7 @@ export default function MainLayout({
               {processingStatus && (
                 <span className="ml-3 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary border border-primary/20 animate-pulse shadow-sm">
                   <svg className="animate-spin h-3.5 w-3.5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <circle className="opacity-25" cx="12" cy="12" r="10" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                   Processing Story
@@ -233,7 +218,7 @@ export default function MainLayout({
               {!processingStatus && imageProcessingStatus === 'processing' && (
                 <span className="ml-3 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full bg-secondary/15 text-secondary border border-secondary/20 animate-pulse shadow-sm">
                   <svg className="animate-spin h-3.5 w-3.5 text-secondary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <circle className="opacity-25" cx="12" cy="12" r="10" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                   Generating Images
@@ -243,17 +228,12 @@ export default function MainLayout({
           </div>
 
           <nav className="flex items-center gap-2">
-            {/* <NavKeyLink to="/" apiKey={currentApiKey} navigate={navigate} className={welcomeLinkStyle}>Welcome</NavKeyLink> */}
             <NavKeyLink to="/story" apiKey={currentApiKey} navigate={navigate} className={storyLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Story</NavKeyLink>
             {!isSafeMode && <NavKeyLink to="/style" apiKey={currentApiKey} navigate={navigate} className={styleLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Style</NavKeyLink>}
             {!isSafeMode && <NavKeyLink to="/characters" apiKey={currentApiKey} navigate={navigate} className={charactersLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Characters</NavKeyLink>}
 
-            {/* Debugging menu items: Images, Publication, Costs, Logs */}
+            {/* Debugging menu items: Images, Costs, Logs */}
             {!isSafeMode && isDEBUG && <NavKeyLink to="/images" apiKey={currentApiKey} navigate={navigate} className={imagesLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Images</NavKeyLink>}
-
-            {/* {!isSafeMode && <NavKeyLink to="/panels" apiKey={currentApiKey} navigate={navigate} className={panelsLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Comic</NavKeyLink>} */}
-
-            {!isSafeMode && isDEBUG && <NavKeyLink to="/publication" apiKey={currentApiKey} navigate={navigate} className={publicationLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Publication</NavKeyLink>}
             {!isSafeMode && isDEBUG && <NavKeyLink to="/costs" apiKey={currentApiKey} navigate={navigate} className={costsLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Costs</NavKeyLink>}
             {!isSafeMode && isDEBUG && <NavKeyLink to="/logs" apiKey={currentApiKey} navigate={navigate} className={logsLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>Logs</NavKeyLink>}
             <NavKeyLink to="/about" apiKey={currentApiKey} navigate={navigate} className={aboutLinkStyle} tabIndex={isNavDisabled ? -1 : undefined} aria-disabled={isNavDisabled}>About</NavKeyLink>
@@ -312,9 +292,8 @@ export default function MainLayout({
         </div>
 
         <div className="flex-1 flex justify-center items-center min-h-[40px]">
-
           {isStoryDisabled ? (
-            <div className="text-xs text-base-content/50">Save not available without a API Key and Local Directory Set</div>
+            <div className="text-xs text-base-content/50">Save not available without an API Key and Local Directory Set</div>
           ) : (
             ['/style', '/story', '/panels', '/characters'].includes(location.pathname) && (
               <div className="flex items-center space-x-4">
@@ -341,8 +320,6 @@ export default function MainLayout({
               </div>
             )
           )}
-
-
         </div>
 
         <div className="flex-1 flex justify-end items-center gap-2">
