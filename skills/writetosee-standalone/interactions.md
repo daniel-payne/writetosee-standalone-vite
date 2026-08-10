@@ -88,13 +88,11 @@ Reduces long narrative text across the story hierarchy when it exceeds specific 
 
 ---
 
-## 2. Interaction 2: Visual Analysis & Character Extraction
-
 ### Mode A: Style Reference Vision Analysis (`image -> text`)
 Analyzes an artist reference painting, photo, or drawing to extract artistic medium, lighting setup, color palette, brush texture, rendering style, and overall visual mood for `style.reference_instructions`.
 
-*   **System Prompt**: [`src/data/llm/prompts/createStyleReferenceSystemPrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createStyleReferenceSystemPrompt.ts)
-    *   **Function**: `createStyleReferenceSystemPrompt(): string`
+*   **Prompt File**: [`src/data/llm/prompts/createStyleReferencePrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createStyleReferencePrompt.ts)
+    *   **Function**: `createStyleReferencePrompt(): string`
     *   **Template**:
         ```text
         # Role
@@ -108,12 +106,6 @@ Analyzes an artist reference painting, photo, or drawing to extract artistic med
         4. Do NOT use markdown headers, bullet points (like -, *, or numbers), or lists in your output.
         5. Return ONLY the description sentences, with each sentence on its own separate line.
         6. Output 5 to 8 lines.
-        ```
-*   **User Prompt**: [`src/data/llm/prompts/createStyleReferenceUserPrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createStyleReferenceUserPrompt.ts)
-    *   **Function**: `createStyleReferenceUserPrompt(): string`
-    *   **Template**:
-        ```text
-        Analyze this image and produce 5 to 8 detailed drawing instruction sentences, with each sentence on a new line. Focus on the art style, colors, lighting, medium, shapes, and character design.
         ```
 
 ---
@@ -279,8 +271,7 @@ Generates high-resolution scene illustrations for each illustrated panel based o
 | **Image Generation** | [`createBookIllustrationPrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createBookIllustrationPrompt.ts) | `createBookIllustrationPrompt` | `{{STYLE_TEXT}}`<br>`{{CINEMATOGRAPHIC_TEXT}}`<br>`{{CHARACTER_TEXT}}`<br>`{{NARRATIVE_TEXT}}`<br>`{{SCENE_TEXT}}` |
 | **Character Extraction (Sys)** | [`createExtractCharactersSystemPrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createExtractCharactersSystemPrompt.ts) | `createExtractCharactersSystemPrompt` | None |
 | **Character Extraction (User)** | [`createExtractCharactersUserPrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createExtractCharactersUserPrompt.ts) | `createExtractCharactersUserPrompt` | `{{STORY_TEXT}}` |
-| **Style Reference (Sys)** | [`createStyleReferenceSystemPrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createStyleReferenceSystemPrompt.ts) | `createStyleReferenceSystemPrompt` | None |
-| **Style Reference (User)** | [`createStyleReferenceUserPrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createStyleReferenceUserPrompt.ts) | `createStyleReferenceUserPrompt` | None |
+| **Style Reference** | [`createStyleReferencePrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createStyleReferencePrompt.ts) | `createStyleReferencePrompt` | None |
 | **Character Story Analysis (Sys)** | [`createAnalyzeCharacterStorySystemPrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createAnalyzeCharacterStorySystemPrompt.ts) | `createAnalyzeCharacterStorySystemPrompt` | `{{CHARACTER_NAME}}` |
 | **Character Story Analysis (User)** | [`createAnalyzeCharacterStoryUserPrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createAnalyzeCharacterStoryUserPrompt.ts) | `createAnalyzeCharacterStoryUserPrompt` | `{{CHARACTER_NAME}}`<br>`{{CURRENT_DESCRIPTION}}`<br>`{{STORY_TEXT}}` |
 | **Character Image Analysis (Sys)** | [`createAnalyzeCharacterImageSystemPrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createAnalyzeCharacterImageSystemPrompt.ts) | `createAnalyzeCharacterImageSystemPrompt` | `{{CHARACTER_NAME}}` |
