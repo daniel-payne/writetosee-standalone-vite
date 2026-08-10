@@ -52,8 +52,9 @@ export async function clientLoader() {
 
       const instImages = foundInst?.images || [];
       const imgIdx = foundInst?.imageIndex ?? 0;
+      const activeDigest = foundInst?.current_prompt_digest || foundInst?.promptDigest || instImages[imgIdx]?.promptDigest;
       const isActive = Boolean(
-        foundInst && instImages[imgIdx]?.promptDigest === digest
+        foundInst && activeDigest === digest
       );
 
       return {

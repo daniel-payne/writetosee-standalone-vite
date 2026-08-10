@@ -127,6 +127,20 @@ export default function PanelImageDisplay({
 
   const panelIdx = paragraph?.panelNo ?? paragraph?.paragraphNo ?? 0;
 
+  const [errorDetails, setErrorDetails] = useState<{
+    message: string;
+    provider?: string;
+    status?: string;
+    rawError?: string;
+    stack?: string;
+    timestamp?: string;
+    fullReport?: string;
+    promptText?: string;
+  } | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [copiedError, setCopiedError] = useState(false);
+  const [copiedErrorPrompt, setCopiedErrorPrompt] = useState(false);
+
   const handleOpenPromptModal = async () => {
     setShowPromptModal(true);
     setPromptLoading(true);
@@ -340,6 +354,140 @@ export default function PanelImageDisplay({
     };
   }, []);
 
+  // Extract clean, human-readable error message from raw LLM/API responses
+  const extractCleanErrorMessage = (rawMsg?: string): string => {
+    if (!rawMsg) return "Image generation failed.";
+
+    const text = String(rawMsg).trim();
+
+    // 1. Try to find and parse JSON inside the string (e.g. from {"error": ...} or API Error: 400 - {...})
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (typeof parsed?.error === 'string' && parsed.error.trim()) {
+          return parsed.error.trim();
+        }
+        if (parsed?.error?.message && typeof parsed.error.message === 'string' && parsed.error.message.trim()) {
+          return parsed.error.message.trim();
+        }
+        if (typeof parsed?.message === 'string' && parsed.message.trim()) {
+          return parsed.message.trim();
+        }
+        if (parsed?.error?.details && typeof parsed.error.details === 'string') {
+          return parsed.error.details.trim();
+        }
+      } catch {
+        // Not valid JSON, continue with string processing
+      }
+    }
+
+    // 2. Strip leading error wrappers: "Error: ", "API Error: 404 - ", "API Error 401: ", etc.
+    let cleaned = text
+      .replace(/^Error:\s*/i, '')
+      .replace(/^API Error:?\s*\d*\s*[-:]?\s*/i, '')
+      .replace(/^HTTP \d+ Error:?\s*/i, '')
+      .replace(/^Failed:\s*/i, '')
+      .trim();
+
+    // Check again if there's an embedded JSON string in the cleaned result
+    if (cleaned.startsWith('{') && cleaned.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(cleaned);
+        if (typeof parsed?.error === 'string') return parsed.error.trim();
+        if (parsed?.error?.message) return parsed.error.message.trim();
+        if (parsed?.message) return parsed.message.trim();
+      } catch {
+        // Ignore
+      }
+    }
+
+    if (cleaned.length > 0) {
+      return cleaned;
+    }
+
+    return text || "Image generation failed.";
+  };
+
+  // Parse structured details from error report markdown file
+  const parseErrorReport = (text: string) => {
+    const providerMatch = text.match(/Provider:\s*([^\n]+)/);
+    const statusMatch = text.match(/HTTP Status:\s*([^\n]+)/);
+    const errorMsgMatch = text.match(/## Error Message\s*\n([\s\S]*?)(?=\n##|$)/);
+    const timestampMatch = text.match(/Timestamp:\s*([^\n]+)/);
+    const rawErrorMatch = text.match(/## Raw LLM Response\s*\n```(?:json)?\n([\s\S]*?)\n```/);
+    const stackMatch = text.match(/## Stack Trace\s*\n```\n([\s\S]*?)\n```/);
+    const promptMatch = text.match(/## Full Prompt Text Sent to LLM\s*\n```\n([\s\S]*?)\n```/);
+
+    const provider = providerMatch ? providerMatch[1].trim() : undefined;
+    const status = statusMatch ? statusMatch[1].trim() : undefined;
+    const rawMessage = errorMsgMatch ? errorMsgMatch[1].trim() : text.trim();
+    const message = extractCleanErrorMessage(rawMessage);
+    const timestamp = timestampMatch ? timestampMatch[1].trim() : undefined;
+    const rawError = rawErrorMatch ? rawErrorMatch[1].trim() : undefined;
+    const stack = stackMatch ? stackMatch[1].trim() : undefined;
+    const promptText = promptMatch ? promptMatch[1].trim() : undefined;
+
+    return {
+      provider: provider && provider !== 'Unknown' ? provider : undefined,
+      status: status && status !== 'N/A' ? status : undefined,
+      message: message || "Image generation failed.",
+      timestamp,
+      rawError,
+      stack,
+      promptText,
+      fullReport: text
+    };
+  };
+
+  // Load detailed error report when panel is in failed state
+  useEffect(() => {
+    if (!isPanelFailed) {
+      setErrorDetails(null);
+      return;
+    }
+
+    let active = true;
+    const digest = paragraph?.digest;
+
+    if (digest) {
+      readFile(`images/${digest}.error`)
+        .then(async (file) => {
+          if (!active) return;
+          const text = await file.text();
+          if (text && text.trim()) {
+            const parsed = parseErrorReport(text);
+            setErrorDetails({
+              ...parsed,
+              provider: parsed.provider || paragraph?.errorProvider,
+              status: parsed.status || paragraph?.errorStatus,
+            });
+            return;
+          }
+        })
+        .catch(() => {
+          if (!active) return;
+          setErrorDetails({
+            message: paragraph?.error || "Image generation failed.",
+            provider: paragraph?.errorProvider,
+            status: paragraph?.errorStatus,
+            fullReport: paragraph?.error || "Image generation failed."
+          });
+        });
+    } else {
+      setErrorDetails({
+        message: paragraph?.error || "Image generation failed.",
+        provider: paragraph?.errorProvider,
+        status: paragraph?.errorStatus,
+        fullReport: paragraph?.error || "Image generation failed."
+      });
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [isPanelFailed, paragraph?.digest, paragraph?.error, paragraph?.errorProvider, paragraph?.errorStatus, reloadTrigger]);
+
   const hasPriorImages = paragraph?.images && Array.isArray(paragraph.images) && paragraph.images.length > 0;
 
   return (
@@ -475,19 +623,37 @@ export default function PanelImageDisplay({
               </div>
             )}
           </div>
-        ) : (paragraph.error || paragraph.imageStatus === 'failed') ? (
-          /* Error state: full-bleed panel with centered error message + same hover buttons as image panel */
+        ) : isPanelFailed ? (
+          /* Error state: clean centered error box + hover buttons (matching the clean first UI design) */
           <div className="w-full h-full relative overflow-hidden bg-slate-50 dark:bg-slate-900 flex flex-col justify-center items-center p-6">
-            {/* Centered error message */}
-            <div className="bg-error/10 dark:bg-error/20 p-3 rounded-xl max-h-[140px] overflow-y-auto border border-error/20 max-w-[280px] w-full">
-              <div className="text-[11px] text-error font-bold flex items-center gap-1.5 mb-1">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-error shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                Generation Error
+            {/* Centered error message box with Details button */}
+            <div
+              className="bg-error/10 dark:bg-error/20 p-3.5 rounded-2xl max-h-[180px] overflow-y-auto border border-error/20 max-w-[280px] w-full flex flex-col gap-1.5 shadow-sm"
+            >
+              <div className="text-[11px] font-bold text-error">
+                Error Generating Image
               </div>
-              <div className="text-[10px] text-error/90 leading-relaxed break-words font-medium select-text">
-                {paragraph.error || "Image generation failed."}
+              <div className="text-[10px] text-error/90 font-medium leading-relaxed break-words select-text">
+                {extractCleanErrorMessage(
+                  errorDetails?.message || paragraph?.error || paragraph?.errorMessage || "Image generation failed."
+                )}
+              </div>
+
+              <div className="flex items-center justify-end pt-1 border-t border-error/15">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowErrorModal(true);
+                  }}
+                  className="btn btn-xs bg-error/15 hover:bg-error/25 text-error border-none text-[10px] font-bold gap-1 px-2.5 py-0.5 rounded-lg transition-all flex items-center"
+                  title="Inspect full error report, stack trace & prompt"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
+                  <span>Details</span>
+                </button>
               </div>
             </div>
 
@@ -664,6 +830,206 @@ export default function PanelImageDisplay({
           currentIsLocked={isLocked}
           onSave={handleSaveInstructions}
         />
+      )}
+
+      {/* Error Details Modal */}
+      {showErrorModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowErrorModal(false);
+          }}
+          onDoubleClick={(e) => e.stopPropagation()}
+        >
+          <div
+            className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-3xl w-full flex flex-col overflow-hidden text-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-rose-50/50 dark:bg-rose-950/20">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-rose-500/10 rounded-xl text-rose-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-800 dark:text-white flex items-center gap-2">
+                    Panel {panelIdx + 1} Error Report
+                    {paragraph?.digest && (
+                      <span className="badge badge-sm font-mono text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                        {paragraph.digest}
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Comprehensive diagnosis, provider status, and payload details
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowErrorModal(false)}
+                className="btn btn-sm btn-circle btn-ghost text-slate-500 hover:text-slate-700 dark:hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto max-h-[68vh] space-y-4">
+              {/* Metadata Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Provider</div>
+                  <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5">
+                    {errorDetails?.provider || paragraph.errorProvider || 'Unknown'}
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status Code</div>
+                  <div className="text-xs font-mono font-bold text-rose-600 dark:text-rose-400 mt-0.5">
+                    {errorDetails?.status || paragraph.errorStatus ? `HTTP ${errorDetails?.status || paragraph.errorStatus}` : 'N/A'}
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Instruction No.</div>
+                  <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-0.5">
+                    Panel #{panelIdx + 1}
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Timestamp</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-300 truncate mt-0.5">
+                    {errorDetails?.timestamp ? new Date(errorDetails.timestamp).toLocaleTimeString() : 'Recent'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Error Message */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 block">
+                  Error Message
+                </label>
+                <div className="p-3 bg-rose-50/60 dark:bg-rose-950/30 rounded-xl border border-rose-200 dark:border-rose-900/50 text-xs font-mono text-rose-900 dark:text-rose-200 select-text break-words">
+                  {errorDetails?.message || paragraph.error || "Image generation failed."}
+                </div>
+              </div>
+
+              {/* Raw Response (if present) */}
+              {errorDetails?.rawError && (
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 block">
+                    Raw API Response
+                  </label>
+                  <pre className="p-3 bg-slate-950 text-rose-300 rounded-xl border border-slate-800 text-[11px] font-mono max-h-40 overflow-y-auto select-text whitespace-pre-wrap">
+                    {errorDetails.rawError}
+                  </pre>
+                </div>
+              )}
+
+              {/* Stack Trace (if present) */}
+              {errorDetails?.stack && (
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 block">
+                    Stack Trace
+                  </label>
+                  <pre className="p-3 bg-slate-950 text-slate-400 rounded-xl border border-slate-800 text-[10px] font-mono max-h-32 overflow-y-auto select-text whitespace-pre-wrap">
+                    {errorDetails.stack}
+                  </pre>
+                </div>
+              )}
+
+              {/* Full Prompt Text (if present) */}
+              {errorDetails?.promptText && (
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                      Prompt Text Sent to LLM
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (errorDetails?.promptText) {
+                          navigator.clipboard.writeText(errorDetails.promptText);
+                          setCopiedErrorPrompt(true);
+                          setTimeout(() => setCopiedErrorPrompt(false), 2000);
+                        }
+                      }}
+                      className="text-[10px] font-semibold text-primary hover:underline flex items-center gap-1"
+                    >
+                      {copiedErrorPrompt ? "Copied Prompt!" : "Copy Prompt"}
+                    </button>
+                  </div>
+                  <pre className="p-3 bg-slate-950 text-emerald-400 rounded-xl border border-slate-800 text-[11px] font-mono max-h-44 overflow-y-auto select-text whitespace-pre-wrap">
+                    {errorDetails.promptText}
+                  </pre>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-3.5 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-800/80">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const fullText = errorDetails?.fullReport || JSON.stringify(errorDetails, null, 2);
+                    navigator.clipboard.writeText(fullText);
+                    setCopiedError(true);
+                    setTimeout(() => setCopiedError(false), 2000);
+                  }}
+                  className="btn btn-sm btn-outline text-xs font-semibold gap-1.5"
+                >
+                  {copiedError ? (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      Copied Report
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Copy Full Report
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowErrorModal(false)}
+                  className="btn btn-sm btn-ghost text-xs"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    setShowErrorModal(false);
+                    handleRegenerate(e);
+                  }}
+                  disabled={isRegenerating}
+                  className="btn btn-sm btn-primary text-white text-xs font-bold gap-1.5"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                  {isRegenerating ? "Retrying..." : "Retry Generation"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Debug Mode: View Prompt Modal */}

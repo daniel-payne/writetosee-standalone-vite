@@ -301,10 +301,15 @@ export async function processImages(
       } catch (err: any) {
         console.error(`[TRACE:PROCESS_IMAGES] Image generation failed for instruction ${inst.instructionNo}:`, err);
         activeImage.status = 'FAILED' as any;
+        activeImage.errorMessage = err?.message || String(err);
+        activeImage.errorProvider = err?.provider || 'Unknown';
+        activeImage.errorStatus = err?.status;
+        inst.error = err?.message || String(err);
         await processDb.instructions.put(inst);
         await processDb.images.put({
           image_digest: promptDigest,
           image_status: 'FAILED',
+          error_message: err?.message || String(err),
           created_at: new Date()
         });
         setState('instructions-data', [...finalInstructions], StoragePersistence.none);

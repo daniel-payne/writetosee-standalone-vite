@@ -82,8 +82,13 @@ export default function Story({
       (i.paragraphId === p.paragraphNo)
     ) || instructions[idx];
 
-    const activeImage = inst?.images?.[inst?.imageIndex || 0] || inst?.images?.[0];
-    const promptDigest = activeImage?.promptDigest || inst?.current_prompt_digest || inst?.promptDigest || '';
+    // Explicitly prioritize current_prompt_digest, finding the matching image entry or fallback to imageIndex
+    const currentDigest = inst?.current_prompt_digest || inst?.promptDigest;
+    let activeImage = currentDigest ? inst?.images?.find(img => img.promptDigest === currentDigest) : undefined;
+    if (!activeImage) {
+      activeImage = inst?.images?.[inst?.imageIndex || 0] || inst?.images?.[0];
+    }
+    const promptDigest = currentDigest || activeImage?.promptDigest || '';
     const imagePath = promptDigest ? `images/${promptDigest}.png` : '';
 
     const dexieStatus = promptDigest ? imageStatusMap.get(promptDigest) : undefined;
@@ -118,7 +123,10 @@ export default function Story({
       images: (inst?.images || []).map((img: ImageEntry) => `images/${img.promptDigest}.png`),
       characters: charArr,
       cinematographicText: inst?.cinematographic_directions || inst?.cinematographicDirections || inst?.cinematographicText || '',
-      isLocked: Boolean(inst?.is_locked ?? inst?.isLocked)
+      isLocked: Boolean(inst?.is_locked ?? inst?.isLocked),
+      error: activeImage?.errorMessage || activeImage?.error || inst?.error || undefined,
+      errorProvider: activeImage?.errorProvider || undefined,
+      errorStatus: activeImage?.errorStatus || undefined
     };
 
     console.log(`[TRACE:STORY] Panel ${idx}:`, {

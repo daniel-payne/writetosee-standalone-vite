@@ -174,9 +174,7 @@ export async function loadStartup(): Promise<{
       const instCharacters = existing ? (existing.assigned_characters || existing.characters || []) : [];
       const charArr = Array.isArray(instCharacters) ? instCharacters : (typeof instCharacters === 'string' ? JSON.parse(instCharacters) : []);
       const cinematographicDirections = existing ? (existing.cinematographic_directions || existing.cinematographicDirections || existing.cinematographicText || '') : '';
-      const imageIndex = existing ? (existing.imageIndex || 0) : 0;
       const isLocked = existing ? Boolean(existing.is_locked ?? existing.isLocked) : false;
-
       const currentPromptDigest = existing?.current_prompt_digest || existing?.promptDigest || null;
       let assignedPromptDigests: string[] = [];
       if (existing?.assigned_prompt_digests) {
@@ -186,6 +184,15 @@ export async function loadStartup(): Promise<{
       }
       if (currentPromptDigest && !assignedPromptDigests.includes(currentPromptDigest)) {
         assignedPromptDigests.push(currentPromptDigest);
+      }
+
+      // Ensure imageIndex points to currentPromptDigest if present in assignedPromptDigests
+      let imageIndex = existing?.imageIndex !== undefined ? existing.imageIndex : 0;
+      if (currentPromptDigest && assignedPromptDigests.length > 0) {
+        const foundIdx = assignedPromptDigests.indexOf(currentPromptDigest);
+        if (foundIdx >= 0) {
+          imageIndex = foundIdx;
+        }
       }
 
       // Build images list from assigned_prompt_digests and disk cache

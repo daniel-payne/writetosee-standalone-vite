@@ -126,12 +126,17 @@ export async function savePanelInstructions(
   let updatedList: Instruction[];
   if (index >= 0) {
     updatedList = [...currentInstructions];
+    const selectedDigest = updates.imageIndex !== undefined ?
+      (updatedList[index].images?.[updates.imageIndex]?.promptDigest || updatedList[index].assigned_prompt_digests?.[updates.imageIndex])
+      : undefined;
+
     updatedList[index] = {
       ...updatedList[index],
       ...(updates.characters !== undefined ? { characters: updates.characters, assigned_characters: updates.characters } : {}),
       ...(updates.cinematographicText !== undefined ? { cinematographicDirections: updates.cinematographicText, cinematographic_directions: updates.cinematographicText, cinematographicText: updates.cinematographicText } : {}),
       ...(updates.isLocked !== undefined ? { isLocked: updates.isLocked, is_locked: updates.isLocked } : {}),
-      ...(updates.imageIndex !== undefined ? { imageIndex: updates.imageIndex } : {})
+      ...(updates.imageIndex !== undefined ? { imageIndex: updates.imageIndex } : {}),
+      ...(selectedDigest ? { current_prompt_digest: selectedDigest, promptDigest: selectedDigest } : {})
     };
   } else {
     updatedList = [
