@@ -1,6 +1,8 @@
 import llmGenerateText from '@/data/llm/llmGenerateText';
 import { storeCost } from '@/data/storage/costStorage';
 import * as fileStorage from '@/data/storage/fileStorage';
+import { createGenerateSummarySystemPrompt } from '@/data/llm/prompts/createGenerateSummarySystemPrompt';
+import { createGenerateSummaryUserPrompt } from '@/data/llm/prompts/createGenerateSummaryUserPrompt';
 import { processDb } from '../db';
 import { generateTextDigest } from '../parsers';
 import { existingSummariesSet } from '../loadStartup';
@@ -62,15 +64,10 @@ export async function getOrGenerateSummary(
   const maxWords = options.maxWords || 150;
   const contextType = options.contextType || 'narrative';
 
-  const systemPrompt = `You are an expert literary and narrative summarizer for illustrated book scenes.
-Analyze the provided ${contextType} text and generate a concise, high-level narrative summary.
-Guidelines:
-1. Maximum length: strictly no more than ${maxWords} words.
-2. Focus on core characters, central conflict, setting, and essential narrative progression.
-3. Output ONLY the plain summary text. Do not add titles, headers, bullet points, or commentary wrappers.`;
+  const systemPrompt = createGenerateSummarySystemPrompt(contextType, maxWords);
 
   try {
-    const userPrompt = `<text-to-summarize>\n${text.trim()}\n</text-to-summarize>`;
+    const userPrompt = createGenerateSummaryUserPrompt(text);
     const { content, totalCost } = await llmGenerateText(systemPrompt, userPrompt);
     const summaryText = (content || text.slice(0, 300)).trim();
 

@@ -13,6 +13,10 @@ import type { Character, Style } from './TYPES';
 import llmGenerateText from '@/data/llm/llmGenerateText';
 import llmGenerateAnalysis from '@/data/llm/llmGenerateAnalysis';
 import { storeCost } from '@/data/storage/costStorage';
+import { createAnalyzeCharacterStorySystemPrompt } from '@/data/llm/prompts/createAnalyzeCharacterStorySystemPrompt';
+import { createAnalyzeCharacterStoryUserPrompt } from '@/data/llm/prompts/createAnalyzeCharacterStoryUserPrompt';
+import { createAnalyzeCharacterImageSystemPrompt } from '@/data/llm/prompts/createAnalyzeCharacterImageSystemPrompt';
+import { createAnalyzeCharacterImageUserPrompt } from '@/data/llm/prompts/createAnalyzeCharacterImageUserPrompt';
 
 /**
  * Saves characters list (or markdown string) to characters.md and replaces characters in IndexedDB.
@@ -210,12 +214,12 @@ export async function analyzeCharacterStory(
     throw new Error('No story text available to analyze.');
   }
 
-  const systemPrompt = `You are an expert literary character analyst.
-Your task is to analyze the provided story text and generate a detailed, rich, comprehensive character description for the character named "${characterName}".
-Focus on physical appearance, facial features, age, body type, clothing style, personality, key traits, and role in the story.
-Return ONLY the description text. Do not include markdown headers or commentary wrapper tags.`;
-
-  const userPrompt = `<character-name>${characterName}</character-name>\n<current-description>${currentDescription}</current-description>\n<story>\n${storyText}\n</story>`;
+  const systemPrompt = createAnalyzeCharacterStorySystemPrompt(characterName);
+  const userPrompt = createAnalyzeCharacterStoryUserPrompt({
+    characterName,
+    currentDescription,
+    storyText
+  });
 
   const { content, totalCost } = await llmGenerateText(systemPrompt, userPrompt);
 
@@ -338,13 +342,8 @@ export async function analyzeCharacterImage(
     mimeType = cropped.mimeType;
   }
 
-  const systemPrompt = `You are an expert visual artist and character illustrator.
-Analyze the provided image of the character "${characterName}".
-Generate precise, highly detailed step-by-step drawing instructions for illustrating this character.
-Cover: art style, body proportions, facial structure & features, eye shape/color, hair style/color, outfit & clothing details, color palette, lighting/shadowing, and key visual attributes.
-Return ONLY the drawing instructions text. Do not include markdown headers or wrapper commentary.`;
-
-  const userPrompt = `Analyze the character picture for "${characterName}" and provide detailed drawing instructions.`;
+  const systemPrompt = createAnalyzeCharacterImageSystemPrompt(characterName);
+  const userPrompt = createAnalyzeCharacterImageUserPrompt(characterName);
 
   const { content, totalCost } = await llmGenerateAnalysis(systemPrompt, userPrompt, {
     mimeType,
