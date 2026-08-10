@@ -2,11 +2,19 @@
  * Analyze Character Story User Prompt Template
  * Used by analyzeCharacterStory to construct the user payload containing character name, description, and story text.
  */
-export const ANALYZE_CHARACTER_STORY_USER_PROMPT_TEMPLATE = `<character-name>{{CHARACTER_NAME}}</character-name>
-<current-description>{{CURRENT_DESCRIPTION}}</current-description>
+export const ANALYZE_CHARACTER_STORY_USER_PROMPT_TEMPLATE = `
+<character-name>
+{{CHARACTER_NAME}}
+</character-name>
+
+<current-description>
+{{CURRENT_DESCRIPTION}}
+</current-description>
+
 <story>
 {{STORY_TEXT}}
-</story>`;
+</story>
+`;
 
 export interface AnalyzeCharacterStoryUserPromptVariables {
   characterName: string;

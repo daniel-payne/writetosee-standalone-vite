@@ -2,7 +2,8 @@
  * Book Illustration Prompt Template
  * Used by compilePrompt and processImages to construct edge-to-edge illustrated scene prompts.
  */
-export const BOOK_ILLUSTRATION_PROMPT_TEMPLATE = `# Role
+export const BOOK_ILLUSTRATION_PROMPT_TEMPLATE = `
+# Role
 You are an illustrator for a book.
 Please draw an illustration for the scene-text bellow.
 The narrative-text lays out the story before the current scene, and the scene-text is the current scene.
@@ -56,7 +57,8 @@ Please draw the scene described bellow. The narrative text is there to give you 
 
 <scene-text>
 {{SCENE_TEXT}}
-</scene-text>`;
+</scene-text>
+`;
 
 export interface BookIllustrationPromptVariables {
   styleText?: string;

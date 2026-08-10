@@ -2,8 +2,7 @@ import llmGenerateText from "@/data/llm/llmGenerateText";
 import { readFile } from "@/data/storage/fileStorage";
 import { writeLog } from "@/data/storage/logStorage";
 
-import { createStyleReferenceSystemPrompt } from "@/data/llm/prompts/createStyleReferenceSystemPrompt";
-import { createStyleReferenceUserPrompt } from "@/data/llm/prompts/createStyleReferenceUserPrompt";
+import { createStyleReferencePrompt } from "@/data/llm/prompts/createStyleReferencePrompt";
 
 async function fileToBase64(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -30,8 +29,8 @@ export default async function generateStyleReference(referenceUrl: string): Prom
   const base64Data = await fileToBase64(file);
   const mimeType = file.type || "image/png";
 
-  const systemPrompt = createStyleReferenceSystemPrompt();
-  const userPrompt = createStyleReferenceUserPrompt();
+  const systemPrompt = createStyleReferencePrompt();
+  const userPrompt = "Analyze this style reference image and produce drawing instructions.";
 
   const result = await llmGenerateText(systemPrompt, userPrompt, {
     mimeType,

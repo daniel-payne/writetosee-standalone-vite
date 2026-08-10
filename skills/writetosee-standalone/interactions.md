@@ -34,11 +34,12 @@ flowchart LR
 
 ## Prompt Template Architectural Standards (`src/data/llm/prompts/`)
 
-All LLM prompts in the application must strictly adhere to the following architecture:
+All LLM prompts in the application strictly adhere to the following architecture:
 1. **One Prompt Per File**: Every individual prompt template (system prompt or user prompt template) resides in its own dedicated TypeScript file.
-2. **`verbNoun` Naming Standard**: File names and builder function names must follow the `verbNoun` convention starting with a verb (e.g. `createBookIllustrationPrompt`, `createExtractCharactersSystemPrompt`, `createExtractCharactersUserPrompt`).
-3. **Direct File Imports**: Files must be imported directly from their specific module path (e.g. `import { createBookIllustrationPrompt } from '@/data/llm/prompts/createBookIllustrationPrompt'`). No `index.ts` barrel files are used.
-4. **Mustache Placeholders**: Dynamic prompt values use standard Mustache tag notation (e.g. `{{STYLE_TEXT}}`, `{{CHARACTER_NAME}}`, `{{STORY_TEXT}}`).
+2. **`verbNoun` Naming Standard**: File names and builder function names follow the `verbNoun` convention starting with a verb (e.g. `createBookIllustrationPrompt`, `createExtractCharactersSystemPrompt`, `createExtractCharactersUserPrompt`).
+3. **Role Header Requirement**: Every system prompt template begins with an explicit `# Role` header clearly defining the model's persona and objective.
+4. **Direct File Imports**: Files must be imported directly from their specific module path (e.g. `import { createBookIllustrationPrompt } from '@/data/llm/prompts/createBookIllustrationPrompt'`). No `index.ts` barrel files are used.
+5. **Mustache Placeholders**: Dynamic prompt values use standard Mustache tag notation (e.g. `{{STYLE_TEXT}}`, `{{CHARACTER_NAME}}`, `{{STORY_TEXT}}`).
 
 ---
 
@@ -65,12 +66,15 @@ Reduces long narrative text across the story hierarchy when it exceeds specific 
 *   **Function**: `createGenerateSummarySystemPrompt(contextType?: string, maxWords?: number): string`
 *   **Template**:
     ```mustache
+    # Role
     You are an expert literary and narrative summarizer for illustrated book scenes.
-    Analyze the provided {{CONTEXT_TYPE}} text and generate a concise, high-level narrative summary.
+    Analyze the provided {{CONTEXT_TYPE}} text and generate a concise, high-level narrative summary designed to provide visual and story continuity for subsequent scene illustrations.
+
     Guidelines:
     1. Maximum length: strictly no more than {{MAX_WORDS}} words.
-    2. Focus on core characters, central conflict, setting, and essential narrative progression.
-    3. Output ONLY the plain summary text. Do not add titles, headers, bullet points, or commentary wrappers.
+    2. Focus on physical environment & setting, active characters present, key narrative actions, and the immediate state of the scene.
+    3. Prioritize concrete situational progression over abstract thematic commentary.
+    4. Output ONLY the plain summary text. Do NOT add titles, headers, bullet points, or commentary wrappers.
     ```
 
 #### User Prompt: [`src/data/llm/prompts/createGenerateSummaryUserPrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createGenerateSummaryUserPrompt.ts)
@@ -93,12 +97,17 @@ Analyzes an artist reference painting, photo, or drawing to extract artistic med
     *   **Function**: `createStyleReferenceSystemPrompt(): string`
     *   **Template**:
         ```text
-        You are a professional art director and style analyzer for AI image generation.
+        # Role
+        You are a professional art director and visual style analyst for AI image generation.
         Analyze the style reference image provided. Generate a precise, detailed list of drawing instructions that capture its artistic style, medium, coloring, lighting, composition, mood, and characters.
-        Each point should be a clear descriptive instruction.
-        Do NOT use markdown headers, bullet points (like -, *, or numbers), or lists in your output.
-        Return ONLY the description sentences, each sentence on its own line.
-        Output 5 to 8 lines.
+
+        Guidelines:
+        1. Focus on 5 key visual dimensions: Artistic Medium & Technique, Color Palette & Harmony, Lighting & Atmosphere, Linework & Surface Texture, and Compositional Framing.
+        2. Each sentence should be a dense, clear descriptive instruction suitable for appending directly to an image generation prompt.
+        3. Do NOT use introductory filler (e.g. "The image depicts...").
+        4. Do NOT use markdown headers, bullet points (like -, *, or numbers), or lists in your output.
+        5. Return ONLY the description sentences, with each sentence on its own separate line.
+        6. Output 5 to 8 lines.
         ```
 *   **User Prompt**: [`src/data/llm/prompts/createStyleReferenceUserPrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createStyleReferenceUserPrompt.ts)
     *   **Function**: `createStyleReferenceUserPrompt(): string`
@@ -116,19 +125,21 @@ Parses story text to extract up to 10 key character entities and their visual ap
     *   **Function**: `createExtractCharactersSystemPrompt(): string`
     *   **Template**:
         ```text
+        # Role
         You are an expert literary analyst and character extractor.
         Your task is to analyze the story text provided by the user and extract all key characters.
 
         Strict Constraints:
         1. Extract at most 10 characters (maximum of 10 characters).
-        2. For each character, provide a "name" and a clear, descriptive summary ("description") covering their physical appearance, traits, and role in the story.
-        3. Return ONLY a valid JSON array of character objects with keys "name" and "description".
-        4. Do not include markdown formatting tags, fences, or introductory text.
+        2. Canonical Names: Use the character's primary recognizable name. Merge aliases, nicknames, and titles into a single canonical entry.
+        3. For each character, provide a "name" and a clear, descriptive summary ("description") covering their physical appearance, facial features, hair/eye color, estimated age, clothing style, and role in the story.
+        4. Return ONLY a valid JSON array of character objects with keys "name" and "description".
+        5. Do NOT include markdown code blocks, backticks, fences, or introductory text.
 
         Example format:
         [
-          {"name": "Alice", "description": "A curious young girl with blue eyes and blonde hair who explores Wonderland."},
-          {"name": "White Rabbit", "description": "A frantic, waistcoat-wearing rabbit who is always running late."}
+          {"name": "Alice", "description": "A curious 10-year-old girl with blonde hair, bright blue eyes, wearing a blue knee-length dress with a white apron who explores Wonderland."},
+          {"name": "White Rabbit", "description": "An anthropomorphic, waistcoat-wearing white rabbit with pink eyes and a pocket watch who is always running late."}
         ]
         ```
 *   **User Prompt**: [`src/data/llm/prompts/createExtractCharactersUserPrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createExtractCharactersUserPrompt.ts)
@@ -149,10 +160,15 @@ Analyzes full story text for a specific character to build rich physical and per
     *   **Function**: `createAnalyzeCharacterStorySystemPrompt(characterName: string): string`
     *   **Template**:
         ```mustache
+        # Role
         You are an expert literary character analyst.
         Your task is to analyze the provided story text and generate a detailed, rich, comprehensive character description for the character named "{{CHARACTER_NAME}}".
-        Focus on physical appearance, facial features, age, body type, clothing style, personality, key traits, and role in the story.
-        Return ONLY the description text. Do not include markdown headers or commentary wrapper tags.
+
+        Guidelines:
+        1. Synthesize existing description details with newly discovered story context.
+        2. Focus on concrete visual attributes: physical build, facial features, skin tone, eye color/shape, hair style/color, estimated age, signature wardrobe/accessories, and characteristic postures.
+        3. Highlight key personality traits, emotional disposition, and their narrative role in the story.
+        4. Return ONLY the description text. Do not include markdown headers, bullet lists, or commentary wrapper tags.
         ```
 *   **User Prompt**: [`src/data/llm/prompts/createAnalyzeCharacterStoryUserPrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createAnalyzeCharacterStoryUserPrompt.ts)
     *   **Function**: `createAnalyzeCharacterStoryUserPrompt({ characterName, currentDescription, storyText }): string`
@@ -174,11 +190,15 @@ Analyzes character reference images or cropped face/body regions to extract cons
     *   **Function**: `createAnalyzeCharacterImageSystemPrompt(characterName: string): string`
     *   **Template**:
         ```mustache
+        # Role
         You are an expert visual artist and character illustrator.
         Analyze the provided image of the character "{{CHARACTER_NAME}}".
-        Generate precise, highly detailed step-by-step drawing instructions for illustrating this character.
-        Cover: art style, body proportions, facial structure & features, eye shape/color, hair style/color, outfit & clothing details, color palette, lighting/shadowing, and key visual attributes.
-        Return ONLY the drawing instructions text. Do not include markdown headers or wrapper commentary.
+        Generate precise, highly detailed step-by-step drawing instructions to ensure consistent visual depiction of this character across multiple illustrated scenes.
+
+        Guidelines:
+        1. Cover: Art medium/style, body proportions, facial structure & features, eye shape & exact color, hair texture/length/color, outfit & clothing materials, color palette, lighting/shadowing, and signature visual attributes.
+        2. Provide exact visual descriptors (e.g. "shoulder-length wavy chestnut hair", "almond-shaped hazel eyes", "dark charcoal linen vest over a cream collared shirt").
+        3. Return ONLY the drawing instructions text. Do NOT include markdown headers, bullet lists, or wrapper commentary.
         ```
 *   **User Prompt**: [`src/data/llm/prompts/createAnalyzeCharacterImageUserPrompt.ts`](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/src/data/llm/prompts/createAnalyzeCharacterImageUserPrompt.ts)
     *   **Function**: `createAnalyzeCharacterImageUserPrompt(characterName: string): string`
@@ -200,52 +220,31 @@ Generates high-resolution scene illustrations for each illustrated panel based o
 *   **Template Structure**:
     ```mustache
     # Role
-    You are an illustrator for a book.
-    Please draw an illustration for the scene-text bellow.
-    The narrative-text lays out the story before the current scene, and the scene-text is the current scene.
-
+    You are a master book illustrator.
+    Draw a complete, single, full-bleed illustration that visualizes the scene described in <scene-text>.
+    The <narrative-text> provides preceding story context; do NOT illustrate past events from <narrative-text>.
 
     ## Drawing Instructions
-    The following style text describes how you should draw, and the target for the drawing.
-    There might also be some cinematographic instructions for the drawing.
+    The following style text describes how you should draw, and the target aesthetic for the drawing:
 
     <style-text>
     {{STYLE_TEXT}}
     </style-text>
-
-    ### Strict Rules
-    1. A wide-angle, edge-to-edge scene that completely fills 100% of the image space from corner to corner.
-    2. The camera is pulled back so the environment extends fully to the very edges of the rectangular canvas.
-    3. Keep the background in focus, and of the same style as the foreground object.
-    4. Do not illustrate any words, signs, or speech bubbles unless specifically asked for in the text.
-    5. Do not make any illustration with rounded edges; the completed illustration should be a rectangle.
-    6. Do not draw any frame, boundary, or any decoration around the image.
-    7. Do not draw any text in the image.
-    8. Do not use copyright symbols (©, ™, ®) or any other markings in the illustration.
-
-    ### Output Format
-    1. The illustration is to fill the complete drawing area.
-    2. Do not make any illustration with rounded edges; the completed illustration should be a rectangle.
-    3. Do not draw any frame, boundary, or any decoration around the image (i.e., fameless, full-bleed, no white margins, edge-to-edge environment). 
-    4. Keep the background in focus and of the same style as the foreground. Do not make the background blurry or out of focus. The background should be as detailed as the foreground.
-    5. Do not draw any text in the image. 
-    6. Do not use copyright symbols (©, ™, ®) or any other markings in the illustration.
 
     <cinematographic-text>
     {{CINEMATOGRAPHIC_TEXT}}
     </cinematographic-text>
 
     ## Character Instructions
-
-    The scene contains the following characters, please use these instructions when drawing the scene:
+    The scene contains the following characters. Please follow these visual descriptions and instructions:
 
     <character-text>
     {{CHARACTER_TEXT}}
     </character-text>
 
     ## Scene Instructions
-    Please draw the scene described bellow. The narrative text is there to give you an indication of how the story lead to this scene.
-    **CRITICAL**: Illustrate ONLY the <scene-text>. Do NOT illustrate the <narrative-text>, which is provided strictly for background context.
+    Please draw the scene described below. Illustrate ONLY the <scene-text>.
+    The narrative text is provided strictly for background context.
 
     <narrative-text>
     {{NARRATIVE_TEXT}}
@@ -254,6 +253,14 @@ Generates high-resolution scene illustrations for each illustrated panel based o
     <scene-text>
     {{SCENE_TEXT}}
     </scene-text>
+
+    ## Composition & Quality Rules
+    1. A single, wide-angle, edge-to-edge full-bleed scene filling 100% of the rectangular canvas from corner to corner.
+    2. The camera is pulled back so the environment extends fully to the very edges without borders, frames, vignettes, or white margins.
+    3. Keep the background in sharp focus and stylistically unified with the foreground.
+    4. Single continuous image only: NO split panels, NO comic strip grids, NO gutters, NO collage divisions.
+    5. Do NOT illustrate any words, letters, speech bubbles, signs, subtitles, watermarks, or artist signatures.
+    6. Do NOT use copyright symbols (©, ™, ®) or any markings in the illustration.
     ```
 
 #### Segments Definition:

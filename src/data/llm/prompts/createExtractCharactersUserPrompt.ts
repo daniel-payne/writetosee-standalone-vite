@@ -2,7 +2,8 @@
  * Extract Characters User Prompt Template
  * Used by generateCharacters to wrap the story text with story tags.
  */
-export const EXTRACT_CHARACTERS_USER_PROMPT_TEMPLATE = `<story>
+export const EXTRACT_CHARACTERS_USER_PROMPT_TEMPLATE = `
+<story>
 {{STORY_TEXT}}
 </story>`;
 
