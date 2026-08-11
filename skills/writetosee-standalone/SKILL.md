@@ -118,6 +118,13 @@ When storing files received from LLMs (such as Markdown `.md` text and PNG `.png
 
 ---
 
+## Module Architecture & File Organization
+
+*   **No Index / Barrel Files:** Do NOT create `index.ts` / `index.js` barrel files to re-export modules. Always import directly from specific individual module files (e.g., `import { CHILDRENS_BOOK_INSTRUCTIONS } from './styles/childrensBook'` instead of creating a `styles/index.ts`).
+
+---
+
 ## Planning and Execution Guidelines
 
 *   **No Planning Mode Unless Explicitly Requested:** Do NOT create implementation plans, task checklists (e.g. `task.md`), or walkthrough artifacts (e.g. `walkthrough.md`) automatically at the start of a conversation. The agent must proceed directly to code changes and execution, skipping the implementation plan phase entirely, unless the user explicitly requests one.
+

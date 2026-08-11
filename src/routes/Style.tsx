@@ -1,7 +1,7 @@
 import { Form, useLoaderData, useNavigation, useBlocker, useFetcher, useActionData } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback, type HTMLAttributes, type PropsWithChildren } from "react";
 import FormDrawingInstructions from "@/components/FormDrawingInstructions";
-import FormReferenceLink from "@/components/FormReferenceLink";
+import LocalImagePickerModal from "@/components/LocalImagePickerModal";
 import { useLocalState } from "@keldan-systems/state-mutex";
 import { useLiveQuery } from "dexie-react-hooks";
 import { processDb } from "@/data/process/db";
@@ -48,6 +48,8 @@ export default function Style({
     referenceUrl: initialStyle.reference_url || initialStyle.referenceUrl || '',
     linkInstructions: safeJoin(initialStyle.linkInstructions || initialStyle.reference_instructions || initialStyle.referenceInstructions),
   });
+
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   useEffect(() => {
     if (actionData?.cancelled) {
@@ -158,6 +160,30 @@ export default function Style({
   };
 
   const handlePresetSelect = (presetKey: string) => {
+    if (presetKey === 'REFERENCE') {
+      // If there is no reference style yet, open the choose modal
+      if (!formData.referenceUrl && !formData.linkInstructions) {
+        setIsPickerOpen(true);
+        return;
+      }
+
+      // If reference style exists, display what is there
+      const existingRef = (formData.linkInstructions || '').trim();
+      if (!existingRef && formData.referenceUrl) {
+        fetcher.submit(
+          { intent: 'UPDATE_REFERENCE', referenceUrl: formData.referenceUrl },
+          { method: 'post' }
+        );
+        return;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        drawingInstructions: existingRef
+      }));
+      return;
+    }
+
     let newInstructions = '';
     if (presetKey === 'CHILDREN') {
       newInstructions = STYLE_PRESETS.CHILDRENS_BOOK.trim();
@@ -171,19 +197,6 @@ export default function Style({
       newInstructions = STYLE_PRESETS.SUPERHERO_COMIC.trim();
     } else if (presetKey === 'CLAYMATION') {
       newInstructions = STYLE_PRESETS.CLAYMATION.trim();
-    } else if (presetKey === 'REFERENCE') {
-      const existingRef = (formData.linkInstructions || '').trim();
-      if (!existingRef) {
-        if (formData.referenceUrl) {
-          fetcher.submit(
-            { intent: 'UPDATE_REFERENCE', referenceUrl: formData.referenceUrl },
-            { method: 'post' }
-          );
-        }
-        return;
-      } else {
-        newInstructions = existingRef;
-      }
     }
 
     setFormData(prev => ({
@@ -192,9 +205,25 @@ export default function Style({
     }));
   };
 
+  const handleImageSelect = (filename: string) => {
+    setFormData(prev => ({
+      ...prev,
+      referenceUrl: filename,
+      linkInstructions: ''
+    }));
+
+    fetcher.submit(
+      { intent: 'UPDATE_REFERENCE', referenceUrl: filename },
+      { method: 'post' }
+    );
+  };
+
   const getActivePreset = () => {
     const current = (formData.drawingInstructions || '').trim();
-    if (!current) return null;
+    if (!current) {
+      if (formData.referenceUrl) return 'REFERENCE';
+      return null;
+    }
     if (current === STYLE_PRESETS.CHILDRENS_BOOK.trim()) return 'CHILDREN';
     if (current === STYLE_PRESETS.GRAPHIC_NOVEL.trim()) return 'GRAPHIC';
     if (current === STYLE_PRESETS.PHOTO_REALISTIC.trim()) return 'PHOTO_REALISTIC';
@@ -203,13 +232,14 @@ export default function Style({
     if (current === STYLE_PRESETS.CLAYMATION.trim()) return 'CLAYMATION';
     const refInstructions = (formData.linkInstructions || '').trim();
     if (refInstructions && current === refInstructions) return 'REFERENCE';
+    if (formData.referenceUrl) return 'REFERENCE';
     return null;
   };
 
   const activePreset = getActivePreset();
 
   return (
-    <div {...rest} className={`p-4 w-full mx-auto h-full overflow-auto flex flex-col ${rest.className || ''}`}>
+    <div {...rest} className={`p-4 w-full mx-auto h-full overflow-hidden flex flex-col ${rest.className || ''}`}>
       {/* Top preset action buttons styled like Characters page */}
       <div className="flex items-center justify-center gap-2.5 mb-4 shrink-0 flex-wrap">
         {PRESET_OPTIONS.map((preset) => {
@@ -246,27 +276,36 @@ export default function Style({
       </div>
 
       <Form id="main-form" method="post" className="flex-1 flex flex-row w-full items-stretch justify-between gap-4 min-h-0">
+        <input type="hidden" name="referenceUrl" value={formData.referenceUrl} />
+        <input type="hidden" name="linkInstructions" value={formData.linkInstructions} />
+
+        {/* Left card containing Drawing Instructions & Floated Reference Image */}
         <div className="flex-1 card bg-base-100 shadow-xl border border-base-content/5 h-full flex flex-col overflow-hidden">
           <div className="card-body flex-1 flex flex-col min-h-0">
             <FormDrawingInstructions
               value={formData.drawingInstructions}
+              referenceUrl={formData.referenceUrl}
+              isReferenceActive={activePreset === 'REFERENCE'}
               isAnalyzing={isAnalyzing}
               onChange={handleChange}
+              onOpenPicker={() => setIsPickerOpen(true)}
             />
           </div>
         </div>
 
+        {/* Right card is empty as requested */}
         <div className="flex-1 card bg-base-100 shadow-xl border border-base-content/5 h-full flex flex-col overflow-hidden">
           <div className="card-body overflow-auto flex-1 flex flex-col min-h-0">
-            <FormReferenceLink
-              referenceValue={formData.referenceUrl}
-              instructionsValue={formData.linkInstructions}
-              isAnalyzing={isAnalyzing}
-              onChange={handleChange}
-            />
           </div>
         </div>
       </Form>
+
+      {/* Local Image Picker Modal */}
+      <LocalImagePickerModal
+        isOpen={isPickerOpen}
+        onClose={() => setIsPickerOpen(false)}
+        onSelect={handleImageSelect}
+      />
     </div>
   );
 }
