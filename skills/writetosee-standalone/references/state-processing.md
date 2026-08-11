@@ -4,7 +4,7 @@
 
 This document specifies the core **Data Ingestion, Asset Caching, Post-Ingestion Summarization, Prompt Compilation, LLM Image Generation, and File-Save Reactive Cascade Workflows** for the WriteToSee standalone application.
 
-All state transitions and disk synchronizations adhere to the [Domain Model Specification](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/skills/writetosee-standalone/domain.md) and propagate deterministically through **Dexie.js IndexedDB** for domain entities and `@keldan-systems/state-mutex` for transient display state.
+All state transitions and disk synchronizations adhere to the [Domain Entities Specification](file:///home/daniel/Data/GitHub/writetosee/writetosee-standalone-vite/skills/writetosee-standalone/references/domain-entities.md) and propagate deterministically through **Dexie.js IndexedDB** for domain entities and `@keldan-systems/state-mutex` for transient display state.
 
 ---
 

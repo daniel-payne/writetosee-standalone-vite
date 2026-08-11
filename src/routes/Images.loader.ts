@@ -28,14 +28,17 @@ export async function clientLoader() {
       let promptText = promptMap.get(digest) || "";
       let paragraphNo: number | undefined = undefined;
 
-      const foundInst = instructions.find(inst =>
-        (inst.images || []).some(img => img.promptDigest === digest)
-      );
+      const foundInst = instructions.find(inst => {
+        const assigned = Array.isArray(inst.assigned_prompt_digests)
+          ? inst.assigned_prompt_digests
+          : (typeof inst.assigned_prompt_digests === 'string' ? JSON.parse(inst.assigned_prompt_digests) : []);
+        return (inst.images || []).some(img => img.promptDigest === digest) || assigned.includes(digest) || inst.current_prompt_digest === digest;
+      });
 
       if (foundInst) {
         paragraphNo = (foundInst.instructionNo ?? foundInst.paragraph_no ?? 0) + 1;
         const instImages = foundInst.images || [];
-        const activeEntry = instImages[foundInst.imageIndex ?? 0] || instImages.find(i => i.promptDigest === digest);
+        const activeEntry = instImages.find(i => i.promptDigest === digest) || instImages[foundInst.imageIndex ?? 0];
         if (activeEntry) {
           text = activeEntry.sceneText || activeEntry.narrativeText || "";
         }

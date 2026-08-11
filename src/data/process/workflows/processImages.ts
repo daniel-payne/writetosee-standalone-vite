@@ -95,7 +95,6 @@ export async function processImages(
       const instCharacters = existing ? (existing.assigned_characters || existing.characters || []) : [];
       const charArr = Array.isArray(instCharacters) ? instCharacters : (typeof instCharacters === 'string' ? JSON.parse(instCharacters) : []);
       const cinematographicDirections = existing ? (existing.cinematographic_directions || existing.cinematographicDirections || existing.cinematographicText || '') : '';
-      const imageIndex = existing ? (existing.imageIndex || 0) : 0;
       const isLocked = existing ? Boolean(existing.is_locked ?? existing.isLocked) : false;
 
       // Build 5 prompt segments
@@ -122,59 +121,108 @@ export async function processImages(
       const sceneText = p.paragraphText;
       const narrativeText = p.narrativeSummary || p.narrativeText || '';
 
-      let promptDigest: string;
-      const isForced = options?.forceRegenerateInstructionNo === idx;
-
-      // Lock check: if isLocked is true and not forced, preserve existing prompt digest if present
-      if (isLocked && !isForced && existing?.current_prompt_digest) {
-        promptDigest = existing.current_prompt_digest;
-        console.log(`[TRACE:PROCESS_IMAGES] Instruction ${idx}: Locked -> preserving current_prompt_digest "${promptDigest}"`);
-      } else {
-        const fullPromptText = compilePrompt({
-          styleText,
-          cinematographicText: cinematographicDirections,
-          characterText,
-          sceneText,
-          narrativeText
-        });
-        promptDigest = generateTextDigest(fullPromptText);
-        console.log(`[TRACE:PROCESS_IMAGES] Instruction ${idx}: Compiled prompt digest = "${promptDigest}" (existing was "${existing?.current_prompt_digest}")`);
-      }
-
-      // Check if image file exists on disk
-      const imageFileName = `images/${promptDigest}.png`;
-      const isImageOnDisk = existingImagesSet.has(imageFileName);
-
-      const existingImages = existing?.images || [];
-      const currentImageEntry = existingImages[imageIndex];
-
-      const initialStatus = isImageOnDisk ? 'SAVED' : (currentImageEntry?.status === 'SAVED' ? 'SAVED' : 'PROCESSING');
-
-      const newImageEntry: ImageEntry = {
-        status: initialStatus as any,
+      // Compile prompt for the current state of paragraph, style, directions, characters
+      const fullPromptText = compilePrompt({
         styleText,
         cinematographicText: cinematographicDirections,
         characterText,
         sceneText,
-        narrativeText,
-        promptDigest
-      };
+        narrativeText
+      });
+      const compiledPromptDigest = generateTextDigest(fullPromptText);
 
-      const updatedImages = [...existingImages];
-      updatedImages[imageIndex] = newImageEntry;
-
-      const assignedDigests = existing?.assigned_prompt_digests ?
-        (Array.isArray(existing.assigned_prompt_digests) ? existing.assigned_prompt_digests : JSON.parse(existing.assigned_prompt_digests)) : [];
-      if (promptDigest && !assignedDigests.includes(promptDigest)) {
-        assignedDigests.push(promptDigest);
+      // Collect existing assigned prompt digests
+      let assignedDigests: string[] = [];
+      if (existing?.assigned_prompt_digests) {
+        assignedDigests = Array.isArray(existing.assigned_prompt_digests)
+          ? [...existing.assigned_prompt_digests]
+          : (typeof existing.assigned_prompt_digests === 'string' ? JSON.parse(existing.assigned_prompt_digests) : []);
+      }
+      if (existing?.current_prompt_digest && !assignedDigests.includes(existing.current_prompt_digest)) {
+        assignedDigests.push(existing.current_prompt_digest);
+      }
+      if (existing?.promptDigest && !assignedDigests.includes(existing.promptDigest)) {
+        assignedDigests.push(existing.promptDigest);
+      }
+      if (Array.isArray(existing?.images)) {
+        for (const img of existing.images) {
+          if (img?.promptDigest && !assignedDigests.includes(img.promptDigest)) {
+            assignedDigests.push(img.promptDigest);
+          }
+        }
       }
 
+      let activePromptDigest: string;
+      const isForced = options?.forceRegenerateInstructionNo === idx;
+
+      if (isLocked && !isForced && existing?.current_prompt_digest) {
+        activePromptDigest = existing.current_prompt_digest;
+        console.log(`[TRACE:PROCESS_IMAGES] Instruction ${idx}: Locked -> preserving current_prompt_digest "${activePromptDigest}"`);
+      } else if (isForced) {
+        activePromptDigest = compiledPromptDigest;
+        if (!assignedDigests.includes(compiledPromptDigest)) {
+          assignedDigests.push(compiledPromptDigest);
+        }
+        console.log(`[TRACE:PROCESS_IMAGES] Instruction ${idx}: Forced regenerate -> active digest = "${activePromptDigest}"`);
+      } else {
+        // If the compiled prompt digest is not in assignedDigests, it means prompt instructions/text were updated!
+        if (!assignedDigests.includes(compiledPromptDigest)) {
+          assignedDigests.push(compiledPromptDigest);
+          activePromptDigest = compiledPromptDigest;
+          console.log(`[TRACE:PROCESS_IMAGES] Instruction ${idx}: New prompt compiled -> active digest = "${activePromptDigest}"`);
+        } else {
+          // If compiledPromptDigest is already in assignedDigests, preserve the user's selected current_prompt_digest if set
+          activePromptDigest = existing?.current_prompt_digest || compiledPromptDigest;
+          console.log(`[TRACE:PROCESS_IMAGES] Instruction ${idx}: Existing prompt -> active digest = "${activePromptDigest}"`);
+        }
+      }
+
+      if (activePromptDigest && !assignedDigests.includes(activePromptDigest)) {
+        assignedDigests.push(activePromptDigest);
+      }
+
+      let imageIndex = assignedDigests.indexOf(activePromptDigest);
+      if (imageIndex === -1) {
+        imageIndex = existing?.imageIndex !== undefined && existing.imageIndex < assignedDigests.length ? existing.imageIndex : 0;
+      }
+
+      // Build images list 1-to-1 matching assignedDigests, preserving existing image entry data
+      const updatedImages: ImageEntry[] = assignedDigests.map(digest => {
+        const existingEntry = (existing?.images || []).find(img => img.promptDigest === digest);
+        const isImageOnDisk = existingImagesSet.has(`images/${digest}.png`);
+        const status = isImageOnDisk ? 'SAVED' : (existingEntry?.status === 'SAVED' ? 'SAVED' : (existingEntry?.status || 'PROCESSING'));
+
+        if (digest === compiledPromptDigest) {
+          return {
+            status: status as any,
+            styleText,
+            cinematographicText: cinematographicDirections,
+            characterText,
+            sceneText,
+            narrativeText,
+            promptDigest: digest,
+            errorMessage: existingEntry?.errorMessage,
+            errorProvider: existingEntry?.errorProvider,
+            errorStatus: existingEntry?.errorStatus
+          };
+        }
+
+        return existingEntry || {
+          status: status as any,
+          styleText: style?.drawing_instructions || style?.drawingInstructions || '',
+          cinematographicText: cinematographicDirections,
+          characterText: '',
+          sceneText: p.paragraphText,
+          narrativeText: '',
+          promptDigest: digest
+        };
+      });
+
       console.log(`[TRACE:PROCESS_IMAGES] Instruction ${idx} status:`, {
-        promptDigest,
-        imageFileName,
-        isImageOnDisk,
-        initialStatus,
-        assignedDigests
+        activePromptDigest,
+        imageIndex,
+        assignedDigests,
+        imagesCount: updatedImages.length
       });
 
       return {
@@ -195,8 +243,8 @@ export async function processImages(
         assigned_characters: charArr,
         characters: charArr,
         assigned_prompt_digests: assignedDigests,
-        current_prompt_digest: promptDigest,
-        promptDigest,
+        current_prompt_digest: activePromptDigest,
+        promptDigest: activePromptDigest,
         images: updatedImages,
         is_locked: isLocked,
         isLocked

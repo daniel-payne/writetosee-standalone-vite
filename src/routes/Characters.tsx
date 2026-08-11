@@ -135,10 +135,25 @@ export default function Characters({
     setCardTabs(prev => ({ ...prev, [index]: tab }));
   };
 
-  const handleCharacterChange = (index: number, field: string, value: string) => {
+  const handleCharacterChange = (index: number, field: string, value: any) => {
     setCharacterList(prev => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      if (field === 'image') {
+        updated[index] = {
+          ...updated[index],
+          image: value,
+          reference_url: value,
+          referenceUrl: value,
+          cropBox: undefined,
+          crop_box: undefined,
+          crop_x: undefined,
+          crop_y: undefined,
+          crop_width: undefined,
+          crop_height: undefined
+        };
+      } else {
+        updated[index] = { ...updated[index], [field]: value };
+      }
       return updated;
     });
   };
@@ -351,6 +366,20 @@ export default function Characters({
           <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,400px),1fr))] gap-4 pb-4">
             {characterList.map((char, index) => {
               const imageSrc = getImageSrc(char.image);
+              const isBoxSelected = Boolean(char.cropBox && char.cropBox.width > 0 && char.cropBox.height > 0);
+              const isImageSelected = Boolean(char.image && char.image.trim());
+
+              const selectBtnClass = !isImageSelected
+                ? 'btn btn-xs btn-primary bg-primary text-primary-content rounded-lg gap-1 shadow-sm'
+                : 'btn btn-xs btn-outline btn-primary rounded-lg gap-1';
+
+              const boxBtnClass = (isImageSelected && !isBoxSelected)
+                ? 'btn btn-xs btn-primary bg-primary text-primary-content rounded-lg gap-1 shadow-sm'
+                : 'btn btn-xs btn-outline btn-primary rounded-lg gap-1';
+
+              const analyzeBtnClass = (isImageSelected && isBoxSelected)
+                ? 'btn btn-xs btn-primary bg-primary text-primary-content rounded-lg gap-1 shadow-sm'
+                : 'btn btn-xs btn-outline btn-primary rounded-lg gap-1';
 
               return (
                 <div
@@ -529,25 +558,37 @@ export default function Characters({
                               {char.image?.replace(/^images\//, '')}
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
-                              {/* 1. Isolate Box */}
+                              {/* 1. Select */}
+                              <button
+                                type="button"
+                                onClick={() => setSelectingImageIdx(index)}
+                                className={selectBtnClass}
+                                title="Select another image from storage"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                </svg>
+                                Select
+                              </button>
+                              {/* 2. Isolate Box / Edit Box */}
                               <button
                                 type="button"
                                 onClick={() => setCropModalCharIdx(index)}
-                                className="btn btn-xs btn-outline btn-primary rounded-lg gap-1"
+                                className={boxBtnClass}
                                 title="Expand image & draw bounding box around character"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 3.75H6A2.25 2.25 0 0 0 3.75 6v1.5M16.5 3.75H18A2.25 2.25 0 0 1 20.25 6v1.5m0 9V18A2.25 2.25 0 0 1 18 20.25h-1.5m-9 0H6A2.25 2.25 0 0 1 3.75 18v-1.5" />
                                 </svg>
-                                {char.cropBox ? 'Edit Box' : 'Isolate Box'}
+                                {isBoxSelected ? 'Edit Box' : 'Isolate Box'}
                               </button>
-                              {/* 2. Analyze Image */}
+                              {/* 3. Analyze Image */}
                               <button
                                 type="button"
                                 onClick={() => handleAnalyzeImage(index)}
                                 disabled={analyzingImageIdx === index}
-                                className="btn btn-xs btn-primary bg-primary text-primary-content rounded-lg gap-1 shadow-sm"
-                                title={char.cropBox ? "Analyze isolated character box with LLM Vision" : "Analyze picture with LLM Vision to extract drawing instructions"}
+                                className={analyzeBtnClass}
+                                title={isBoxSelected ? "Analyze isolated character box with LLM Vision" : "Analyze picture with LLM Vision to extract drawing instructions"}
                               >
                                 {analyzingImageIdx === index ? (
                                   <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -560,18 +601,6 @@ export default function Characters({
                                   </svg>
                                 )}
                                 Analyze Image
-                              </button>
-                              {/* 3. Select (Between Analyze and Delete) */}
-                              <button
-                                type="button"
-                                onClick={() => setSelectingImageIdx(index)}
-                                className="btn btn-xs btn-outline rounded-lg gap-1"
-                                title="Select another image from storage"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                                </svg>
-                                Select
                               </button>
                               {/* 4. Delete / Remove picture */}
                               <button
@@ -831,64 +860,80 @@ export default function Characters({
                         </span>
                       )}
                     </div>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                      {characterList[editingModalCharIdx].image && (
-                        <button
-                          type="button"
-                          onClick={() => setCropModalCharIdx(editingModalCharIdx)}
-                          className="btn btn-xs btn-outline btn-primary rounded-lg text-[11px] gap-1"
-                          title="Expand image & draw bounding box around character"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 3.75H6A2.25 2.25 0 0 0 3.75 6v1.5M16.5 3.75H18A2.25 2.25 0 0 1 20.25 6v1.5m0 9V18A2.25 2.25 0 0 1 18 20.25h-1.5m-9 0H6A2.25 2.25 0 0 1 3.75 18v-1.5" />
-                          </svg>
-                          Isolate Box
-                        </button>
-                      )}
-                      {characterList[editingModalCharIdx].image && (
-                        <button
-                          type="button"
-                          onClick={() => handleAnalyzeImage(editingModalCharIdx)}
-                          disabled={analyzingImageIdx === editingModalCharIdx}
-                          className="btn btn-xs btn-primary rounded-lg text-[11px] gap-1"
-                        >
-                          {analyzingImageIdx === editingModalCharIdx ? (
-                            <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                          ) : (
+                    {(() => {
+                      const modalChar = characterList[editingModalCharIdx];
+                      const modalHasImage = Boolean(modalChar?.image && modalChar.image.trim());
+                      const modalHasBox = Boolean(modalChar?.cropBox && modalChar.cropBox.width > 0 && modalChar.cropBox.height > 0);
+
+                      const modalSelectClass = !modalHasImage
+                        ? 'btn btn-xs btn-primary bg-primary text-primary-content rounded-lg text-[11px] gap-1 shadow-sm'
+                        : 'btn btn-xs btn-outline btn-primary rounded-lg text-[11px] gap-1';
+
+                      const modalBoxClass = (modalHasImage && !modalHasBox)
+                        ? 'btn btn-xs btn-primary bg-primary text-primary-content rounded-lg text-[11px] gap-1 shadow-sm'
+                        : 'btn btn-xs btn-outline btn-primary rounded-lg text-[11px] gap-1';
+
+                      const modalAnalyzeClass = (modalHasImage && modalHasBox)
+                        ? 'btn btn-xs btn-primary bg-primary text-primary-content rounded-lg text-[11px] gap-1 shadow-sm'
+                        : 'btn btn-xs btn-outline btn-primary rounded-lg text-[11px] gap-1';
+
+                      return (
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => setSelectingImageIdx(editingModalCharIdx)}
+                            className={modalSelectClass}
+                          >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
                             </svg>
+                            Select
+                          </button>
+                          {modalHasImage && (
+                            <button
+                              type="button"
+                              onClick={() => setCropModalCharIdx(editingModalCharIdx)}
+                              className={modalBoxClass}
+                              title="Expand image & draw bounding box around character"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 3.75H6A2.25 2.25 0 0 0 3.75 6v1.5M16.5 3.75H18A2.25 2.25 0 0 1 20.25 6v1.5m0 9V18A2.25 2.25 0 0 1 18 20.25h-1.5m-9 0H6A2.25 2.25 0 0 1 3.75 18v-1.5" />
+                              </svg>
+                              {modalHasBox ? 'Edit Box' : 'Isolate Box'}
+                            </button>
                           )}
-                          Analyze
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setSelectingImageIdx(editingModalCharIdx)}
-                        className="btn btn-xs btn-outline rounded-lg text-[11px]"
-                      >
-                        Select
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => triggerUploadForCharacter(editingModalCharIdx)}
-                        className="btn btn-xs btn-outline rounded-lg text-[11px] hidden"
-                      >
-                        Upload File
-                      </button>
-                      {characterList[editingModalCharIdx].image && (
-                        <button
-                          type="button"
-                          onClick={() => handleCharacterChange(editingModalCharIdx, 'image', '')}
-                          className="btn btn-xs btn-ghost text-error rounded-lg text-[11px]"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
+                          {modalHasImage && (
+                            <button
+                              type="button"
+                              onClick={() => handleAnalyzeImage(editingModalCharIdx)}
+                              disabled={analyzingImageIdx === editingModalCharIdx}
+                              className={modalAnalyzeClass}
+                            >
+                              {analyzingImageIdx === editingModalCharIdx ? (
+                                <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                              ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                                </svg>
+                              )}
+                              Analyze
+                            </button>
+                          )}
+                          {modalHasImage && (
+                            <button
+                              type="button"
+                              onClick={() => handleCharacterChange(editingModalCharIdx, 'image', '')}
+                              className="btn btn-xs btn-ghost text-error rounded-lg text-[11px]"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

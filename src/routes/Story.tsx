@@ -110,6 +110,21 @@ export default function Story({
     const assignedChars = inst?.assigned_characters ?? inst?.characters ?? [];
     const charArr = Array.isArray(assignedChars) ? assignedChars : [];
 
+    // Collect all assigned prompt digests for this panel in order
+    let allImageDigests: string[] = [];
+    if (inst?.assigned_prompt_digests) {
+      allImageDigests = Array.isArray(inst.assigned_prompt_digests)
+        ? [...inst.assigned_prompt_digests]
+        : (typeof inst.assigned_prompt_digests === 'string' ? JSON.parse(inst.assigned_prompt_digests) : []);
+    }
+    if (allImageDigests.length === 0 && Array.isArray(inst?.images)) {
+      allImageDigests = inst.images.map((img: ImageEntry) => img.promptDigest).filter(Boolean);
+    }
+    if (currentDigest && !allImageDigests.includes(currentDigest)) {
+      allImageDigests.push(currentDigest);
+    }
+    const panelImages = allImageDigests.map(d => `images/${d}.png`);
+
     const panelObj = {
       panelNo: idx,
       paragraphNo: p.paragraphNo,
@@ -120,7 +135,7 @@ export default function Story({
       image: imagePath,
       imageStatus: status,
       digest: promptDigest,
-      images: (inst?.images || []).map((img: ImageEntry) => `images/${img.promptDigest}.png`),
+      images: panelImages,
       characters: charArr,
       cinematographicText: inst?.cinematographic_directions || inst?.cinematographicDirections || inst?.cinematographicText || '',
       isLocked: Boolean(inst?.is_locked ?? inst?.isLocked),

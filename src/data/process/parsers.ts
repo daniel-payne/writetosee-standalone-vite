@@ -512,7 +512,6 @@ export function parseInstructionsMarkdown(markdown: string): Instruction[] {
     const paragraphId = paraMatch ? parseInt(paraMatch[1], 10) : instructionNo;
     const pageId = pageMatch ? parseInt(pageMatch[1], 10) : 0;
     const chapterId = chapMatch ? parseInt(chapMatch[1], 10) : 0;
-    const imageIndex = imgIdxMatch ? parseInt(imgIdxMatch[1], 10) : 0;
     const isLocked = lockMatch ? lockMatch[1].toLowerCase() === 'true' : false;
     const currentPromptDigest = promptDigestMatch ? promptDigestMatch[1].trim() : null;
     let assignedPromptDigests: string[] = [];
@@ -525,6 +524,13 @@ export function parseInstructionsMarkdown(markdown: string): Instruction[] {
     }
     if (currentPromptDigest && !assignedPromptDigests.includes(currentPromptDigest)) {
       assignedPromptDigests.push(currentPromptDigest);
+    }
+    let imageIndex = imgIdxMatch ? parseInt(imgIdxMatch[1], 10) : 0;
+    if (currentPromptDigest && assignedPromptDigests.length > 0) {
+      const foundIdx = assignedPromptDigests.indexOf(currentPromptDigest);
+      if (foundIdx >= 0) {
+        imageIndex = foundIdx;
+      }
     }
     const charList = charMatch ? charMatch[1].split(',').map(s => s.trim()).filter(Boolean) : [];
 
@@ -581,10 +587,23 @@ export function serializeInstructionsMarkdown(instructions: Instruction[]): stri
       const paragraphId = inst.paragraph_no ?? inst.paragraphNo ?? inst.paragraphId ?? num;
       const pageId = inst.page_no ?? inst.pageNo ?? inst.pageId ?? 0;
       const chapterId = inst.chapter_no ?? inst.chapterNo ?? inst.chapterId ?? 0;
-      const imageIndex = inst.imageIndex ?? 0;
       const isLocked = Boolean(inst.is_locked ?? inst.isLocked);
       const currentDigest = inst.current_prompt_digest || inst.promptDigest;
       const assignedDigests = inst.assigned_prompt_digests;
+      let assignedArr: string[] = [];
+      if (assignedDigests) {
+        assignedArr = Array.isArray(assignedDigests) ? [...assignedDigests] : (typeof assignedDigests === 'string' ? JSON.parse(assignedDigests) : []);
+      }
+      if (currentDigest && !assignedArr.includes(currentDigest)) {
+        assignedArr.push(currentDigest);
+      }
+      let imageIndex = inst.imageIndex ?? 0;
+      if (currentDigest && assignedArr.length > 0) {
+        const foundIdx = assignedArr.indexOf(currentDigest);
+        if (foundIdx >= 0) {
+          imageIndex = foundIdx;
+        }
+      }
       const chars = inst.assigned_characters ?? inst.characters ?? [];
       const charArr = Array.isArray(chars) ? chars : (typeof chars === 'string' ? JSON.parse(chars) : []);
       const dirs = inst.cinematographic_directions ?? inst.cinematographicDirections ?? inst.cinematographicText ?? '';
@@ -597,7 +616,7 @@ export function serializeInstructionsMarkdown(instructions: Instruction[]): stri
         `- imageIndex: ${imageIndex}`,
         ...(isLocked ? [`- isLocked: true`] : []),
         ...(currentDigest ? [`- currentPromptDigest: ${currentDigest}`] : []),
-        ...(Array.isArray(assignedDigests) && assignedDigests.length > 0 ? [`- assignedPromptDigests: ${JSON.stringify(assignedDigests)}`] : [])
+        ...(assignedArr.length > 0 ? [`- assignedPromptDigests: ${JSON.stringify(assignedArr)}`] : [])
       ];
       if (charArr.length > 0) {
         parts.push(`**Characters:** ${charArr.join(', ')}`);

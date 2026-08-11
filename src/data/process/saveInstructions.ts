@@ -114,7 +114,13 @@ export async function saveInstructions(input: string | Instruction[]): Promise<I
 
 export async function savePanelInstructions(
   panelNo: number,
-  updates: { characters?: string[]; cinematographicText?: string; isLocked?: boolean; imageIndex?: number }
+  updates: {
+    characters?: string[];
+    cinematographicText?: string;
+    isLocked?: boolean;
+    imageIndex?: number;
+    currentPromptDigest?: string;
+  }
 ): Promise<Instruction[]> {
   const currentInstructions = await processDb.instructions.toArray();
   const index = currentInstructions.findIndex(inst =>
@@ -126,19 +132,44 @@ export async function savePanelInstructions(
   let updatedList: Instruction[];
   if (index >= 0) {
     updatedList = [...currentInstructions];
-    const selectedDigest = updates.imageIndex !== undefined ?
-      (updatedList[index].images?.[updates.imageIndex]?.promptDigest || updatedList[index].assigned_prompt_digests?.[updates.imageIndex])
-      : undefined;
+    const inst = updatedList[index];
+
+    let assignedDigests: string[] = [];
+    if (inst.assigned_prompt_digests) {
+      assignedDigests = Array.isArray(inst.assigned_prompt_digests)
+        ? [...inst.assigned_prompt_digests]
+        : (typeof inst.assigned_prompt_digests === 'string' ? JSON.parse(inst.assigned_prompt_digests) : []);
+    }
+
+    let selectedDigest = updates.currentPromptDigest;
+    if (!selectedDigest && updates.imageIndex !== undefined) {
+      selectedDigest = inst.images?.[updates.imageIndex]?.promptDigest || assignedDigests[updates.imageIndex];
+    }
+
+    if (selectedDigest && !assignedDigests.includes(selectedDigest)) {
+      assignedDigests.push(selectedDigest);
+    }
+
+    let imageIndex = updates.imageIndex;
+    if (imageIndex === undefined && selectedDigest) {
+      const foundIdx = assignedDigests.indexOf(selectedDigest);
+      if (foundIdx >= 0) {
+        imageIndex = foundIdx;
+      }
+    }
 
     updatedList[index] = {
-      ...updatedList[index],
+      ...inst,
       ...(updates.characters !== undefined ? { characters: updates.characters, assigned_characters: updates.characters } : {}),
       ...(updates.cinematographicText !== undefined ? { cinematographicDirections: updates.cinematographicText, cinematographic_directions: updates.cinematographicText, cinematographicText: updates.cinematographicText } : {}),
       ...(updates.isLocked !== undefined ? { isLocked: updates.isLocked, is_locked: updates.isLocked } : {}),
-      ...(updates.imageIndex !== undefined ? { imageIndex: updates.imageIndex } : {}),
-      ...(selectedDigest ? { current_prompt_digest: selectedDigest, promptDigest: selectedDigest } : {})
+      ...(imageIndex !== undefined ? { imageIndex } : {}),
+      ...(selectedDigest ? { current_prompt_digest: selectedDigest, promptDigest: selectedDigest } : {}),
+      assigned_prompt_digests: assignedDigests
     };
   } else {
+    const selectedDigest = updates.currentPromptDigest;
+    const assignedDigests = selectedDigest ? [selectedDigest] : [];
     updatedList = [
       ...currentInstructions,
       {
@@ -158,6 +189,9 @@ export async function savePanelInstructions(
         cinematographicText: updates.cinematographicText || '',
         assigned_characters: updates.characters || [],
         characters: updates.characters || [],
+        assigned_prompt_digests: assignedDigests,
+        current_prompt_digest: selectedDigest || null,
+        promptDigest: selectedDigest || undefined,
         images: [],
         is_locked: Boolean(updates.isLocked),
         isLocked: Boolean(updates.isLocked)

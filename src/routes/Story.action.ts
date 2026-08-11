@@ -100,11 +100,21 @@ export async function clientAction({ request }: ActionFunctionArgs) {
     try {
       const instructions = await processDb.instructions.toArray();
       const inst = instructions.find(i => i.instructionNo === paragraphIndex || i.paragraphId === paragraphIndex);
-      if (inst && Array.isArray(inst.images)) {
-        const idx = inst.images.findIndex(img => `images/${img.promptDigest}.png` === imagePath || img.promptDigest === imagePath);
-        if (idx >= 0) {
-          await savePanelInstructions(paragraphIndex, { imageIndex: idx });
+      if (inst) {
+        const targetDigest = imagePath.replace(/^images\//, '').replace(/\.(png|jpe?g|gif|webp|svg)$/i, '');
+        const assignedDigests: string[] = Array.isArray(inst.assigned_prompt_digests)
+          ? inst.assigned_prompt_digests
+          : (typeof inst.assigned_prompt_digests === 'string' ? JSON.parse(inst.assigned_prompt_digests) : []);
+
+        let idx = assignedDigests.indexOf(targetDigest);
+        if (idx === -1 && Array.isArray(inst.images)) {
+          idx = inst.images.findIndex(img => img.promptDigest === targetDigest || `images/${img.promptDigest}.png` === imagePath);
         }
+
+        await savePanelInstructions(paragraphIndex, {
+          imageIndex: idx >= 0 ? idx : 0,
+          currentPromptDigest: targetDigest
+        });
       }
       return { success: true, message: 'Image selected successfully', timestamp: Date.now() };
     } catch (err: unknown) {
