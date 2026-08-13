@@ -4,7 +4,7 @@ import { storeCost } from '@/data/storage/costStorage';
 import * as fileStorage from '@/data/storage/fileStorage';
 import { processDb } from '../db';
 import { generateTextDigest } from '../parsers';
-import { compilePrompt } from '../compilePrompt';
+import { compilePrompt, parseBookIllustrationPrompt } from '../compilePrompt';
 import { existingImagesSet, existingPromptsSet } from '../loadStartup';
 import type {
   Story,
@@ -64,10 +64,11 @@ export async function processImages(
     for (const chapter of story.chapters || []) {
       for (const page of chapter.pages || []) {
         for (const paragraph of page.paragraphs || []) {
+          const pNarrative = paragraph.narrative_text ?? paragraph.narrativeText ?? [paragraph.preceding_text, paragraph.prior_text].filter(Boolean).join('\n\n').trim();
           paragraphList.push({
             paragraphNo: paragraph.paragraph_no ?? paragraph.paragraphNo ?? 0,
             paragraphText: paragraph.paragraph_text || paragraph.paragraphText || '',
-            narrativeText: paragraph.narrative_text || paragraph.narrativeText || paragraph.paragraph_text || '',
+            narrativeText: pNarrative,
             narrativeSummary: paragraph.narrative_summary || paragraph.narrativeSummary || '',
             pageId: page.page_no ?? page.pageNo ?? 0,
             chapterId: chapter.chapter_no ?? chapter.chapterNo ?? 0
@@ -207,13 +208,20 @@ export async function processImages(
           };
         }
 
+        if (existingEntry && (existingEntry.characterText || existingEntry.narrativeText)) {
+          return {
+            ...existingEntry,
+            status: status as any
+          };
+        }
+
         return existingEntry || {
           status: status as any,
           styleText: style?.drawing_instructions || style?.drawingInstructions || '',
           cinematographicText: cinematographicDirections,
-          characterText: '',
+          characterText,
           sceneText: p.paragraphText,
-          narrativeText: '',
+          narrativeText,
           promptDigest: digest
         };
       });
@@ -266,13 +274,31 @@ export async function processImages(
       const imageFileName = `images/${promptDigest}.png`;
       const promptFileName = `prompts/${promptDigest}.md`;
 
-      const fullPromptText = compilePrompt({
-        styleText: activeImage.styleText,
-        cinematographicText: activeImage.cinematographicText,
-        characterText: activeImage.characterText,
-        sceneText: activeImage.sceneText,
-        narrativeText: activeImage.narrativeText
-      });
+      // Check if prompt already exists in Dexie or on disk for this promptDigest
+      let fullPromptText = '';
+      const existingPromptRecord = await processDb.prompts.get(promptDigest);
+      if (existingPromptRecord?.prompt_text || existingPromptRecord?.promptText) {
+        fullPromptText = (existingPromptRecord.prompt_text || existingPromptRecord.promptText || '').trim();
+      } else if (existingPromptsSet.has(promptFileName)) {
+        try {
+          const file = await fileStorage.readFile(promptFileName);
+          fullPromptText = (await file.text()).trim();
+        } catch {}
+      }
+
+      const pMatching = paragraphList.find(p => p.paragraphNo === inst.paragraph_no || p.paragraphNo === inst.paragraphId);
+      const fallbackNarrative = pMatching ? (pMatching.narrativeSummary || pMatching.narrativeText) : '';
+      const fallbackScene = pMatching ? pMatching.paragraphText : '';
+
+      if (!fullPromptText) {
+        fullPromptText = compilePrompt({
+          styleText: activeImage.styleText || style?.drawing_instructions || style?.drawingInstructions || '',
+          cinematographicText: activeImage.cinematographicText || inst.cinematographic_directions || '',
+          characterText: activeImage.characterText || '',
+          sceneText: activeImage.sceneText || fallbackScene,
+          narrativeText: activeImage.narrativeText || fallbackNarrative
+        });
+      }
 
       // Save prompt text to disk & Dexie prompts table
       if (!existingPromptsSet.has(promptFileName)) {
@@ -284,16 +310,17 @@ export async function processImages(
           console.error(`[TRACE:PROCESS_IMAGES] Failed to save prompt file "${promptFileName}":`, err);
         }
       }
+      const parsedPrompt = parseBookIllustrationPrompt(fullPromptText);
       await processDb.prompts.put({
         prompt_digest: promptDigest,
         digest: promptDigest,
         prompt_text: fullPromptText,
         promptText: fullPromptText,
-        style_text: activeImage.styleText || '',
-        cinematographic_text: activeImage.cinematographicText || '',
-        character_text: activeImage.characterText || '',
-        narrative_text: activeImage.narrativeText || '',
-        scene_text: activeImage.sceneText || ''
+        style_text: parsedPrompt.styleText || activeImage.styleText || '',
+        cinematographic_text: parsedPrompt.cinematographicText || activeImage.cinematographicText || '',
+        character_text: parsedPrompt.characterText || activeImage.characterText || '',
+        narrative_text: parsedPrompt.narrativeText || activeImage.narrativeText || '',
+        scene_text: parsedPrompt.sceneText || activeImage.sceneText || ''
       });
 
       const isForced = options?.forceRegenerateInstructionNo === inst.instructionNo;

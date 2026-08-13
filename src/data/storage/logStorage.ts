@@ -15,6 +15,9 @@ export async function writeLog(
     message: string
 ): Promise<void> {
     console.log(`[APP-LOG] [${type}] [${source}]: ${message}`);
+    if (typeof indexedDB === 'undefined') {
+        return;
+    }
     if (isWritingLog) {
         console.warn(`[Recursive Log Fallback] [${type}] [${source}]: ${message}`);
         return;

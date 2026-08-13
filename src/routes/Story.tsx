@@ -24,7 +24,7 @@ export default function Story({
 
   // Local state for UI display preferences
   const [isAppStartingUp] = useLocalState<boolean>('process-startup-loading', false);
-  const [leftWidth, setLeftWidth] = useState(25);
+  const [leftWidth, setLeftWidth] = useLocalState<number>('story-left-width', 25);
   const [isDragging, setIsDragging] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [mobileTab, setMobileTab] = useState<'text' | 'images'>('text');
@@ -50,7 +50,7 @@ export default function Story({
     paragraphList = paragraphs.map(p => ({
       paragraphNo: p.paragraph_no ?? p.paragraphNo ?? 0,
       paragraphText: p.paragraph_text || p.paragraphText || '',
-      narrativeText: p.narrative_summary || p.narrativeSummary || p.narrativeText || p.paragraph_text || p.paragraphText || ''
+      narrativeText: p.narrative_summary || p.narrativeSummary || p.narrative_text || p.narrativeText || [p.preceding_text, p.prior_text].filter(Boolean).join('\n\n') || ''
     }));
   } else {
     for (const chap of effectiveStory?.chapters || []) {
@@ -59,7 +59,7 @@ export default function Story({
           paragraphList.push({
             paragraphNo: p.paragraph_no ?? p.paragraphNo ?? 0,
             paragraphText: p.paragraph_text || p.paragraphText || '',
-            narrativeText: p.narrative_summary || p.narrativeSummary || p.narrativeText || p.paragraph_text || p.paragraphText || ''
+            narrativeText: p.narrative_summary || p.narrativeSummary || p.narrative_text || p.narrativeText || [p.preceding_text, p.prior_text].filter(Boolean).join('\n\n') || ''
           });
         }
       }
@@ -227,7 +227,7 @@ export default function Story({
   }
 
   return (
-    <div {...rest} className={`h-full w-full min-h-0 flex flex-col ${rest.className || ''}`}>
+    <div {...rest} className={`h-full w-full min-h-0 flex flex-col bg-base-300 ${rest.className || ''}`}>
       {/* Mobile Tab Navigation (< 768px) */}
       {!isDesktop && (
         <div className="flex border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shrink-0">
@@ -260,11 +260,11 @@ export default function Story({
         </div>
       )}
 
-      <Form id="main-form" method="post" className="flex-1 flex flex-col md:flex-row gap-0 justify-between items-stretch h-full w-full min-h-0 overflow-hidden" ref={containerRef}>
+      <Form id="main-form" method="post" className="flex-1 flex flex-col md:flex-row gap-0 justify-between items-stretch h-full w-full min-h-0 overflow-hidden bg-base-300" ref={containerRef}>
         {/* Story Text Editor Panel */}
         {(isDesktop || mobileTab === 'text') && (
           <div
-            className="h-full overflow-hidden flex-1 md:flex-none"
+            className="h-full overflow-hidden flex-1 md:flex-none bg-base-300"
             style={isDesktop ? { width: `${leftWidth}%` } : undefined}
           >
             <StoryEditor
@@ -278,16 +278,16 @@ export default function Story({
         {isDesktop && (
           <div
             onMouseDown={() => setIsDragging(true)}
-            className={`w-1.5 hover:w-2 bg-slate-200 dark:bg-slate-700 hover:bg-primary transition-all cursor-col-resize z-20 flex items-center justify-center shrink-0 ${isDragging ? 'bg-primary w-2' : ''
+            className={`w-1.5 hover:w-2 bg-base-300 hover:bg-base-content/10 dark:bg-slate-700 hover:bg-primary transition-all cursor-col-resize z-20 flex items-center justify-center shrink-0 ${isDragging ? 'bg-primary w-2' : ''
               }`}
           >
-            <div className="w-0.5 h-8 bg-slate-400 dark:bg-slate-500 rounded-full" />
+            <div className="w-0.5 h-8 bg-base-content/30 dark:bg-slate-500 rounded-full" />
           </div>
         )}
 
         {/* Image Grid Display Panel */}
         {(isDesktop || mobileTab === 'images') && (
-          <div className="h-full overflow-y-auto flex-1 p-4 bg-slate-50 dark:bg-slate-900/50 min-h-0 relative">
+          <div className="h-full overflow-y-auto flex-1 p-4 min-h-0 relative bg-base-300">
             <div
               className="grid gap-6 auto-rows-max"
               style={{

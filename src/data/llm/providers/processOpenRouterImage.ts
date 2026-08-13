@@ -180,12 +180,18 @@ async function processViaImagesEndpoint({
             throw new Error(imgErr);
         }
         const blob = await imgRes.blob();
-        content = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
+        if (typeof FileReader !== 'undefined') {
+            content = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } else {
+            const arrayBuffer = await blob.arrayBuffer();
+            const mime = blob.type || 'image/png';
+            content = `data:${mime};base64,${Buffer.from(arrayBuffer).toString('base64')}`;
+        }
     } else {
         content = base64Url;
     }
@@ -376,12 +382,18 @@ async function processViaChatEndpoint({
             throw new Error(imgErr);
         }
         const blob = await imgRes.blob();
-        content = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
+        if (typeof FileReader !== 'undefined') {
+            content = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } else {
+            const arrayBuffer = await blob.arrayBuffer();
+            const mime = blob.type || 'image/png';
+            content = `data:${mime};base64,${Buffer.from(arrayBuffer).toString('base64')}`;
+        }
     } else {
         content = base64Url.startsWith('data:') ? base64Url : `data:image/png;base64,${base64Url}`;
     }

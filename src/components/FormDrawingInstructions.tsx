@@ -103,9 +103,9 @@ export default function FormDrawingInstructions({
         readOnly
       />
 
-      {/* Outer Editor Frame */}
+      {/* Editor Content Frame */}
       <div
-        className="relative w-full flex-1 h-full min-h-0 border border-base-content/20 dark:border-slate-700 rounded-xl bg-base-100 dark:bg-slate-900/60 p-3.5 focus-within:ring-2 focus-within:ring-primary focus-within:border-primary transition-all overflow-y-auto"
+        className="relative w-full flex-1 h-full min-h-0 overflow-y-auto bg-transparent outline-none pt-1"
         onClick={() => {
           if (textRef.current && document.activeElement !== textRef.current) {
             textRef.current.focus();
@@ -187,7 +187,7 @@ export default function FormDrawingInstructions({
         {/* Empty state placeholder when value is empty and not focused */}
         {!value && (
           <div
-            className="absolute top-3.5 left-3.5 text-sm text-base-content/40 pointer-events-none font-sans"
+            className="absolute top-1 left-0 text-sm text-base-content/40 pointer-events-none font-sans"
             aria-hidden="true"
           >
             {isAnalyzing

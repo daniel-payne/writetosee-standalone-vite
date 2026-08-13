@@ -190,10 +190,10 @@ export default function MainLayout({
   return (
     <div
       {...rest}
-      className={`h-screen overflow-hidden bg-gradient-to-br from-base-300 via-base-100 to-base-200 text-base-content flex flex-col font-sans transition-all duration-300 ${rest.className || ''}`}
+      className={`h-screen overflow-hidden bg-base-300 text-base-content flex flex-col font-sans transition-all duration-300 ${rest.className || ''}`}
     >
       {/* Header / Navbar */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-base-100/70 border-b border-base-content/10 px-4 sm:px-8 py-3">
+      <header className="sticky top-0 z-50 bg-base-100 border-b border-base-content/10 px-4 sm:px-8 py-3">
         <div className="mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <NavKeyLink
@@ -206,7 +206,7 @@ export default function MainLayout({
             >
               <div className={`p-2 bg-primary rounded-xl text-primary-content shadow-lg shadow-primary/30 ${isNavDisabled ? 'opacity-50' : 'animate-pulse'}`}>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.83 17.29a2.182 2.182 0 01-.504.34l-3.327 1.11a.488.488 0 01-.613-.613l1.11-3.328a2.182 2.182 0 01.34-.504l12.016-12.017zm0 0L19.5 7.125" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.83 17.29a2.182 2.182 0 01-.504.34l-3.327 1.11a.488.488 0 01-.613-.613l1.11-3.328a2.182 2.182 0 01.34-.504l12.016-12.017zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                 </svg>
               </div>
             </NavKeyLink>
@@ -250,7 +250,7 @@ export default function MainLayout({
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-h-0 w-full flex flex-col justify-center items-center">
+      <main className="flex-1 min-h-0 w-full flex flex-col justify-center items-center bg-base-300">
         {loaderData?.hasDirectory && !loaderData?.permissionGranted ? (
           <div className="max-w-md w-full mx-auto p-8 rounded-2xl bg-base-100/60 backdrop-blur-lg border border-base-content/10 shadow-2xl text-center space-y-6 animate-fade-in">
             <div className="w-16 h-16 bg-warning/10 rounded-2xl text-warning flex items-center justify-center mx-auto shadow-inner">
@@ -287,7 +287,7 @@ export default function MainLayout({
             </div>
           </div>
         ) : (
-          <div className="w-full flex-1 mx-auto px-2 py-2 animate-fade-in flex flex-col min-h-0 overflow-y-auto">
+          <div className="w-full flex-1 mx-auto px-2 py-2 animate-fade-in flex flex-col min-h-0 overflow-y-auto bg-base-300">
             {children}
           </div>
         )}

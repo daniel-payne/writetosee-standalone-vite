@@ -50,6 +50,54 @@ export default function Style({
   });
 
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [leftWidth, setLeftWidth] = useLocalState<number>('style-left-width', 50);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isDesktop, setIsDesktop] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth >= 768);
+  const containerRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging || !containerRef.current) return;
+
+      const containerRect = containerRef.current.getBoundingClientRect();
+      let newLeftWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+
+      if (newLeftWidth < 10) newLeftWidth = 10;
+      if (newLeftWidth > 90) newLeftWidth = 90;
+
+      setLeftWidth(newLeftWidth);
+    };
+
+    const handleMouseUp = () => {
+      if (isDragging) setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'col-resize';
+    } else {
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [isDragging]);
 
   useEffect(() => {
     if (actionData?.cancelled) {
@@ -239,7 +287,7 @@ export default function Style({
   const activePreset = getActivePreset();
 
   return (
-    <div {...rest} className={`p-4 w-full mx-auto h-full overflow-hidden flex flex-col ${rest.className || ''}`}>
+    <div {...rest} className={`p-4 w-full mx-auto h-full overflow-hidden flex flex-col bg-base-300 ${rest.className || ''}`}>
       {/* Top preset action buttons styled like Characters page */}
       <div className="flex items-center justify-center gap-2.5 mb-4 shrink-0 flex-wrap">
         {PRESET_OPTIONS.map((preset) => {
@@ -275,13 +323,21 @@ export default function Style({
         })}
       </div>
 
-      <Form id="main-form" method="post" className="flex-1 flex flex-row w-full items-stretch justify-between gap-4 min-h-0">
+      <Form
+        id="main-form"
+        method="post"
+        className="flex-1 flex flex-col md:flex-row gap-0 justify-between items-stretch h-full w-full min-h-0 overflow-hidden bg-base-300"
+        ref={containerRef}
+      >
         <input type="hidden" name="referenceUrl" value={formData.referenceUrl} />
         <input type="hidden" name="linkInstructions" value={formData.linkInstructions} />
 
         {/* Left card containing Drawing Instructions & Floated Reference Image */}
-        <div className="flex-1 card bg-base-100 shadow-xl border border-base-content/5 h-full flex flex-col overflow-hidden">
-          <div className="card-body flex-1 flex flex-col min-h-0">
+        <div
+          className="h-full overflow-hidden flex-1 md:flex-none bg-base-300"
+          style={isDesktop ? { width: `${leftWidth}%` } : undefined}
+        >
+          <div className="h-full w-full bg-base-100 dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-base-content/10 flex flex-col overflow-hidden">
             <FormDrawingInstructions
               value={formData.drawingInstructions}
               referenceUrl={formData.referenceUrl}
@@ -293,10 +349,18 @@ export default function Style({
           </div>
         </div>
 
-        {/* Right card is empty as requested */}
-        <div className="flex-1 card bg-base-100 shadow-xl border border-base-content/5 h-full flex flex-col overflow-hidden">
-          <div className="card-body overflow-auto flex-1 flex flex-col min-h-0">
+        {/* Resizer Divider / Slider */}
+        {isDesktop && (
+          <div
+            onMouseDown={() => setIsDragging(true)}
+            className={`w-1.5 hover:w-2 bg-base-300 hover:bg-base-content/10 dark:bg-slate-700 hover:bg-primary transition-all cursor-col-resize z-20 flex items-center justify-center shrink-0 ${isDragging ? 'bg-primary w-2' : ''}`}
+          >
+            <div className="w-0.5 h-8 bg-base-content/30 dark:bg-slate-500 rounded-full" />
           </div>
+        )}
+
+        {/* Right box is transparent and see-through to base color */}
+        <div className="h-full overflow-y-auto flex-1 p-4 min-h-0 relative bg-base-300">
         </div>
       </Form>
 

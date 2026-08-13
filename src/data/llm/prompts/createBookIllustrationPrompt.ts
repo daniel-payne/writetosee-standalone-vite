@@ -83,3 +83,20 @@ export function createBookIllustrationPrompt({
     .replace('{{NARRATIVE_TEXT}}', narrativeText.trim())
     .trim();
 }
+
+export function parseBookIllustrationPrompt(promptText: string | null | undefined): BookIllustrationPromptVariables {
+  if (!promptText) return {};
+  const styleMatch = promptText.match(/<style-text>([\s\S]*?)<\/style-text>/i);
+  const cinemaMatch = promptText.match(/<cinematographic-(?:text|directions)>([\s\S]*?)<\/cinematographic-(?:text|directions)>/i);
+  const charMatch = promptText.match(/<character-text>([\s\S]*?)<\/character-text>/i);
+  const narrativeMatch = promptText.match(/<narrative-text>([\s\S]*?)<\/narrative-text>/i);
+  const sceneMatch = promptText.match(/<scene-text>([\s\S]*?)<\/scene-text>/i);
+
+  return {
+    styleText: styleMatch ? styleMatch[1].trim() : '',
+    cinematographicText: cinemaMatch ? cinemaMatch[1].trim() : '',
+    characterText: charMatch ? charMatch[1].trim() : '',
+    narrativeText: narrativeMatch ? narrativeMatch[1].trim() : '',
+    sceneText: sceneMatch ? sceneMatch[1].trim() : ''
+  };
+}

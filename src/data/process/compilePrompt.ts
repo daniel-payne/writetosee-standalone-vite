@@ -1,17 +1,13 @@
 import {
   BOOK_ILLUSTRATION_PROMPT_TEMPLATE,
-  createBookIllustrationPrompt
+  createBookIllustrationPrompt,
+  parseBookIllustrationPrompt,
+  type BookIllustrationPromptVariables
 } from '@/data/llm/prompts/createBookIllustrationPrompt';
 
-export interface PromptComponents {
-  styleText?: string;
-  cinematographicText?: string;
-  characterText?: string;
-  sceneText?: string;
-  narrativeText?: string;
-}
+export interface PromptComponents extends BookIllustrationPromptVariables {}
 
-export { BOOK_ILLUSTRATION_PROMPT_TEMPLATE };
+export { BOOK_ILLUSTRATION_PROMPT_TEMPLATE, parseBookIllustrationPrompt };
 
 /**
  * Compiles the complete 5-segment prompt using the standard book illustration prompt template.

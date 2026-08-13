@@ -41,21 +41,21 @@ export default async function llmGenerateImage(imagePrompt: string) {
     let result: { content?: string; totalCost?: number } = {};
 
     if (provider === 'GOOGLE') {
-        const model = "gemini-2.5-flash-image";
-        const inputCostPerMillion = 0.30;
-        const outputCostPerMillion = 30.00;
+        const model = "gemini-3.1-flash-image";
+        const inputCostPerMillion = 0.50;
+        const outputCostPerMillion = 3.00;
 
         result = await processGoogleImage({ imagePrompt, apiKey, model, inputCostPerMillion, outputCostPerMillion });
     } else if (provider === 'XAI') {
-        const model = "grok-imagine-image-quality";
+        const model = "grok-imagine-image";
         const inputCostPerMillion = 0.00;
-        const outputCostPerMillion = 50.00;
+        const outputCostPerMillion = 20.00;
 
         result = await processxAIImage({ imagePrompt, apiKey, model, inputCostPerMillion, outputCostPerMillion });
     } else if (provider === 'OPENROUTER') {
-        const model = "google/gemini-2.5-flash-image" //, "openai/gpt-image-2" "black-forest-labs/flux.2-pro" // "google/gemini-2.5-flash-image" // "black-forest-labs/flux.2-klein-4b"; //"black-forest-labs/flux.2-pro";
-        const inputCostPerMillion = 8.00;
-        const outputCostPerMillion = 8.00;
+        const model = "google/gemini-3.1-flash-image" //, "openai/gpt-image-2" "black-forest-labs/flux.2-pro" // "google/gemini-2.5-flash-image" // "black-forest-labs/flux.2-klein-4b"; //"black-forest-labs/flux.2-pro";
+        const inputCostPerMillion = 0.50;
+        const outputCostPerMillion = 3.00;
 
         result = await processOpenRouterImage({ imagePrompt, apiKey, model, inputCostPerMillion, outputCostPerMillion });
     }

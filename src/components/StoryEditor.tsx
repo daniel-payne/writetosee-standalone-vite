@@ -41,7 +41,7 @@ export default function StoryEditor({
   };
 
   return (
-    <div {...rest} data-name={name} className="h-full w-full bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
+    <div {...rest} data-name={name} className="h-full w-full bg-base-100 dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-base-content/10 flex flex-col overflow-hidden">
       <textarea
         name="story"
         value={text}

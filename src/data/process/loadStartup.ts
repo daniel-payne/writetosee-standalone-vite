@@ -8,6 +8,7 @@ import {
   parseInstructionsMarkdown,
   generateTextDigest
 } from './parsers';
+import { parseBookIllustrationPrompt } from './compilePrompt';
 import { generateSummaries } from './workflows/generateSummaries';
 import { processImages } from './workflows/processImages';
 import type {
@@ -121,6 +122,63 @@ export async function loadStartup(): Promise<{
       rawInstructions: rawInstructions.map(i => ({ no: i.instructionNo, pNo: i.paragraph_no, currentDigest: i.current_prompt_digest, assignedDigests: i.assigned_prompt_digests }))
     });
 
+    // 2.5 Ingest disk summaries & prompts into Dexie early and build in-memory prompt map
+    const summariesToPut: Summary[] = [];
+    for (const summaryFile of Array.from(existingSummariesSet)) {
+      const digest = summaryFile.replace(/^summaries\//, '').replace(/\.md$/, '');
+      if (digest) {
+        try {
+          const file = await fileStorage.readFile(summaryFile);
+          const summaryText = await file.text();
+          summariesToPut.push({
+            summaryId: summariesToPut.length,
+            summary_digest: digest,
+            digest,
+            summary_text: summaryText,
+            summaryText
+          });
+        } catch {
+          // ignore corrupted file
+        }
+      }
+    }
+
+    const promptsMap = new Map<string, string>();
+    const promptsToPut: Prompt[] = [];
+    for (const promptFile of Array.from(existingPromptsSet)) {
+      const digest = promptFile.replace(/^prompts\//, '').replace(/\.md$/, '');
+      if (digest) {
+        try {
+          const file = await fileStorage.readFile(promptFile);
+          const promptText = await file.text();
+          promptsMap.set(digest, promptText);
+          const parsed = parseBookIllustrationPrompt(promptText);
+          promptsToPut.push({
+            prompt_digest: digest,
+            digest,
+            prompt_text: promptText,
+            promptText,
+            style_text: parsed.styleText || '',
+            cinematographic_text: parsed.cinematographicText || '',
+            character_text: parsed.characterText || '',
+            narrative_text: parsed.narrativeText || '',
+            scene_text: parsed.sceneText || ''
+          });
+        } catch {
+          // ignore corrupted file
+        }
+      }
+    }
+
+    // Build character map
+    const charMap = new Map<string, Character>();
+    for (const char of characters || []) {
+      const name = char.character_name || char.characterName || char.name;
+      if (name) {
+        charMap.set(name.trim().toLowerCase(), char);
+      }
+    }
+
     // Build paragraph list from story
     const flatParagraphs: any[] = [];
     const flatPages: any[] = [];
@@ -147,6 +205,7 @@ export async function loadStartup(): Promise<{
         });
 
         for (const paragraph of page.paragraphs || []) {
+          const pNarrativeText = paragraph.narrative_text ?? paragraph.narrativeText ?? [paragraph.preceding_text, paragraph.prior_text].filter(Boolean).join('\n\n').trim();
           flatParagraphs.push({
             paragraph_no: paragraph.paragraph_no ?? paragraph.paragraphNo ?? 0,
             chapter_no: chapter.chapter_no ?? chapter.chapterNo ?? 0,
@@ -154,8 +213,10 @@ export async function loadStartup(): Promise<{
             paragraph_text: paragraph.paragraph_text || paragraph.paragraphText || '',
             prior_text: paragraph.prior_text || paragraph.priorText || '',
             preceding_text: paragraph.preceding_text || paragraph.precedingText || '',
+            narrative_text: pNarrativeText,
+            narrativeText: pNarrativeText,
             narrative_summary: paragraph.narrative_summary || paragraph.narrativeSummary || '',
-            narrative_digest: paragraph.narrative_digest || paragraph.narrativeDigest || ''
+            narrative_digest: paragraph.narrative_digest || paragraph.narrativeDigest || (pNarrativeText ? generateTextDigest(pNarrativeText) : '')
           });
         }
       }
@@ -186,6 +247,22 @@ export async function loadStartup(): Promise<{
         assignedPromptDigests.push(currentPromptDigest);
       }
 
+      // Compute character text for assigned characters
+      const charTexts: string[] = [];
+      for (const cName of charArr) {
+        const found = charMap.get(cName.trim().toLowerCase());
+        if (found) {
+          const desc = found.description_text || found.descriptionText || found.description || '';
+          const inst = found.instructions_text || found.instructionsText || found.instructions || '';
+          const combined = [desc.trim(), inst.trim()].filter(Boolean).join('\n');
+          if (combined) {
+            charTexts.push(`${found.character_name || found.characterName || found.name || cName}:\n${combined}`);
+          }
+        }
+      }
+      const defaultCharacterText = charTexts.join('\n\n');
+      const defaultNarrativeText = p.narrative_summary || p.narrativeSummary || p.narrative_text || p.narrativeText || '';
+
       // Ensure imageIndex points to currentPromptDigest if present in assignedPromptDigests
       let imageIndex = existing?.imageIndex !== undefined ? existing.imageIndex : 0;
       if (currentPromptDigest && assignedPromptDigests.length > 0) {
@@ -198,13 +275,16 @@ export async function loadStartup(): Promise<{
       // Build images list from assigned_prompt_digests and disk cache
       const images: ImageEntry[] = (assignedPromptDigests.length > 0 ? assignedPromptDigests : (currentPromptDigest ? [currentPromptDigest] : [])).map(digest => {
         const isImageOnDisk = existingImagesSet.has(`images/${digest}.png`);
+        const cachedPrompt = promptsMap.get(digest);
+        const parsed = cachedPrompt ? parseBookIllustrationPrompt(cachedPrompt) : null;
+
         return {
           status: isImageOnDisk ? 'SAVED' : 'PROCESSING',
-          styleText: style.drawing_instructions || style.drawingInstructions || '',
-          cinematographicText: cinematographicDirections,
-          characterText: '',
-          sceneText: p.paragraph_text,
-          narrativeText: '',
+          styleText: parsed?.styleText || style.drawing_instructions || style.drawingInstructions || '',
+          cinematographicText: parsed?.cinematographicText ?? cinematographicDirections,
+          characterText: parsed?.characterText ?? defaultCharacterText,
+          sceneText: parsed?.sceneText || p.paragraph_text,
+          narrativeText: parsed?.narrativeText ?? defaultNarrativeText,
           promptDigest: digest
         };
       });
@@ -254,7 +334,9 @@ export async function loadStartup(): Promise<{
       processDb.style,
       processDb.characters,
       processDb.instructions,
-      processDb.images
+      processDb.images,
+      processDb.summaries,
+      processDb.prompts
     ], async () => {
       await processDb.story.clear();
       await processDb.story.put({ id: 'main', story_id: 'main', ...story });
@@ -290,56 +372,17 @@ export async function loadStartup(): Promise<{
       if (diskImages.length > 0) {
         await processDb.images.bulkPut(diskImages);
       }
+
+      if (summariesToPut.length > 0) {
+        await processDb.summaries.bulkPut(summariesToPut);
+      }
+
+      if (promptsToPut.length > 0) {
+        await processDb.prompts.bulkPut(promptsToPut);
+      }
     });
 
-    console.log('[TRACE:STARTUP] Step 4: Dexie database successfully updated with', diskImages.length, 'disk images');
-
-    // 4. Ingest disk summaries & prompts into Dexie
-    const summariesToPut: Summary[] = [];
-    for (const summaryFile of Array.from(existingSummariesSet)) {
-      const digest = summaryFile.replace(/^summaries\//, '').replace(/\.md$/, '');
-      if (digest) {
-        try {
-          const file = await fileStorage.readFile(summaryFile);
-          const summaryText = await file.text();
-          summariesToPut.push({
-            summaryId: summariesToPut.length,
-            summary_digest: digest,
-            digest,
-            summary_text: summaryText,
-            summaryText
-          });
-        } catch {
-          // ignore corrupted file
-        }
-      }
-    }
-    if (summariesToPut.length > 0) {
-      await processDb.summaries.bulkPut(summariesToPut);
-    }
-
-    const promptsToPut: Prompt[] = [];
-    for (const promptFile of Array.from(existingPromptsSet)) {
-      const digest = promptFile.replace(/^prompts\//, '').replace(/\.md$/, '');
-      if (digest) {
-        try {
-          const file = await fileStorage.readFile(promptFile);
-          const promptText = await file.text();
-          promptsToPut.push({
-            prompt_digest: digest,
-            digest,
-            prompt_text: promptText,
-            promptText
-          });
-        } catch {
-          // ignore corrupted file
-        }
-      }
-    }
-    if (promptsToPut.length > 0) {
-      await processDb.prompts.bulkPut(promptsToPut);
-    }
-    console.log('[TRACE:STARTUP] Step 5: Ingested prompts count =', promptsToPut.length, 'summaries count =', summariesToPut.length);
+    console.log('[TRACE:STARTUP] Step 4: Dexie database successfully updated with', diskImages.length, 'disk images,', promptsToPut.length, 'prompts,', summariesToPut.length, 'summaries');
 
     // 5. Update main thread state-mutex stores for reactive UI sync
     setState('story-data', story, StoragePersistence.none);

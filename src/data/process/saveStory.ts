@@ -103,8 +103,8 @@ export async function saveStory(
 
         for (const paragraph of page.paragraphs || []) {
           const paraNo = paragraph.paragraph_no ?? paragraph.paragraphNo ?? 0;
-          const narrativeText = paragraph.narrative_text || paragraph.narrativeText || [paragraph.preceding_text, paragraph.prior_text].filter(Boolean).join('\n\n') || paragraph.paragraph_text || '';
-          const narrativeDigest = paragraph.narrative_digest || paragraph.narrativeDigest || generateTextDigest(narrativeText || paragraph.paragraph_text || '');
+          const narrativeText = paragraph.narrative_text ?? paragraph.narrativeText ?? [paragraph.preceding_text, paragraph.prior_text].filter(Boolean).join('\n\n').trim();
+          const narrativeDigest = paragraph.narrative_digest || paragraph.narrativeDigest || (narrativeText ? generateTextDigest(narrativeText) : '');
 
           flatParagraphs.push({
             paragraph_no: paraNo,
